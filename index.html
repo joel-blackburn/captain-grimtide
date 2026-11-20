@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Curse of Captain Grimtide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pirata+One&family=Nunito:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #2b1d0e;
+    --paper: #f6ead0;
+    --paper-dark: #e6d3a8;
+    --edge: #b9925a;
+    --wood: #3b2414;
+    --gold: #f2b632;
+    --gold-dark: #b9821a;
+    --red: #b8372b;
+    --red-dark: #7f241c;
+    --sea: #1c4f6e;
+    --sea-dark: #0f2e44;
+    --ghost: #7ef0c4;
+    --hero-a: #2f7fb5;
+    --hero-b: #c9502e;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    font-family: "Nunito", system-ui, sans-serif;
+    color: var(--ink);
+    min-height: 100vh;
+    background:
+      repeating-linear-gradient(90deg, rgba(0,0,0,.08) 0 2px, transparent 2px 120px),
+      linear-gradient(#24160c, #3b2414 40%, #2a190d);
+    display: flex; justify-content: center;
+    padding: 14px 10px 40px;
+  }
+  .app { width: 100%; max-width: 780px; }
+
+  header.top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+  header.top h1 {
+    font-family: "Pirata One", "Nunito", serif; font-weight: 400;
+    font-size: clamp(26px, 6vw, 38px); margin: 0; color: var(--gold);
+    text-shadow: 0 3px 0 #000, 0 0 18px rgba(242,182,50,.35); letter-spacing: 1px;
+  }
+  .tools { display: flex; gap: 6px; }
+  .tbtn {
+    font: inherit; font-weight: 800; font-size: 14px; cursor: pointer;
+    border: 2px solid #000; border-radius: 10px; padding: 7px 11px;
+    background: var(--paper); color: var(--ink); box-shadow: 0 3px 0 #000;
+  }
+  .tbtn[aria-pressed="true"] { background: var(--gold); }
+  .tbtn:active { transform: translateY(2px); box-shadow: 0 1px 0 #000; }
+  .tbtn[disabled] { opacity: .45; cursor: default; }
+
+  .book {
+    background: var(--paper);
+    border-radius: 18px; overflow: hidden;
+    border: 3px solid #000;
+    box-shadow: 0 14px 40px rgba(0,0,0,.6), inset 0 0 0 6px var(--paper-dark), inset 0 0 60px rgba(120,80,20,.25);
+  }
+  .page { animation: turn .45s ease; }
+  @keyframes turn { from { opacity: 0; transform: perspective(900px) rotateY(-10deg) translateX(26px); } to { opacity: 1; transform: none; } }
+
+  /* ---------- Scenes ---------- */
+  .scene { position: relative; aspect-ratio: 16 / 8; overflow: hidden; border-bottom: 4px solid #000; }
+  .scene.dusk     { background: linear-gradient(#f3925a 0%, #c75b5b 35%, #5b3b6e 60%, #23324f 61%, #152238 100%); }
+  .scene.fog      { background: linear-gradient(#3c4a5c 0%, #6f7f8f 45%, #2b3a4b 61%, #18222e 100%); }
+  .scene.port     { background: linear-gradient(#0f1d33 0%, #253b5c 58%, #3a2a1c 59%, #2a1d12 100%); }
+  .scene.cave     { background: radial-gradient(circle at 50% 65%, #6b4a2a 0%, #3a2616 45%, #140c06 100%); }
+  .scene.sea      { background: linear-gradient(#081428 0%, #14294a 45%, #0e3a52 46%, #061a28 100%); }
+  .scene.light    { background: radial-gradient(circle at 70% 18%, #b6ff9e 0%, #3f7a48 18%, #172c2a 50%, #0a1418 100%); }
+  .scene.alley    { background: linear-gradient(#1a1230 0%, #3a2244 50%, #4a2d1a 51%, #26170c 100%); }
+  .scene.ghost    { background: radial-gradient(circle at 50% 45%, #1f6b55 0%, #0d2f2a 45%, #050c0c 100%); }
+  .scene.dawn     { background: linear-gradient(#ffd27a 0%, #ffb37a 35%, #6fb3d6 61%, #2a7aa8 100%); }
+  .scene .art { position: absolute; line-height: 1; user-select: none; filter: drop-shadow(0 6px 6px rgba(0,0,0,.45)); animation: bob 3.2s ease-in-out infinite; }
+  .scene .art.main { font-size: clamp(66px, 16vw, 124px); left: 50%; top: 52%; transform: translate(-50%, -50%); animation-name: bobMain; }
+  .scene .art.side { font-size: clamp(34px, 8.5vw, 62px); }
+  @keyframes bob { 0%,100% { margin-top: 0; } 50% { margin-top: -9px; } }
+  @keyframes bobMain { 0%,100% { transform: translate(-50%, -50%); } 50% { transform: translate(-50%, -56%); } }
+  .scene .moon { position: absolute; right: 7%; top: 9%; width: 9%; aspect-ratio: 1; border-radius: 50%; background: #fff6d6; box-shadow: 0 0 30px 8px rgba(255,246,214,.35); }
+  .scene .mist { position: absolute; left: -20%; right: -20%; bottom: 8%; height: 34%;
+    background: radial-gradient(ellipse at 30% 50%, rgba(220,235,240,.35), transparent 60%), radial-gradient(ellipse at 75% 60%, rgba(220,235,240,.28), transparent 60%);
+    animation: drift 9s ease-in-out infinite alternate; }
+  .scene.ghost .mist { background: radial-gradient(ellipse at 30% 50%, rgba(126,240,196,.25), transparent 60%), radial-gradient(ellipse at 75% 60%, rgba(126,240,196,.2), transparent 60%); }
+  @keyframes drift { from { transform: translateX(-6%); } to { transform: translateX(6%); } }
+  .scene .sparkle { position: absolute; font-size: 16px; animation: twinkle 2.2s ease-in-out infinite; }
+  @keyframes twinkle { 0%,100% { opacity: .15; } 50% { opacity: 1; } }
+
+  .content { padding: 20px clamp(16px, 4vw, 32px) 24px; }
+  .story { font-size: clamp(19px, 3.5vw, 22px); line-height: 1.6; margin: 0 0 20px; white-space: pre-line; }
+  .story strong { color: var(--red-dark); }
+
+  /* ---------- Buttons ---------- */
+  .choices { display: grid; gap: 12px; }
+  .choice {
+    font: inherit; font-size: clamp(17px, 3.3vw, 20px); font-weight: 800; text-align: left;
+    display: flex; align-items: center; gap: 12px; width: 100%;
+    padding: 13px 16px; min-height: 58px; cursor: pointer;
+    border: 3px solid #000; border-radius: 14px;
+    background: var(--red); color: #fff; box-shadow: 0 5px 0 #000;
+  }
+  .choice:nth-child(2) { background: var(--sea); }
+  .choice:nth-child(3) { background: #6b4aa8; }
+  .choice:nth-child(4) { background: #2f7d4f; }
+  .choice:nth-child(5) { background: #8a5a2b; }
+  .choice:active { transform: translateY(4px); box-shadow: 0 1px 0 #000; }
+  .choice .em { font-size: 1.45em; }
+  .choice .num { margin-left: auto; font-size: 13px; background: rgba(255,255,255,.2); border-radius: 8px; padding: 2px 8px; }
+  button:focus-visible { outline: 4px solid var(--gold); outline-offset: 3px; }
+
+  /* ---------- Chat ---------- */
+  .chat { display: flex; flex-direction: column; gap: 12px; margin-bottom: 18px; min-height: 120px; cursor: pointer; }
+  .msg { display: flex; gap: 10px; align-items: flex-end; max-width: 92%; animation: pop .3s ease; }
+  .msg.right { align-self: flex-end; flex-direction: row-reverse; }
+  .avatar { flex: 0 0 auto; width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; font-size: 26px; background: #fff; border: 3px solid #000; }
+  .bubble { padding: 10px 14px; border-radius: 16px; border: 3px solid #000; background: #fff; font-size: clamp(18px, 3.4vw, 21px); line-height: 1.45; }
+  .bubble .who { display: block; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: .6px; margin-bottom: 2px; opacity: .75; }
+  .msg.left .bubble { border-bottom-left-radius: 4px; }
+  .msg.right .bubble { border-bottom-right-radius: 4px; }
+  .msg.hero-a .bubble { background: #dcefff; }
+  .msg.hero-b .bubble { background: #ffe3d6; }
+  .msg.char-grim .bubble { background: #d9fff0; }
+  .msg.char-grim .avatar { background: #0d2f2a; }
+  .narr { align-self: center; text-align: center; font-style: italic; font-size: clamp(17px, 3.2vw, 19px); color: #5a4428; max-width: 90%; animation: pop .3s ease; }
+  .typing { align-self: flex-start; font-size: 26px; letter-spacing: 3px; color: #8a6a3a; animation: blink 1s infinite; padding-left: 58px; }
+  @keyframes blink { 50% { opacity: .3; } }
+  @keyframes pop { from { opacity: 0; transform: translateY(8px) scale(.97); } to { opacity: 1; transform: none; } }
+  .skip { display: block; margin: 0 0 14px auto; font: inherit; font-size: 14px; font-weight: 800; background: none; border: 0; color: #7a5a2a; cursor: pointer; text-decoration: underline; }
+
+  /* ---------- Map ---------- */
+  .maphead { padding: 14px clamp(14px, 3vw, 26px) 6px; display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; justify-content: space-between; }
+  .maphead h2 { font-family: "Pirata One", serif; font-weight: 400; font-size: clamp(26px, 5vw, 34px); margin: 0; }
+  .clock { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 16px; }
+  .pips { display: flex; gap: 5px; }
+  .pip { width: 26px; height: 26px; border-radius: 50%; border: 3px solid #000; background: var(--gold); display: grid; place-items: center; font-size: 14px; }
+  .pip.gone { background: #4a3a5a; }
+  .mapwrap { position: relative; margin: 6px clamp(10px, 2.5vw, 22px) 0; border: 3px solid #000; border-radius: 14px; overflow: hidden; }
+  .mapwrap svg { display: block; width: 100%; height: auto; }
+  .loc {
+    position: absolute; transform: translate(-50%, -50%);
+    font: inherit; font-weight: 800; font-size: clamp(12px, 2.4vw, 15px); cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    background: none; border: 0; color: #fff; text-shadow: 0 2px 0 #000, 0 0 6px #000;
+  }
+  .loc .pin { font-size: clamp(30px, 7vw, 48px); line-height: 1; filter: drop-shadow(0 4px 4px rgba(0,0,0,.6)); transition: transform .15s; animation: bob 2.6s ease-in-out infinite; }
+  .loc:hover .pin { transform: scale(1.12); }
+  .loc .tag { background: rgba(0,0,0,.55); padding: 3px 8px; border-radius: 8px; white-space: nowrap; }
+  .loc.done { cursor: default; }
+  .loc.done .pin { filter: grayscale(1) brightness(.7); animation: none; }
+  .loc.done .tag::after { content: " ✔"; color: var(--ghost); }
+  .boat { position: absolute; transform: translate(-50%, -50%); font-size: clamp(26px, 6vw, 38px); transition: left 1s ease, top 1s ease; pointer-events: none; filter: drop-shadow(0 3px 3px rgba(0,0,0,.6)); }
+  .bag { padding: 12px clamp(14px, 3vw, 26px) 4px; }
+  .bag h3 { margin: 0 0 6px; font-size: 16px; text-transform: uppercase; letter-spacing: 1px; }
+  .items { display: flex; flex-wrap: wrap; gap: 8px; }
+  .item { display: flex; align-items: center; gap: 6px; background: #fff; border: 2px solid #000; border-radius: 999px; padding: 4px 12px 4px 6px; font-weight: 800; font-size: 15px; animation: pop .4s ease; }
+  .item .ie { font-size: 22px; }
+  .maptip { padding: 6px clamp(14px, 3vw, 26px) 0; font-size: 18px; line-height: 1.5; }
+  .mapgo { padding: 12px clamp(14px, 3vw, 26px) 22px; }
+
+  /* ---------- Endings ---------- */
+  .ending-badge { text-align: center; margin: 0 0 14px; }
+  .ending-badge .label { font-size: 14px; letter-spacing: 3px; text-transform: uppercase; color: var(--red-dark); font-weight: 800; }
+  .ending-badge .title { font-family: "Pirata One", serif; font-size: clamp(32px, 7vw, 46px); margin: 2px 0 0; }
+  .new-flag { display: inline-block; margin-top: 6px; background: var(--gold); border: 2px solid #000; border-radius: 999px; padding: 4px 14px; font-weight: 800; animation: pop .5s ease; }
+
+  .shelf { margin-top: 14px; background: rgba(0,0,0,.35); border: 2px solid #000; border-radius: 14px; padding: 10px 14px; color: var(--paper); }
+  .shelf h2 { font-size: 16px; margin: 0 0 8px; display: flex; justify-content: space-between; text-transform: uppercase; letter-spacing: 1px; }
+  .slots { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+  .slot { aspect-ratio: 1; border-radius: 10px; display: grid; place-items: center; background: rgba(255,255,255,.08); border: 2px dashed rgba(255,255,255,.25); font-size: clamp(18px, 4.5vw, 28px); font-weight: 800; color: rgba(255,255,255,.4); }
+  .slot.found { background: var(--paper); border: 2px solid #000; color: var(--ink); }
+
+  /* ---------- Start ---------- */
+  .start { padding: 22px clamp(16px, 5vw, 40px) 28px; text-align: center; }
+  .start h2 { font-family: "Pirata One", serif; font-weight: 400; font-size: clamp(30px, 7vw, 44px); margin: 0 0 4px; }
+  .start p { font-size: 19px; margin: 0 0 18px; line-height: 1.5; }
+  .names { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-width: 480px; margin: 0 auto 16px; text-align: left; }
+  @media (max-width: 460px) { .names { grid-template-columns: 1fr; } }
+  .names label { font-weight: 800; font-size: 16px; }
+  .names input { font: inherit; font-size: 22px; font-weight: 700; width: 100%; margin-top: 4px; padding: 10px 12px; border-radius: 12px; border: 3px solid #000; background: #fff; }
+  .err { color: var(--red); font-weight: 800; min-height: 22px; margin: 0 0 6px; }
+  .bigbtn { font: inherit; font-size: 22px; font-weight: 800; cursor: pointer; padding: 13px 28px; border-radius: 999px; border: 3px solid #000; background: var(--red); color: #fff; box-shadow: 0 5px 0 #000; }
+  .bigbtn.alt { background: var(--paper); color: var(--ink); font-size: 17px; padding: 10px 18px; }
+  .bigbtn:active { transform: translateY(4px); box-shadow: 0 1px 0 #000; }
+  .reveal { display: grid; gap: 12px; margin: 6px auto 18px; max-width: 520px; }
+  .pname { background: #fff; border: 3px solid #000; border-radius: 14px; padding: 12px; animation: pop .5s ease; }
+  .pname .real { font-size: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; opacity: .6; }
+  .pname .pirate { font-family: "Pirata One", serif; font-size: clamp(28px, 6.5vw, 38px); line-height: 1.1; }
+  .pname.a .pirate { color: var(--hero-a); }
+  .pname.b .pirate { color: var(--hero-b); }
+  .row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <h1>☠️ The Curse of Captain Grimtide</h1>
+    <div class="tools">
+      <button class="tbtn" id="readBtn" aria-pressed="false">🔈 Read to me</button>
+      <button class="tbtn" id="backBtn">↩️ Back</button>
+      <button class="tbtn" id="homeBtn" aria-label="Start again">🏠</button>
+    </div>
+  </header>
+  <main class="book" id="book" aria-live="polite"></main>
+  <section class="shelf" aria-label="Endings found">
+    <h2><span>🏆 Endings found</span><span id="count">0 / 7</span></h2>
+    <div class="slots" id="slots"></div>
+  </section>
+</div>
+
+<script>
+/* =====================================================================
+   CHARACTERS — avatar, name, and read-aloud voice (pitch 0–2, rate)
+   ===================================================================== */
+const CHARS = {
+  n:        { name: "",                pitch: 1.0,  rate: 0.95 },
+  a:        { name: "{a}",             pitch: 1.35, rate: 1.0,  side: "right", cls: "hero-a", av: "🧒" },
+  b:        { name: "{b}",             pitch: 1.6,  rate: 1.05, side: "right", cls: "hero-b", av: "👦" },
+  feathers: { name: "Mister Feathers", pitch: 1.9,  rate: 1.15, av: "🦜" },
+  bones:    { name: "Bones McGee",     pitch: 0.7,  rate: 1.1,  av: "💀" },
+  ink:      { name: "Inkbeard",        pitch: 0.1,  rate: 0.75, av: "🦑" },
+  brine:    { name: "Old Mother Brine",pitch: 1.3,  rate: 0.8,  av: "🧙‍♀️" },
+  grim:     { name: "Captain Grimtide",pitch: 0.2,  rate: 0.72, av: "👻", cls: "char-grim" }
+};
+
+const ITEMS = {
+  coin:     { em: "🪙", name: "Cursed coin" },
+  musicbox: { em: "🎶", name: "Music box" },
+  kraken:   { em: "🦑", name: "Inkbeard (friend)" },
+  salt:     { em: "🧂", name: "Moonlight salt" },
+  choc:     { em: "🍫", name: "Chocolate coin" }
+};
+
+/* Places on the island map. x/y are % across the map picture. */
+const PLACES = [
+  { id: "skull", name: "Skull Rock Caves",    em: "💀", x: 20, y: 24, start: "skull1" },
+  { id: "reef",  name: "Kraken Reef",          em: "🐙", x: 76, y: 22, start: "reef1" },
+  { id: "light", name: "Witch's Lighthouse",   em: "🗼", x: 80, y: 74, start: "light1" },
+  { id: "alley", name: "Smugglers' Alley",     em: "🏮", x: 30, y: 74, start: "alley1" }
+];
+const PORT = { x: 46, y: 62 };
+const HOURS = 3; /* stops before midnight */
+
+/* =====================================================================
+   THE STORY
+   type: page (storybook), chat (message bubbles), map, ending
+   {a} and {b} become the pirate names.
+   choices: label, em, to; optional need (item), give (item), cost (extra hours)
+   ===================================================================== */
+const STORY = {
+  intro1: {
+    type: "page", scene: "dusk", art: ["🐟", "🪙", "⛵"],
+    text: "Gullwhistle Harbour smells of fish, tar and trouble.\n\n{a} and {b} are the cabin kids on a grumpy old fishing boat, and tonight's job is the worst job of all: gutting fish.\n\n{b} slices open a fat silver fish and... CLINK! Out rolls a gold coin, slimy and gleaming. On one side is a grinning skull. On the other is a name: GRIMTIDE.",
+    choices: [ { label: "Pocket the gold coin", em: "🪙", to: "intro2", give: "coin" } ]
+  },
+  intro2: {
+    type: "page", scene: "fog", art: ["🔔", "🌫️", "🏮"],
+    text: "As the sun sinks, a cold fog creeps across the harbour. Far out at sea, a bell begins to ring. Dong... dong... dong.\n\nOne by one, every lantern on the dock flickers out. The fishermen go pale. \"The Rattlebones,\" someone whispers. \"Grimtide's ghost ship!\"\n\n{a} throws the coin as far as they can. Plop. Then {b} feels something cold in their pocket.\n\nThe coin is back.",
+    choices: [
+      { label: "Run to the old parrot on the dock", em: "🦜", to: "feathers" },
+      { label: "Hide under a fishing net", em: "🕸️", to: "hide" }
+    ]
+  },
+  hide: {
+    type: "page", scene: "port", art: ["🕸️", "🐟", "👀"],
+    text: "Under the net it's dark, smelly and very wiggly. Something cold and slimy slaps {a} across the face.\n\nIt's... a fish. Just a fish. Phew.\n\nThen a croaky voice squawks from above: \"Hiding won't help ye, you pair of barnacles! Get over here!\"",
+    choices: [ { label: "Peek out", em: "👀", to: "feathers" } ]
+  },
+  feathers: {
+    type: "chat", scene: "port", art: ["🦜", "🗺️", "⚓"],
+    lines: [
+      ["feathers", "SQUAWK! You've got Grimtide's coin, haven't ye? I can smell the curse from here!"],
+      ["a", "It keeps coming back! What do we do?"],
+      ["feathers", "Captain Grimtide was the meanest ghost on the seven seas. I should know. I was his parrot. Brrrk."],
+      ["feathers", "At midnight his ship comes for that coin. Whoever holds it joins his skeleton crew. FOREVER."],
+      ["b", "Forever?! I haven't even had dinner!"],
+      ["feathers", "Then listen close. This island is full of things that can help ye. Take this map, take that rowboat, and don't dawdle."],
+      ["feathers", "You've got time for THREE stops before midnight. Choose wisely!"]
+    ],
+    choices: [ { label: "Grab the map and row!", em: "🚣", to: "map" } ]
+  },
+
+  map: { type: "map" },
+
+  /* ---------- Skull Rock Caves ---------- */
+  skull1: {
+    type: "page", scene: "cave", art: ["💀", "🔥", "🦴"],
+    text: "Skull Rock is a giant stone skull poking out of the sea. You row straight into its gaping mouth.\n\nInside, torches flicker and something rattles in the dark. Clickety-clack. Clickety-clack.\n\nA whole crew of skeletons is huddled in the middle of the cave... and they're shaking.",
+    choices: [
+      { label: "Sneak past them", em: "🤫", to: "skullSneak" },
+      { label: "Say hello", em: "👋", to: "skullChat" }
+    ]
+  },
+  skullSneak: {
+    type: "page", scene: "cave", art: ["🦶", "💥", "💀"],
+    text: "You tiptoe past ever so quietly... and {a} steps right on a skeleton's toe.\n\nCRACK!\n\n\"OWWWW!\" The toe bone goes flying across the cave and lands in a puddle. Every skull in the cave turns to look at you.",
+    choices: [ { label: "Uh oh. Say hello now", em: "😬", to: "skullChat" } ]
+  },
+  skullChat: {
+    type: "chat", scene: "cave", art: ["💀", "🕯️", "💀"],
+    lines: [
+      ["bones", "W-w-who goes there? Are you GHOSTS?"],
+      ["b", "We're kids. Aren't YOU meant to be the scary ones?"],
+      ["bones", "We're skeletons! We're terrified of the dark! Our torches are running out, and we haven't got any eyeballs!"],
+      ["bones", "Cheer us up, and we'll give you a treasure. Something Captain Grimtide left behind..."]
+    ],
+    choices: [
+      { label: "Tell them a joke", em: "😂", to: "skullJoke", give: "musicbox" },
+      { label: "Give them your boat lantern", em: "🏮", to: "skullLantern", give: "musicbox" }
+    ]
+  },
+  skullJoke: {
+    type: "page", scene: "cave", art: ["🎶", "💀", "😂"],
+    text: "{a} says, \"Why didn't the skeleton go to the party?\"\n\n\"WHY?\" rattle the skeletons.\n\n{b} grins. \"Because he had no BODY to go with!\"\n\nThe skeletons laugh so hard that one of them falls to pieces. They put him back together, mostly right. (His foot is on his head.)\n\nBones McGee hands you a little silver music box. \"Grimtide used to cry when he heard this,\" he whispers. \"Don't tell him I said that.\"",
+    choices: [ { label: "Back to the map", em: "🗺️", to: "map" } ]
+  },
+  skullLantern: {
+    type: "page", scene: "cave", art: ["🎶", "🏮", "💀"],
+    text: "The skeletons cheer and do a clattery jig around your lantern.\n\nBones McGee hands you a little silver music box. \"Grimtide used to cry when he heard this,\" he whispers.\n\nBut now your boat has no light. Rowing in the pitch dark is sloooow, and you bump into every rock on the way out.\n\nYou lose an extra hour!",
+    choices: [ { label: "Back to the map", em: "🗺️", to: "map", cost: 1 } ]
+  },
+
+  /* ---------- Kraken Reef ---------- */
+  reef1: {
+    type: "page", scene: "sea", art: ["🌊", "🦑", "🪨"],
+    text: "The water around Kraken Reef is black and still. Wrecked ships poke out of the rocks like broken teeth.\n\nThen the sea begins to bubble. Blub. Blub. BLUB.\n\nA tentacle as thick as a tree trunk rises out of the water, drips all over {a}... and wraps around your boat!",
+    choices: [
+      { label: "Row for your lives!", em: "🚣", to: "endRock" },
+      { label: "Tickle the tentacle", em: "🪶", to: "reefChat", give: "kraken" }
+    ]
+  },
+  reefChat: {
+    type: "chat", scene: "sea", art: ["🦑", "🌊", "🚣"],
+    lines: [
+      ["ink", "HO HO HO HEE HEE! STOP! I'm VERY ticklish!"],
+      ["a", "Then let go of our boat!"],
+      ["ink", "Sorry, sorry. I'm Inkbeard. I only grab boats because I'm lonely. Nobody ever visits a kraken."],
+      ["b", "We'll be your friends! But we need help. Captain Grimtide is coming for us at midnight."],
+      ["ink", "GRIMTIDE?! He calls me 'Squidface'. I HATE that. When he comes, shout my name, and I'll be there."]
+    ],
+    choices: [ { label: "Wave goodbye and row back", em: "🗺️", to: "map" } ]
+  },
+
+  /* ---------- Witch's Lighthouse ---------- */
+  light1: {
+    type: "page", scene: "light", art: ["🗼", "🐸", "🚪"],
+    text: "The old lighthouse leans over the cliff, as if it's trying to read something in the sea. A spooky green light glows in the top window.\n\nOn the door is a sign:\n\nKNOCK THREE TIMES.\nNO SALESMEN. NO GHOSTS. NO MONKEYS.",
+    choices: [
+      { label: "Knock three times", em: "✊", to: "lightChat" },
+      { label: "Knock FOUR times, just to see", em: "🤪", to: "lightFrog" }
+    ]
+  },
+  lightFrog: {
+    type: "page", scene: "light", art: ["🐸", "⚡", "🧙‍♀️"],
+    text: "KNOCK. KNOCK. KNOCK. KNOCK.\n\nThe door flies open. \"Can't you COUNT?!\" screeches a voice.\n\nZAP! {a} is suddenly a small green frog.\n\n\"Ribbit,\" says {a}, very crossly.\n\n\"Oh, fine,\" sighs the witch. ZAP! {a} is back to normal. Mostly. Still a bit slimy.",
+    choices: [
+      { label: "Say sorry", em: "🙏", to: "lightChat" },
+      { label: "Ask to be turned into a frog too", em: "🐸", to: "endFrog" }
+    ]
+  },
+  lightChat: {
+    type: "chat", scene: "light", art: ["🧙‍♀️", "🧂", "🐈‍⬛"],
+    lines: [
+      ["brine", "Well, well. Two little sea-rats with a cursed coin. I can smell it from here. Phwoar."],
+      ["brine", "I have Moonlight Salt. Throw it on a ghost and he turns solid. Solid enough to bonk on the nose."],
+      ["a", "Yes please!"],
+      ["brine", "Nothing's free, dearie. Answer my riddle. I have a head and a tail, but no body. What am I?"]
+    ],
+    choices: [
+      { label: "A coin!", em: "🪙", to: "lightRight", give: "salt" },
+      { label: "A snake!", em: "🐍", to: "lightWrong" }
+    ]
+  },
+  lightRight: {
+    type: "chat", scene: "light", art: ["🧂", "✨", "🧙‍♀️"],
+    lines: [
+      ["brine", "Hmph. Clever little barnacles."],
+      ["n", "She hands you a jar of glittering, glowing salt."],
+      ["brine", "Throw it, don't eat it. And DON'T sneeze on it. Now shoo!"]
+    ],
+    choices: [ { label: "Back to the map", em: "🗺️", to: "map" } ]
+  },
+  lightWrong: {
+    type: "chat", scene: "light", art: ["🐍", "🚪", "🧙‍♀️"],
+    lines: [
+      ["brine", "WRONG! A snake has a head and a tail AND a body. It's all body, you silly sprats!"],
+      ["n", "SLAM! The door shuts in your faces."],
+      ["b", "Oops. That was a whole hour wasted."]
+    ],
+    choices: [ { label: "Back to the map", em: "🗺️", to: "map" } ]
+  },
+
+  /* ---------- Smugglers' Alley ---------- */
+  alley1: {
+    type: "page", scene: "alley", art: ["🐒", "🪙", "🏮"],
+    text: "Back in Gullwhistle, Smugglers' Alley is packed with lanterns, stalls and shady pirates selling shady things.\n\n\"Lucky eyeballs! Pickled rats! Gold chocolate coins!\" shouts a lolly-seller.\n\nSuddenly a little monkey in a waistcoat drops from a roof, snatches the cursed coin out of {b}'s pocket, and scampers away!",
+    choices: [
+      { label: "Chase it over the rooftops", em: "🏃", to: "alleyRoof", give: "choc" },
+      { label: "Buy a banana and wait", em: "🍌", to: "alleyBanana", give: "choc" }
+    ]
+  },
+  alleyRoof: {
+    type: "page", scene: "alley", art: ["🍫", "🐒", "💥"],
+    text: "You climb, leap and slide across the slippery rooftops. {a} grabs the monkey's tail. {b} grabs the coin. And all three of you crash through a roof...\n\n...straight into the lolly-seller's stall. CRASH! Chocolate coins everywhere!\n\nThe lolly-seller laughs so hard she lets you keep one: a gold-wrapped chocolate coin.\n\nHmm. It looks EXACTLY like Grimtide's coin...",
+    choices: [ { label: "Back to the map", em: "🗺️", to: "map" } ]
+  },
+  alleyBanana: {
+    type: "page", scene: "alley", art: ["🍌", "🐒", "🍫"],
+    text: "The monkey sniffs the air. It can't resist. It creeps back down, swaps the cursed coin for the banana, and eats it in three bites, peel and all.\n\nThe lolly-seller claps. \"Smart thinking!\" She flips you a gold-wrapped chocolate coin.\n\nHmm. It looks EXACTLY like Grimtide's coin...",
+    choices: [ { label: "Back to the map", em: "🗺️", to: "map" } ]
+  },
+
+  /* ---------- Midnight ---------- */
+  midnight: {
+    type: "page", scene: "ghost", art: ["🏴‍☠️", "💀", "💀"],
+    text: "DONG. DONG. DONG.\n\nThe fog splits open, and there it is: the Rattlebones. Ragged green sails. Glowing portholes. A crew of skeletons grinning over the rails.\n\nA plank slides down onto your little boat. Something stomps down it. STOMP. STOMP. STOMP.\n\nCaptain Grimtide is see-through, seven feet tall, and his beard is full of crabs.",
+    choices: [ { label: "Face him", em: "😤", to: "grimChat" } ]
+  },
+  grimChat: {
+    type: "chat", scene: "ghost", art: ["👻", "⚔️", "🦀"],
+    lines: [
+      ["grim", "Arrrrr. Somebody... has... MY coin."],
+      ["grim", "Hand it over, little sea-rats, and come aboard. My crew needs new deck-scrubbers. For ever and EVER and EVER."],
+      ["a", "We're not scrubbing your smelly decks!"],
+      ["grim", "Then what are ye going to do about it? HAR HAR HAR!"]
+    ],
+    choices: [
+      { label: "Play the music box", em: "🎶", to: "endMusic", need: "musicbox" },
+      { label: "Shout for Inkbeard!", em: "🦑", to: "endKraken", need: "kraken" },
+      { label: "Throw the Moonlight Salt", em: "🧂", to: "saltFight", need: "salt" },
+      { label: "Hand over the chocolate coin", em: "🍫", to: "endChoc", need: "choc" },
+      { label: "Run around the deck screaming", em: "😱", to: "endScrub" }
+    ]
+  },
+  saltFight: {
+    type: "page", scene: "ghost", art: ["🧂", "👻", "🍳"],
+    text: "You fling the Moonlight Salt. It sparkles all over Grimtide. He sneezes. ACHOO!\n\nThen he looks down at his hands. They're not see-through any more. They're SOLID.\n\n\"Uh oh,\" says Grimtide.\n\n{a} grabs a mop. {b} grabs a frying pan. Grimtide draws his rusty cutlass.",
+    choices: [ { label: "CHARGE!", em: "⚔️", to: "endDuel" } ]
+  },
+
+  /* ---------- Endings ---------- */
+  endMusic: {
+    type: "ending", scene: "dawn", art: ["🎶", "👻", "✨"],
+    ending: { id: "music", title: "The Lullaby", em: "🎶" },
+    text: "{b} winds up the little music box. Plink... plink... plonk...\n\nA sweet, wobbly tune floats over the water. Grimtide freezes. His crabby beard trembles.\n\n\"Me mum... me mum used to play that song...\"\n\nThen the scariest ghost on the seven seas bursts into tears. Big, wet, see-through tears. As the music plays, the curse lifts. The coin crumbles into gold dust, and the Rattlebones sails up, up, up into the stars.\n\nMister Feathers lands on {a}'s shoulder. \"Not bad,\" he squawks. \"Not bad at all.\""
+  },
+  endKraken: {
+    type: "ending", scene: "sea", art: ["🦑", "🏴‍☠️", "🌊"],
+    ending: { id: "kraken", title: "Kraken Attack", em: "🦑" },
+    text: "{a} cups their hands and yells, \"INKBEEEEEARD!\"\n\nThe sea goes very, very quiet.\n\nThen... WHOOOSH! Eight giant tentacles burst out of the water and wrap around the Rattlebones.\n\n\"WHO'S SQUIDFACE NOW?\" roars Inkbeard.\n\nWith one mighty tug, he drags the whole ghost ship down to the bottom of the sea. Bubble... bubble... gone. The cursed coin turns to sand in {b}'s hand.\n\nInkbeard pops back up and waves a tentacle. \"Same time next week?\""
+  },
+  endChoc: {
+    type: "ending", scene: "ghost", art: ["🍫", "👻", "😋"],
+    ending: { id: "choc", title: "The Chocolate Trick", em: "🍫" },
+    text: "{b} holds out the gold-wrapped chocolate coin. \"Here's your coin, Captain.\"\n\nGrimtide snatches it and bites it. Crunch. His ghostly eyes go wide.\n\n\"It's... it's... CHOCOLATE!\"\n\nHe hasn't tasted chocolate in three hundred years. \"MORE!\" he roars. \"Full sail to the lolly shop!\" And off goes the Rattlebones, forgetting all about you.\n\nWhile nobody's looking, {a} drops the real cursed coin over the side. This time, it doesn't come back."
+  },
+  endDuel: {
+    type: "ending", scene: "ghost", art: ["⚔️", "🍳", "🧹"],
+    ending: { id: "duel", title: "Duel at Midnight", em: "⚔️" },
+    text: "CLANG! Cutlass meets frying pan!\n\nGrimtide swings. {a} ducks. {b} slips on the wet deck and slides right between the captain's legs. \"Oi!\"\n\nGrimtide spins around, gets tangled in his own crabby beard, and... BONK! {a} bops him on the nose with the mop.\n\nThe captain topples over the rail. SPLOSH! The salt wears off, he goes see-through again, and sinks to the bottom of the sea, grumbling.\n\nThe skeleton crew throw their hats in the air. \"NEW CAPTAINS!\" they cheer. \"NEW CAPTAINS!\""
+  },
+  endScrub: {
+    type: "ending", scene: "dawn", art: ["🧽", "👻", "🍳"],
+    ending: { id: "scrub", title: "Saved by Mum", em: "🧽" },
+    text: "You run around the deck screaming. Grimtide runs around after you. The skeletons run around after him. Round and round and round, until everyone is too dizzy to stand.\n\n\"Fine,\" puffs Grimtide. \"Now SCRUB.\"\n\nSo you scrub, and scrub, and scrub all night long... until, as the sun comes up, a voice rings out across the water:\n\n\"BREAKFAAAAST!\"\n\nGrimtide goes pale. (Paler.) \"Is that... your MOTHER?\"\n\nEven ghosts are scared of mums. He lets you go. Just this once."
+  },
+  endFrog: {
+    type: "ending", scene: "light", art: ["🐸", "🐸", "👻"],
+    ending: { id: "frog", title: "Two Frogs and a Ghost", em: "🐸" },
+    text: "\"You WANT to be a frog?\" The witch shrugs. \"Suit yourselves.\" ZAP! ZAP!\n\nNow there are two small green frogs on the doorstep. And frogs don't have pockets. The cursed coin drops, clinks down the cliff, and lands right in a seagull's nest.\n\nAt midnight the Rattlebones arrives. Grimtide searches everywhere for the cursed kids. All he finds are two frogs, who say \"ribbit\" in a very innocent way.\n\nThe next morning, the seagull is wearing a skull-coin necklace and looking VERY nervous. And the frogs? They hop home in time for breakfast, and turn back into kids just before Mum sees."
+  },
+  endRock: {
+    type: "ending", scene: "sea", art: ["🪨", "🦑", "🐦"],
+    ending: { id: "rock", title: "Stuck on a Rock", em: "🪨" },
+    text: "You row so fast the oars start to smoke. But the tentacle simply lifts your whole boat out of the water and plonks it on top of the tallest, pointiest rock.\n\n\"MINE,\" booms a voice from the deep.\n\nYou spend the rest of the night stuck on the rock, waving at seagulls. At midnight the Rattlebones sails past, and Grimtide hooks his coin out of your pocket with a fishing rod. \"Har har! Ye can keep the rock!\"\n\nNobody joins his crew. But Mum is NOT happy about the soggy pyjamas."
+  }
+};
+
+const ENDINGS = Object.values(STORY).filter(p => p.ending).map(p => p.ending.id);
+
+/* =====================================================================
+   PIRATE NAMES
+   ===================================================================== */
+const PREFIX = ["Barnacle", "Salty", "Stinky-Boots", "Cannonball", "Squid-Lips", "Two-Socks", "Rusty-Hook", "Bilge-Rat",
+  "Thunderpants", "Sharkbait", "Pickle-Beard", "Scurvy", "One-Eye", "Peg-Leg", "Mad-Dog", "Seaweed", "Gunpowder", "Crabclaw"];
+const SUFFIX = ["the Bold", "the Sneaky", "the Terrible", "of the Seven Snacks", "the Unwashed", "the Fearless",
+  "Saltbeard", "the Loud", "the Wobbly", "Stormbringer", "the Slippery", "Bonecrusher", "the Smelly", "Goldtooth"];
+
+function hash(s) { let h = 7; for (const c of s.toLowerCase()) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h; }
+function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+function makeNames(realA, realB, roll) {
+  const ia = (hash(realA) + roll * 5) % PREFIX.length;
+  let ib = (hash(realB) + roll * 7 + 3) % PREFIX.length;
+  if (ib === ia) ib = (ib + 1) % PREFIX.length;
+  const sa = (hash(realA + "x") + roll * 3) % SUFFIX.length;
+  let sb = (hash(realB + "y") + roll * 2 + 1) % SUFFIX.length;
+  if (sb === sa) sb = (sb + 1) % SUFFIX.length;
+  return {
+    a: PREFIX[ia] + " " + cap(realA), aFull: PREFIX[ia] + " " + cap(realA) + " " + SUFFIX[sa],
+    b: PREFIX[ib] + " " + cap(realB), bFull: PREFIX[ib] + " " + cap(realB) + " " + SUFFIX[sb]
+  };
+}
+
+/* =====================================================================
+   ENGINE
+   ===================================================================== */
+const store = {
+  get(k, d) { try { const v = localStorage.getItem("grimtide:" + k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem("grimtide:" + k, JSON.stringify(v)); } catch (e) {} }
+};
+
+let S = { a: "", b: "", node: null, items: [], visited: [], hours: 0, lastPlace: null, history: [],
+          found: store.get("found", []), reading: store.get("reading", false), roll: 0 };
+let timers = [];
+
+const book = document.getElementById("book");
+const readBtn = document.getElementById("readBtn");
+const backBtn = document.getElementById("backBtn");
+const homeBtn = document.getElementById("homeBtn");
+
+const fill = t => t.replace(/\{a\}/g, S.a).replace(/\{b\}/g, S.b);
+function el(tag, cls, text) { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
+function clearTimers() { timers.forEach(clearTimeout); timers = []; }
+
+/* ---------- Read aloud ---------- */
+let voice = null;
+function pickVoice() {
+  try {
+    const vs = window.speechSynthesis.getVoices();
+    voice = vs.find(v => /en-AU/i.test(v.lang)) || vs.find(v => /en-GB/i.test(v.lang)) || vs.find(v => /^en/i.test(v.lang)) || null;
+  } catch (e) {}
+}
+try { pickVoice(); window.speechSynthesis.onvoiceschanged = pickVoice; } catch (e) {}
+function stopSpeech() { try { window.speechSynthesis.cancel(); } catch (e) {} }
+function say(parts) { /* parts: [[speakerKey, text], ...] */
+  stopSpeech();
+  if (!S.reading) return;
+  try {
+    parts.forEach(([who, text]) => {
+      const c = CHARS[who] || CHARS.n;
+      const u = new SpeechSynthesisUtterance(text.replace(/[\u{1F300}-\u{1FAFF}☀-➿️‍]/gu, ""));
+      u.pitch = c.pitch; u.rate = c.rate; if (voice) u.voice = voice;
+      window.speechSynthesis.speak(u);
+    });
+  } catch (e) {}
+}
+function choiceSpeech(list) {
+  return list.length ? [["n", "What will you do? " + list.map((c, i) => (i + 1) + ". " + c.label + ".").join(" ")]] : [];
+}
+
+/* ---------- Scenes ---------- */
+const SPOTS = [[17, 32], [83, 60], [13, 72], [86, 26]];
+function drawScene(scene, art) {
+  const s = el("div", "scene " + scene);
+  if (["dusk", "port", "sea", "alley", "fog"].includes(scene)) s.appendChild(el("div", "moon"));
+  art.forEach((emoji, i) => {
+    const a = el("div", "art " + (i === 0 ? "main" : "side"), emoji);
+    a.setAttribute("aria-hidden", "true");
+    if (i > 0) { const [x, y] = SPOTS[(i - 1) % SPOTS.length]; a.style.left = x + "%"; a.style.top = y + "%"; a.style.marginLeft = "-0.5em"; a.style.animationDelay = (i * .7) + "s"; }
+    s.appendChild(a);
+  });
+  if (["fog", "ghost", "sea", "port", "light"].includes(scene)) s.appendChild(el("div", "mist"));
+  if (["ghost", "cave", "light", "dawn"].includes(scene)) {
+    for (let i = 0; i < 6; i++) { const sp = el("div", "sparkle", scene === "ghost" ? "✦" : "✨"); sp.style.color = "#7ef0c4"; sp.style.left = (6 + Math.random() * 88) + "%"; sp.style.top = (6 + Math.random() * 70) + "%"; sp.style.animationDelay = (Math.random() * 2) + "s"; sp.setAttribute("aria-hidden", "true"); s.appendChild(sp); }
+  }
+  return s;
+}
+
+/* ---------- Navigation ---------- */
+function snapshot() { return { node: S.node, items: S.items.slice(), visited: S.visited.slice(), hours: S.hours, lastPlace: S.lastPlace }; }
+function goTo(id, opts = {}) {
+  if (S.node && !opts.noHistory) S.history.push(snapshot());
+  if (opts.give && !S.items.includes(opts.give)) S.items.push(opts.give);
+  if (opts.cost) S.hours += opts.cost;
+  if (id === "map" && S.hours >= HOURS) id = "midnight";
+  S.node = id;
+  render();
+}
+function enterPlace(p) {
+  S.history.push(snapshot());
+  S.visited.push(p.id); S.hours += 1; S.lastPlace = p.id;
+  S.node = p.start; render();
+}
+
+function render() {
+  clearTimers(); stopSpeech();
+  const node = STORY[S.node];
+  book.innerHTML = "";
+  if (node.type === "map") renderMap();
+  else if (node.type === "chat") renderChat(node);
+  else renderPage(node);
+  backBtn.disabled = S.history.length === 0;
+  drawShelf();
+  try { window.scrollTo({ top: 0, behavior: "smooth" }); } catch (e) {}
+}
+
+function makeChoices(node) {
+  const box = el("div", "choices");
+  const list = (node.choices || []).filter(c => !c.need || S.items.includes(c.need));
+  list.forEach((c, i) => {
+    const b = el("button", "choice"); b.type = "button";
+    b.appendChild(el("span", "em", c.em)); b.appendChild(el("span", null, c.label));
+    const n = el("span", "num", String(i + 1)); n.setAttribute("aria-hidden", "true"); b.appendChild(n);
+    b.addEventListener("click", () => c.action ? c.action() : goTo(c.to, { give: c.give, cost: c.cost }));
+    box.appendChild(b);
+  });
+  return { box, list };
+}
+
+function renderPage(node) {
+  const wrap = el("div", "page");
+  wrap.appendChild(drawScene(node.scene, node.art));
+  const content = el("div", "content");
+  let speech = [];
+  if (node.type === "ending") {
+    const isNew = !S.found.includes(node.ending.id);
+    if (isNew) { S.found.push(node.ending.id); store.set("found", S.found); }
+    const badge = el("div", "ending-badge");
+    badge.appendChild(el("div", "label", "The End"));
+    badge.appendChild(el("div", "title", node.ending.em + " " + node.ending.title));
+    if (isNew) badge.appendChild(el("div", "new-flag", "⭐ New ending found!"));
+    content.appendChild(badge);
+    speech.push(["n", "The end. " + node.ending.title + "."]);
+    node = Object.assign({}, node, { choices: [
+      { label: "Play again (same pirates)", em: "🔄", action: () => newGame(false) },
+      { label: "New pirate names", em: "✏️", action: showStart }
+    ]});
+  }
+  const text = fill(node.text);
+  content.appendChild(el("p", "story", text));
+  const { box, list } = makeChoices(node);
+  content.appendChild(box);
+  wrap.appendChild(content);
+  book.appendChild(wrap);
+  speech.push(["n", text]);
+  if (node.type !== "ending") speech = speech.concat(choiceSpeech(list));
+  say(speech);
+}
+
+function renderChat(node) {
+  const wrap = el("div", "page");
+  wrap.appendChild(drawScene(node.scene, node.art));
+  const content = el("div", "content");
+  const chat = el("div", "chat");
+  const skip = el("button", "skip", "Show all ⏩"); skip.type = "button";
+  content.appendChild(skip);
+  content.appendChild(chat);
+  const { box, list } = makeChoices(node);
+  box.style.visibility = "hidden";
+  content.appendChild(box);
+  wrap.appendChild(content);
+  book.appendChild(wrap);
+
+  const lines = node.lines.map(([who, t]) => [who, fill(t)]);
+  let shown = 0, typing = null;
+  function addLine(i) {
+    if (typing) { typing.remove(); typing = null; }
+    const [who, text] = lines[i];
+    const c = CHARS[who] || CHARS.n;
+    if (who === "n") { chat.appendChild(el("div", "narr", text)); return; }
+    const m = el("div", "msg " + (c.side === "right" ? "right " : "left ") + (c.cls || ""));
+    m.appendChild(el("div", "avatar", c.av));
+    const bub = el("div", "bubble");
+    bub.appendChild(el("span", "who", fill(c.name)));
+    bub.appendChild(document.createTextNode(text));
+    m.appendChild(bub);
+    chat.appendChild(m);
+  }
+  function finish() {
+    clearTimers();
+    while (shown < lines.length) addLine(shown++);
+    if (typing) { typing.remove(); typing = null; }
+    box.style.visibility = "visible"; skip.style.display = "none";
+  }
+  function step() {
+    if (shown >= lines.length) { finish(); return; }
+    addLine(shown++);
+    if (shown >= lines.length) { finish(); return; }
+    const next = lines[shown];
+    if (next[0] !== "n" && (CHARS[next[0]] || {}).side !== "right") { typing = el("div", "typing", "•••"); chat.appendChild(typing); }
+    const wait = Math.min(3400, 900 + lines[shown - 1][1].length * (S.reading ? 55 : 28));
+    timers.push(setTimeout(step, wait));
+  }
+  skip.addEventListener("click", finish);
+  chat.addEventListener("click", finish);
+  step();
+  say(lines.concat(choiceSpeech(list)));
+}
+
+/* ---------- Map ---------- */
+function mapSVG() {
+  return `<svg viewBox="0 0 800 460" role="img" aria-label="Treasure map of the island">
+    <rect width="800" height="460" fill="#123a55"/>
+    <g opacity=".25" stroke="#7fc0e0" stroke-width="2" fill="none">
+      <path d="M40 60 q20 -10 40 0 t40 0"/><path d="M600 120 q20 -10 40 0 t40 0"/><path d="M90 300 q20 -10 40 0 t40 0"/>
+      <path d="M520 400 q20 -10 40 0 t40 0"/><path d="M300 30 q20 -10 40 0 t40 0"/><path d="M680 300 q20 -10 40 0 t40 0"/>
+    </g>
+    <circle cx="730" cy="56" r="26" fill="#fff6d6"/><circle cx="742" cy="48" r="24" fill="#123a55"/>
+    <path d="M250 250 C230 180 300 140 380 150 C470 160 520 200 560 250 C600 300 640 360 600 400 C540 440 420 420 330 410 C250 400 200 360 210 310 C215 285 260 280 250 250 Z" fill="#d9b874" stroke="#000" stroke-width="4"/>
+    <path d="M300 230 C320 200 380 190 420 210 C450 225 470 260 460 290 C440 330 380 340 340 320 C300 300 285 260 300 230 Z" fill="#7aa35a" opacity=".85"/>
+    <path d="M360 250 l20 -34 l20 34 z M395 262 l16 -28 l16 28 z" fill="#5a4a3a" stroke="#000" stroke-width="2"/>
+    <path d="M120 90 C110 60 160 45 190 60 C220 75 215 120 185 130 C150 140 125 120 120 90 Z" fill="#9a9590" stroke="#000" stroke-width="4"/>
+    <circle cx="150" cy="88" r="9" fill="#000"/><circle cx="180" cy="86" r="9" fill="#000"/>
+    <g fill="#5b5550" stroke="#000" stroke-width="3">
+      <path d="M560 80 l18 -30 l16 30 z"/><path d="M600 95 l14 -24 l14 24 z"/><path d="M640 70 l16 -28 l14 28 z"/><path d="M590 125 l12 -20 l12 20 z"/>
+    </g>
+    <path d="M610 330 C640 300 700 300 720 330 C740 360 720 400 680 405 C640 410 600 380 610 330 Z" fill="#c9a865" stroke="#000" stroke-width="4"/>
+    <g stroke="#3a2a1a" stroke-width="3" stroke-dasharray="2 10" stroke-linecap="round" fill="none" opacity=".75">
+      <path d="M368 285 C320 240 220 180 160 130"/><path d="M368 285 C450 220 540 160 600 120"/>
+      <path d="M368 285 C450 330 560 360 640 345"/><path d="M368 285 C320 320 270 330 240 340"/>
+    </g>
+    <text x="400" y="445" text-anchor="middle" font-family="Pirata One, serif" font-size="26" fill="#f6ead0" opacity=".8">Isle of Gullwhistle</text>
+    <g opacity=".55" fill="#d8f5ff"><ellipse cx="770" cy="230" rx="60" ry="18"/><ellipse cx="760" cy="255" rx="45" ry="12"/></g>
+  </svg>`;
+}
+
+function renderMap() {
+  const wrap = el("div", "page");
+  const left = HOURS - S.hours;
+  const head = el("div", "maphead");
+  head.appendChild(el("h2", null, "🗺️ The Island Map"));
+  const clock = el("div", "clock");
+  clock.appendChild(el("span", null, "🌙"));
+  const pips = el("div", "pips");
+  for (let i = 0; i < HOURS; i++) { const p = el("div", "pip" + (i < S.hours ? " gone" : ""), i < S.hours ? "" : "⏳"); pips.appendChild(p); }
+  clock.appendChild(pips);
+  clock.appendChild(el("span", null, left === 1 ? "1 hour to midnight!" : left + " hours to midnight"));
+  head.appendChild(clock);
+  wrap.appendChild(head);
+
+  const mw = el("div", "mapwrap");
+  mw.innerHTML = mapSVG();
+  PLACES.forEach(p => {
+    const done = S.visited.includes(p.id);
+    const b = el("button", "loc" + (done ? " done" : "")); b.type = "button";
+    b.style.left = p.x + "%"; b.style.top = p.y + "%";
+    b.appendChild(el("span", "pin", p.em)); b.appendChild(el("span", "tag", p.name));
+    b.setAttribute("aria-label", p.name + (done ? " (already visited)" : ""));
+    if (!done) b.addEventListener("click", () => enterPlace(p));
+    mw.appendChild(b);
+  });
+  const here = S.lastPlace ? PLACES.find(p => p.id === S.lastPlace) : PORT;
+  const boat = el("div", "boat", "🚣"); boat.style.left = here.x + "%"; boat.style.top = (here.y + 9) + "%";
+  mw.appendChild(boat);
+  wrap.appendChild(mw);
+
+  const tip = el("p", "maptip");
+  const tipText = S.visited.length === 0
+    ? "The moon is rising. Where will {a} and {b} row first? Tap a place on the map."
+    : left === 1 ? "The bell is ringing louder. Time for ONE more stop... or sail out to face Grimtide now!"
+    : "The fog is getting thicker. Where to next?";
+  tip.textContent = fill(tipText);
+  wrap.appendChild(tip);
+
+  const bag = el("div", "bag");
+  bag.appendChild(el("h3", null, "🎒 Your bag"));
+  const items = el("div", "items");
+  S.items.forEach(k => { const it = el("div", "item"); it.appendChild(el("span", "ie", ITEMS[k].em)); it.appendChild(el("span", null, ITEMS[k].name)); items.appendChild(it); });
+  bag.appendChild(items);
+  wrap.appendChild(bag);
+
+  const go = el("div", "mapgo");
+  const b = el("button", "choice"); b.type = "button";
+  b.style.background = "#0d2f2a";
+  b.appendChild(el("span", "em", "🏴‍☠️")); b.appendChild(el("span", null, "Sail out to face Grimtide now"));
+  b.addEventListener("click", () => goTo("midnight"));
+  go.appendChild(b);
+  wrap.appendChild(go);
+  book.appendChild(wrap);
+
+  const open = PLACES.filter(p => !S.visited.includes(p.id)).map(p => p.name).join(", ");
+  say([["n", fill(tipText) + " " + (left === 1 ? "One hour" : left + " hours") + " until midnight. You can go to: " + open + "."]]);
+}
+
+/* ---------- Start screen ---------- */
+function showStart() {
+  clearTimers(); stopSpeech();
+  S.node = null; S.history = [];
+  book.innerHTML = "";
+  const wrap = el("div", "page");
+  wrap.appendChild(drawScene("ghost", ["🏴‍☠️", "🪙", "💀", "🦜"]));
+  const box = el("div", "start");
+  box.appendChild(el("h2", null, "Who dares sail tonight?"));
+  box.appendChild(el("p", null, "Type your first names and we'll turn you into proper pirates. Then break the curse before midnight! There are 7 endings to find."));
+  const form = el("form");
+  const names = el("div", "names");
+  const saved = store.get("names", { a: "", b: "" });
+  [["a", "Pirate 1"], ["b", "Pirate 2"]].forEach(([k, label]) => {
+    const l = el("label", null, label);
+    const inp = document.createElement("input");
+    inp.id = "n" + k; inp.maxLength = 12; inp.autocomplete = "off"; inp.value = saved[k] || "";
+    inp.placeholder = k === "a" ? "Sam" : "Max";
+    inp.addEventListener("input", () => { err.textContent = ""; });
+    l.appendChild(inp); names.appendChild(l);
+  });
+  form.appendChild(names);
+  const err = el("p", "err", "");
+  form.appendChild(err);
+  const go = el("button", "bigbtn", "Make us pirates! 🏴‍☠️"); go.type = "submit";
+  form.appendChild(go);
+  form.addEventListener("submit", e => {
+    e.preventDefault();
+    const ra = document.getElementById("na").value.trim().replace(/[^\p{L}\-' ]/gu, "");
+    const rb = document.getElementById("nb").value.trim().replace(/[^\p{L}\-' ]/gu, "");
+    if (!ra || !rb) { err.textContent = "Both pirates need a name!"; return; }
+    store.set("names", { a: ra, b: rb });
+    S.roll = 0;
+    showReveal(ra, rb);
+  });
+  box.appendChild(form);
+  wrap.appendChild(box);
+  book.appendChild(wrap);
+  backBtn.disabled = true;
+  say([["n", "Who dares sail tonight? Type your first names, and we'll turn you into proper pirates."]]);
+}
+
+function showReveal(ra, rb) {
+  stopSpeech();
+  const N = makeNames(ra, rb, S.roll);
+  book.innerHTML = "";
+  const wrap = el("div", "page");
+  wrap.appendChild(drawScene("dusk", ["🏴‍☠️", "⚔️", "🦜"]));
+  const box = el("div", "start");
+  box.appendChild(el("h2", null, "Arrr! Meet the crew"));
+  const rv = el("div", "reveal");
+  [["a", ra, N.aFull], ["b", rb, N.bFull]].forEach(([k, real, full]) => {
+    const c = el("div", "pname " + k);
+    c.appendChild(el("div", "real", cap(real) + " is now..."));
+    c.appendChild(el("div", "pirate", full));
+    rv.appendChild(c);
+  });
+  box.appendChild(rv);
+  const row = el("div", "row");
+  const again = el("button", "bigbtn alt", "🎲 Roll new names"); again.type = "button";
+  again.addEventListener("click", () => { S.roll++; showReveal(ra, rb); });
+  const start = el("button", "bigbtn", "Set sail! ⛵"); start.type = "button";
+  start.addEventListener("click", () => { S.a = N.a; S.b = N.b; store.set("pirates", { a: N.a, b: N.b }); newGame(true); });
+  row.appendChild(again); row.appendChild(start);
+  box.appendChild(row);
+  wrap.appendChild(box);
+  book.appendChild(wrap);
+  say([["n", cap(ra) + " is now " + N.aFull + ". And " + cap(rb) + " is now " + N.bFull + ". Arrr!"]]);
+}
+
+function newGame() {
+  S.items = []; S.visited = []; S.hours = 0; S.lastPlace = null; S.history = []; S.node = null;
+  goTo("intro1", { noHistory: true });
+}
+
+function drawShelf() {
+  const slots = document.getElementById("slots"); slots.innerHTML = "";
+  const info = {}; Object.values(STORY).forEach(p => { if (p.ending) info[p.ending.id] = p.ending; });
+  ENDINGS.forEach(id => {
+    const got = S.found.includes(id);
+    const s = el("div", "slot" + (got ? " found" : ""), got ? info[id].em : "?");
+    s.title = got ? info[id].title : "Not found yet";
+    slots.appendChild(s);
+  });
+  document.getElementById("count").textContent = S.found.length + " / " + ENDINGS.length;
+}
+
+/* ---------- Toolbar ---------- */
+function syncRead() { readBtn.setAttribute("aria-pressed", String(S.reading)); readBtn.textContent = S.reading ? "🔊 Reading" : "🔈 Read to me"; }
+readBtn.addEventListener("click", () => {
+  S.reading = !S.reading; store.set("reading", S.reading); syncRead();
+  if (S.node) render(); else stopSpeech();
+});
+backBtn.addEventListener("click", () => {
+  const prev = S.history.pop(); if (!prev) return;
+  Object.assign(S, prev); render();
+});
+homeBtn.addEventListener("click", showStart);
+document.addEventListener("keydown", e => {
+  if (e.target.tagName === "INPUT") return;
+  const n = parseInt(e.key, 10);
+  if (n >= 1 && n <= 9) { const b = book.querySelectorAll(".choice"); if (b[n - 1] && b[n - 1].offsetParent && b[n - 1].closest(".choices,.mapgo") && getComputedStyle(b[n - 1].parentElement).visibility !== "hidden") b[n - 1].click(); }
+});
+
+syncRead();
+drawShelf();
+showStart();
+</script>
+</body>
+</html>
