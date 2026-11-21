@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Captain Dad's Recording Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pirata+One&family=Nunito:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root { --ink: #2b1d0e; --paper: #f6ead0; --edge: #e6d3a8; --red: #b8372b; --gold: #f2b632; --green: #2f7d4f; --blue: #2f7fb5; --orange: #c9502e; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: Nunito, system-ui, sans-serif; color: var(--ink); background: linear-gradient(#24160c, #3b2414); min-height: 100vh; padding: 18px 12px 60px; }
+  .wrap { max-width: 860px; margin: 0 auto; }
+  h1 { font-family: "Pirata One", serif; font-weight: 400; color: var(--gold); font-size: clamp(30px, 6vw, 44px); margin: 0 0 4px; text-shadow: 0 3px 0 #000; }
+  .panel { background: var(--paper); border: 3px solid #000; border-radius: 16px; padding: 16px 20px; margin-bottom: 16px; box-shadow: 0 8px 24px rgba(0,0,0,.5); }
+  .panel h2 { margin: 0 0 8px; font-size: 20px; }
+  .panel ol, .panel ul { margin: 6px 0 0; padding-left: 22px; line-height: 1.6; }
+  .bar { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+  .prog { flex: 1; min-width: 200px; }
+  .track { height: 14px; background: #d8c49a; border: 2px solid #000; border-radius: 999px; overflow: hidden; }
+  .fillbar { height: 100%; background: var(--green); width: 0; transition: width .3s; }
+  .prog .lbl { font-weight: 800; margin-bottom: 4px; }
+  button, .upl { font: inherit; font-weight: 800; font-size: 15px; cursor: pointer; border: 3px solid #000; border-radius: 12px; padding: 8px 14px; background: #fff; color: var(--ink); box-shadow: 0 3px 0 #000; display: inline-flex; align-items: center; gap: 6px; }
+  button:active, .upl:active { transform: translateY(2px); box-shadow: 0 1px 0 #000; }
+  button[disabled] { opacity: .4; cursor: default; }
+  button.rec { background: var(--red); color: #fff; }
+  button.rec.on { background: #000; animation: pulse 1s infinite; }
+  button.big { background: var(--green); color: #fff; font-size: 17px; padding: 10px 18px; }
+  @keyframes pulse { 50% { box-shadow: 0 0 0 6px rgba(184,55,43,.5); } }
+  .section { font-family: "Pirata One", serif; color: var(--gold); font-size: 28px; margin: 26px 0 8px; text-shadow: 0 2px 0 #000; }
+  .clip { background: var(--paper); border: 3px solid #000; border-radius: 14px; margin-bottom: 12px; overflow: hidden; }
+  .clip.done { border-color: var(--green); box-shadow: 0 0 0 3px var(--green) inset; }
+  .clip .head { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 14px; background: var(--edge); border-bottom: 2px solid #000; }
+  .clip .head .t { font-weight: 800; }
+  .clip .head .id { font-family: ui-monospace, monospace; font-size: 13px; opacity: .7; }
+  .pill { font-size: 13px; font-weight: 800; padding: 3px 10px; border-radius: 999px; border: 2px solid #000; background: #fff; white-space: nowrap; }
+  .pill.ok { background: var(--green); color: #fff; }
+  .script { padding: 12px 16px; font-size: 18px; line-height: 1.6; }
+  .script p { margin: 0 0 10px; white-space: pre-line; }
+  .script .line { margin: 0 0 8px; }
+  .script .who { font-weight: 800; }
+  .script .who.a { color: var(--blue); } .script .who.b { color: var(--orange); }
+  .script .dir { font-style: italic; color: #7a5a2a; font-size: 15px; }
+  .script .narr { font-style: italic; }
+  .script .choices { margin-top: 10px; padding-top: 8px; border-top: 2px dashed #c9b48a; font-size: 16px; }
+  .script .choices em { color: #7a5a2a; }
+  .script .end { font-family: "Pirata One", serif; font-size: 24px; color: var(--red); }
+  .ctl { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 0 16px 14px; }
+  .timer { font-weight: 800; font-variant-numeric: tabular-nums; min-width: 48px; }
+  .upl input { display: none; }
+  .warn { background: #ffe1d6; border: 2px solid var(--red); border-radius: 10px; padding: 10px 12px; font-weight: 700; margin-top: 10px; display: none; }
+  .tiny { font-size: 14px; opacity: .8; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🎙️ Captain Dad's Recording Studio</h1>
+
+  <div class="panel">
+    <h2>How it works</h2>
+    <ol>
+      <li>Press <b>● Record</b>, read the words on the card, then press <b>■ Stop</b>. Press <b>▶ Play</b> to check it, and record again if you want another go.</li>
+      <li>Your recordings are saved in this browser as you go, so you can do a few at a time and come back later. Use the same browser on the same computer.</li>
+      <li>When you're done, press <b>Download all</b>. You'll get a zip with an <code>audio</code> folder inside.</li>
+      <li>Unzip it and put the <code>audio</code> folder in your GitHub repo, next to <code>index.html</code>. Commit and push, and Vercel updates the game.</li>
+      <li>In the game, choose <b>Captain Dad</b> on the first page. Any page you haven't recorded yet uses the computer voice instead.</li>
+    </ol>
+    <ul class="tiny">
+      <li>Quiet room, mic about a hand's width away, and leave a second of silence at the start and end.</li>
+      <li>Sonny is the pirate in blue and Wylie is the pirate in orange. Read the choices at the bottom of each card if you like, or skip them.</li>
+      <li>Recorded somewhere else, like your phone? Use <b>⬆ Upload</b> on that card instead.</li>
+    </ul>
+    <div class="warn" id="warn"></div>
+  </div>
+
+  <div class="panel bar">
+    <div class="prog"><div class="lbl" id="plbl">0 of 0 recorded</div><div class="track"><div class="fillbar" id="pfill"></div></div></div>
+    <button class="big" id="dl" type="button">⬇ Download all</button>
+  </div>
+
+  <div id="list"></div>
+</div>
+
+<script>const CHARS = {
+  n:        { name: "",                pitch: 1.0,  rate: 0.95, dir: "Narrator" },
+  a:        { name: "{a}",             pitch: 1.35, rate: 1.0,  side: "right", cls: "hero-a", av: "🧒", dir: "kid voice, brave" },
+  b:        { name: "{b}",             pitch: 1.6,  rate: 1.05, side: "right", cls: "hero-b", av: "👦", dir: "kid voice, cheeky" },
+  feathers: { name: "Mister Feathers", pitch: 1.9,  rate: 1.15, av: "🦜", dir: "squawky, cranky old parrot" },
+  bones:    { name: "Bones McGee",     pitch: 0.7,  rate: 1.1,  av: "💀", dir: "nervous, teeth chattering" },
+  ink:      { name: "Inkbeard",        pitch: 0.1,  rate: 0.75, av: "🦑", dir: "big, booming, but friendly" },
+  brine:    { name: "Old Mother Brine",pitch: 1.3,  rate: 0.8,  av: "🧙‍♀️", dir: "croaky old witch, cackles" },
+  grim:     { name: "Captain Grimtide",pitch: 0.2,  rate: 0.72, av: "👻", cls: "char-grim", dir: "slow, deep and spooky" }
+};
+
+const ITEMS = {
+  coin:     { em: "🪙", name: "Cursed coin" },
+  musicbox: { em: "🎶", name: "Music box" },
+  kraken:   { em: "🦑", name: "Inkbeard (friend)" },
+  salt:     { em: "🧂", name: "Moonlight salt" },
+  choc:     { em: "🍫", name: "Chocolate coin" }
+};
+
+/* Places on the island map. x/y are % across the map picture. */
+const PLACES = [
+  { id: "skull", name: "Skull Rock Caves",    em: "💀", x: 20, y: 24, start: "skull1" },
+  { id: "reef",  name: "Kraken Reef",          em: "🐙", x: 76, y: 22, start: "gameReef" },
+  { id: "light", name: "Witch's Lighthouse",   em: "🗼", x: 80, y: 74, start: "light1" },
+  { id: "alley", name: "Smugglers' Alley",     em: "🏮", x: 30, y: 74, start: "alley1" }
+];
+const PORT = { x: 46, y: 62 };
+const HOURS = 3; /* stops before midnight */
+
+/* When Captain Dad narrates, the heroes use these fixed names so the recordings match */
+const GENERIC = { a: "Sonny", b: "Wylie" };
+
+/* Words for the map screen (also recorded as map-start, map-middle, map-last) */
+const MAP_TIPS = {
+  "map-start":  "The moon is rising. Where will {a} and {b} row first? Tap a place on the map.",
+  "map-middle": "The fog is getting thicker, and the bell is getting louder. Where to next?",
+  "map-last":   "The bell is ringing louder. Time for ONE more stop... or sail out to face Grimtide now!"
+};
+const WELCOME = "Ahoy, me hearties! Tonight, Sonny and Wylie are the cabin kids of Gullwhistle Harbour. Sonny, you're the pirate in blue. Wylie, you're the pirate in orange. Ready? Then set sail!";
+
+/* =====================================================================
+   THE STORY
+   type: page (storybook), chat (message bubbles), map, ending
+   {a} and {b} become the pirate names.
+   choices: label, em, to; optional need (item), give (item), cost (extra hours)
+   ===================================================================== */
+const STORY = {
+  intro1: {
+    type: "page", scene: "dusk", art: ["🐟", "🪙", "⛵"],
+    text: "Gullwhistle Harbour smells of fish, tar and trouble.\n\n{a} and {b} are the cabin kids on a grumpy old fishing boat. Tonight's job: fling the whole day's catch into the fish barrel before Captain Crabbe gets back.\n\n\"Every fish in that barrel,\" he bellowed, \"or NO PUDDING!\"\n\nHow hard can it be?",
+    choices: [ { label: "Start flinging fish!", em: "🐟", to: "gameFish" } ]
+  },
+  gameFish: {
+    type: "game", game: "fishFling", title: "Fish Fling", next: "coinFind",
+    how: "Drag the fish back, aim, and let go to fling it into the barrel. The barrel moves after every throw!",
+    pic: { bg: "harbour", mode: "dusk" }
+  },
+  coinFind: {
+    type: "page",
+    text: "Splat! Splat! SPLAT! Just one fish is left on the dock: a fat, shiny silver one.\n\n{b} picks it up to throw... and something inside it goes CLINK.\n\n{a} slices it open. Out rolls a gold coin, slimy and gleaming. On one side is a grinning skull. On the other is a name: GRIMTIDE.",
+    choices: [ { label: "Pocket the gold coin", em: "🪙", to: "intro2", give: "coin" } ]
+  },
+  intro2: {
+    type: "page", scene: "fog", art: ["🔔", "🌫️", "🏮"],
+    text: "As the sun sinks, a cold fog creeps across the harbour. Far out at sea, a bell begins to ring. Dong... dong... dong.\n\nOne by one, every lantern on the dock flickers out. The fishermen go pale. \"The Rattlebones,\" someone whispers. \"Grimtide's ghost ship!\"\n\n{a} throws the coin as far as they can. Plop. Then {b} feels something cold in their pocket.\n\nThe coin is back.",
+    choices: [
+      { label: "Run to the old parrot on the dock", em: "🦜", to: "feathers" },
+      { label: "Hide under a fishing net", em: "🕸️", to: "hide" }
+    ]
+  },
+  hide: {
+    type: "page", scene: "port", art: ["🕸️", "🐟", "👀"],
+    text: "Under the net it's dark, smelly and very wiggly. Something cold and slimy slaps {a} across the face.\n\nIt's... a fish. Just a fish. Phew.\n\nThen a croaky voice squawks from above: \"Hiding won't help ye, you pair of barnacles! Get over here!\"",
+    choices: [ { label: "Peek out", em: "👀", to: "feathers" } ]
+  },
+  feathers: {
+    type: "chat", scene: "port", art: ["🦜", "🗺️", "⚓"],
+    lines: [
+      ["feathers", "SQUAWK! You've got Grimtide's coin, haven't ye? I can smell the curse from here!"],
+      ["a", "It keeps coming back! What do we do?"],
+      ["feathers", "Captain Grimtide was the meanest ghost on the seven seas. I should know. I was his parrot. Brrrk."],
+      ["feathers", "At midnight his ship comes for that coin. Whoever holds it joins his skeleton crew. FOREVER."],
+      ["b", "Forever?! I haven't even had dinner!"],
+      ["feathers", "Then listen close. This island is full of things that can help ye. Take this map, take that rowboat, and don't dawdle."],
+      ["feathers", "You've got time for THREE stops before midnight. Choose wisely!"]
+    ],
+    choices: [ { label: "Grab the map and row!", em: "🚣", to: "map" } ]
+  },
+
+  map: { type: "map" },
+
+  /* ---------- Skull Rock Caves ---------- */
+  skull1: {
+    type: "page",
+    text: "Skull Rock is a giant stone skull poking out of the sea. You row straight into its gaping mouth.\n\nInside, torches flicker along the cave walls... and one by one, they start to fizzle out.\n\nFrom somewhere in the dark, a voice whimpers: \"N-n-no! Not the DARK! Somebody light the torches!\"",
+    choices: [ { label: "Relight the torches!", em: "🔥", to: "gameTorch" } ]
+  },
+  gameTorch: {
+    type: "game", game: "torchPanic", title: "Torch Panic", next: "skull2",
+    how: "The torches keep going out! Tap each one to relight it before the cave goes dark.",
+    pic: { bg: "cave" }
+  },
+  skull2: {
+    type: "page",
+    text: "The torches blaze bright again. Now you can see who was whimpering.\n\nA whole crew of skeletons is huddled in the middle of the cave, hugging each other... and shaking like jelly. Clickety-clack. Clickety-clack.",
+    choices: [
+      { label: "Sneak past them", em: "🤫", to: "skullSneak" },
+      { label: "Say hello", em: "👋", to: "skullChat" }
+    ]
+  },
+  skullSneak: {
+    type: "page", scene: "cave", art: ["🦶", "💥", "💀"],
+    text: "You tiptoe past ever so quietly... and {a} steps right on a skeleton's toe.\n\nCRACK!\n\n\"OWWWW!\" The toe bone goes flying across the cave and lands in a puddle. Every skull in the cave turns to look at you.",
+    choices: [ { label: "Uh oh. Say hello now", em: "😬", to: "skullChat" } ]
+  },
+  skullChat: {
+    type: "chat", scene: "cave", art: ["💀", "🕯️", "💀"],
+    lines: [
+      ["bones", "W-w-who goes there? Are you GHOSTS?"],
+      ["b", "We're kids. Aren't YOU meant to be the scary ones?"],
+      ["bones", "We're skeletons! We're terrified of the dark! Our torches are running out, and we haven't got any eyeballs!"],
+      ["bones", "Cheer us up, and we'll give you a treasure. Something Captain Grimtide left behind..."]
+    ],
+    choices: [
+      { label: "Tell them a joke", em: "😂", to: "skullJoke", give: "musicbox" },
+      { label: "Give them your boat lantern", em: "🏮", to: "skullLantern", give: "musicbox", flag: "noLantern" }
+    ]
+  },
+  skullJoke: {
+    type: "page", scene: "cave", art: ["🎶", "💀", "😂"],
+    text: "{a} says, \"Why didn't the skeleton go to the party?\"\n\n\"WHY?\" rattle the skeletons.\n\n{b} grins. \"Because he had no BODY to go with!\"\n\nThe skeletons laugh so hard that one of them falls to pieces. They put him back together, mostly right. (His foot is on his head.)\n\nBones McGee hands you a little silver music box. \"Grimtide used to cry when he heard this,\" he whispers. \"Don't tell him I said that.\"",
+    choices: [ { label: "Back to the map", em: "🗺️", to: "map" } ]
+  },
+  skullLantern: {
+    type: "page", scene: "cave", art: ["🎶", "🏮", "💀"],
+    text: "The skeletons cheer and do a clattery jig around your lantern.\n\nBones McGee hands you a little silver music box. \"Grimtide used to cry when he heard this,\" he whispers.\n\nBut now your boat has no light. Rowing in the pitch dark is sloooow, and you bump into every rock on the way out.\n\nYou lose an extra hour!",
+    choices: [ { label: "Back to the map", em: "🗺️", to: "map", cost: 1 } ]
+  },
+
+  /* ---------- Kraken Reef ---------- */
+  gameReef: {
+    type: "game", game: "reefRun", title: "Reef Run", next: "reef1",
+    how: "Kraken Reef is full of rocks, wrecks and wriggly tentacles! Drag left and right to steer, and grab the pieces of eight.",
+    pic: { bg: "reef" }
+  },
+  reef1: {
+    type: "page", scene: "sea", art: ["🌊", "🦑", "🪨"],
+    text: "Phew! You've rowed right into the middle of Kraken Reef. Wrecked ships poke out of the rocks like broken teeth, and the water is black and still.\n\nThen the sea begins to bubble. Blub. Blub. BLUB.\n\nA tentacle as thick as a tree trunk rises out of the water, drips all over {a}... and wraps around your boat!",
+    choices: [
+      { label: "Row for your lives!", em: "🚣", to: "endRock" },
+      { label: "Tickle the tentacle", em: "🪶", to: "reefChat", give: "kraken" }
+    ]
+  },
+  reefChat: {
+    type: "chat", scene: "sea", art: ["🦑", "🌊", "🚣"],
+    lines: [
+      ["ink", "HO HO HO HEE HEE! STOP! I'm VERY ticklish!"],
+      ["a", "Then let go of our boat!"],
+      ["ink", "Sorry, sorry. I'm Inkbeard. I only grab boats because I'm lonely. Nobody ever visits a kraken."],
+      ["b", "We'll be your friends! But we need help. Captain Grimtide is coming for us at midnight."],
+      ["ink", "GRIMTIDE?! He calls me 'Squidface'. I HATE that. When he comes, shout my name, and I'll be there."]
+    ],
+    choices: [ { label: "Wave goodbye and row back", em: "🗺️", to: "map" } ]
+  },
+
+  /* ---------- Witch's Lighthouse ---------- */
+  light1: {
+    type: "page", scene: "light", art: ["🗼", "🐸", "🚪"],
+    text: "The old lighthouse leans over the cliff, as if it's trying to read something in the sea. A spooky green light glows in the top window.\n\nOn the door is a sign:\n\nKNOCK THREE TIMES.\nNO SALESMEN. NO GHOSTS. NO MONKEYS.",
+    choices: [
+      { label: "Knock three times", em: "✊", to: "lightChat" },
+      { label: "Knock FOUR times, just to see", em: "🤪", to: "lightFrog" }
+    ]
+  },
+  lightFrog: {
+    type: "page", scene: "light", art: ["🐸", "⚡", "🧙‍♀️"],
+    text: "KNOCK. KNOCK. KNOCK. KNOCK.\n\nThe door flies open. \"Can't you COUNT?!\" screeches a voice.\n\nZAP! {a} is suddenly a small green frog.\n\n\"Ribbit,\" says {a}, very crossly.\n\n\"Oh, fine,\" sighs the witch. ZAP! {a} is back to normal. Mostly. Still a bit slimy.",
+    choices: [
+      { label: "Say sorry", em: "🙏", to: "lightChat" },
+      { label: "Ask to be turned into a frog too", em: "🐸", to: "endFrog" }
+    ]
+  },
+  lightChat: {
+    type: "chat", scene: "light", art: ["🧙‍♀️", "🧂", "🐈‍⬛"],
+    lines: [
+      ["brine", "Well, well. Two little sea-rats with a cursed coin. I can smell it from here. Phwoar."],
+      ["brine", "I have Moonlight Salt. Throw it on a ghost and he turns solid. Solid enough to bonk on the nose."],
+      ["a", "Yes please!"],
+      ["brine", "Nothing's free, dearie. Answer my riddle. I have a head and a tail, but no body. What am I?"]
+    ],
+    choices: [
+      { label: "A coin!", em: "🪙", to: "gameBrew" },
+      { label: "A snake!", em: "🐍", to: "lightWrong" }
+    ]
+  },
+  gameBrew: {
+    type: "game", game: "brew", title: "Brew the Moonlight Salt", next: "lightRight", give: "salt",
+    how: "\"Correct!\" cackles Brine. \"Now help me brew it.\" Watch which jars glow, then tap them in the same order.",
+    pic: { bg: "lighthouse" }
+  },
+  lightRight: {
+    type: "chat", scene: "light", art: ["🧂", "✨", "🧙‍♀️"],
+    lines: [
+      ["brine", "Hmph. Clever little barnacles."],
+      ["n", "She hands you a jar of glittering, glowing salt."],
+      ["brine", "Throw it, don't eat it. And DON'T sneeze on it. Now shoo!"]
+    ],
+    choices: [ { label: "Back to the map", em: "🗺️", to: "map" } ]
+  },
+  lightWrong: {
+    type: "chat", scene: "light", art: ["🐍", "🚪", "🧙‍♀️"],
+    lines: [
+      ["brine", "WRONG! A snake has a head and a tail AND a body. It's all body, you silly sprats!"],
+      ["n", "SLAM! The door shuts in your faces."],
+      ["b", "Oops. That was a whole hour wasted."]
+    ],
+    choices: [ { label: "Back to the map", em: "🗺️", to: "map" } ]
+  },
+
+  /* ---------- Smugglers' Alley ---------- */
+  alley1: {
+    type: "page", scene: "alley", art: ["🐒", "🪙", "🏮"], take: "coin",
+    text: "Back in Gullwhistle, Smugglers' Alley is packed with lanterns, stalls and shady pirates selling shady things.\n\n\"Lucky eyeballs! Pickled rats! Gold chocolate coins!\" shouts a lolly-seller.\n\nSuddenly a little monkey in a waistcoat drops from a roof, snatches the cursed coin out of {b}'s pocket, and scampers away!",
+    choices: [
+      { label: "Chase it over the rooftops", em: "🏃", to: "gameRoof" },
+      { label: "Buy a banana and wait", em: "🍌", to: "gameCatch" }
+    ]
+  },
+  gameRoof: {
+    type: "game", game: "rooftop", title: "Rooftop Run", next: "alleyRoof",
+    how: "After that monkey! Tap to jump over the gaps between the roofs. Grab pieces of eight as you go.",
+    pic: { bg: "alley" }
+  },
+  gameCatch: {
+    type: "game", game: "coinCatch", title: "Coin Catch", next: "alleyBanana",
+    how: "While you wait, the lolly stall wobbles... and chocolate coins rain down! Drag your hat to catch them, but dodge the rotten fish!",
+    pic: { bg: "alley" }
+  },
+  alleyRoof: {
+    type: "page", scene: "alley", art: ["🍫", "🐒", "💥"], give: ["coin", "choc"],
+    text: "You climb, leap and slide across the slippery rooftops. {a} grabs the monkey's tail. {b} grabs the coin. And all three of you crash through a roof...\n\n...straight into the lolly-seller's stall. CRASH! Chocolate coins everywhere!\n\nThe lolly-seller laughs so hard she lets you keep one: a gold-wrapped chocolate coin.\n\nHmm. It looks EXACTLY like Grimtide's coin...",
+    choices: [ { label: "Back to the map", em: "🗺️", to: "map" } ]
+  },
+  alleyBanana: {
+    type: "page", scene: "alley", art: ["🍌", "🐒", "🍫"], give: ["coin", "choc"],
+    text: "The monkey sniffs the air. It can't resist. It creeps back down, swaps the cursed coin for the banana, and eats it in three bites, peel and all.\n\nThe lolly-seller claps. \"Smart thinking!\" She flips you a gold-wrapped chocolate coin.\n\nHmm. It looks EXACTLY like Grimtide's coin...",
+    choices: [ { label: "Back to the map", em: "🗺️", to: "map" } ]
+  },
+
+  /* ---------- Midnight ---------- */
+  midnight: {
+    type: "page", scene: "ghost", art: ["🏴‍☠️", "💀", "💀"],
+    text: "DONG. DONG. DONG.\n\nThe fog splits open, and there it is: the Rattlebones. Ragged green sails. Glowing portholes. A crew of skeletons grinning over the rails.\n\nA plank slides down onto your little boat. Something stomps down it. STOMP. STOMP. STOMP.\n\nCaptain Grimtide is see-through, seven feet tall, and his beard is full of crabs.",
+    choices: [ { label: "Face him", em: "😤", to: "grimChat" } ]
+  },
+  grimChat: {
+    type: "chat", scene: "ghost", art: ["👻", "⚔️", "🦀"],
+    lines: [
+      ["grim", "Arrrrr. Somebody... has... MY coin."],
+      ["grim", "Hand it over, little sea-rats, and come aboard. My crew needs new deck-scrubbers. For ever and EVER and EVER."],
+      ["a", "We're not scrubbing your smelly decks!"],
+      ["grim", "Then what are ye going to do about it? HAR HAR HAR!"]
+    ],
+    choices: [
+      { label: "Play the music box", em: "🎶", to: "endMusic", need: "musicbox" },
+      { label: "Shout for Inkbeard!", em: "🦑", to: "endKraken", need: "kraken" },
+      { label: "Throw the Moonlight Salt", em: "🧂", to: "saltFight", need: "salt" },
+      { label: "Hand over the chocolate coin", em: "🍫", to: "endChoc", need: "choc" },
+      { label: "Run around the deck screaming", em: "😱", to: "endScrub" }
+    ]
+  },
+  saltFight: {
+    type: "page", scene: "ghost", art: ["🧂", "👻", "🍳"],
+    text: "You fling the Moonlight Salt. It sparkles all over Grimtide. He sneezes. ACHOO!\n\nThen he looks down at his hands. They're not see-through any more. They're SOLID.\n\n\"Uh oh,\" says Grimtide.\n\n{a} grabs a mop. {b} grabs a frying pan. Grimtide draws his rusty cutlass.",
+    choices: [ { label: "CHARGE!", em: "⚔️", to: "gameDuel" } ]
+  },
+  gameDuel: {
+    type: "game", game: "duel", title: "Sword Duel", next: "endDuel",
+    how: "When Grimtide's cutlass flashes white, TAP to block it. Then bonk him on the nose while he's dizzy!",
+    pic: { bg: "deck", mode: "night" }
+  },
+
+  /* ---------- Endings ---------- */
+  endMusic: {
+    type: "ending", scene: "dawn", art: ["🎶", "👻", "✨"],
+    ending: { id: "music", title: "The Lullaby", em: "🎶" },
+    text: "{b} winds up the little music box. Plink... plink... plonk...\n\nA sweet, wobbly tune floats over the water. Grimtide freezes. His crabby beard trembles.\n\n\"Me mum... me mum used to play that song...\"\n\nThen the scariest ghost on the seven seas bursts into tears. Big, wet, see-through tears. As the music plays, the curse lifts. The coin crumbles into gold dust, and the Rattlebones sails up, up, up into the stars.\n\nMister Feathers lands on {a}'s shoulder. \"Not bad,\" he squawks. \"Not bad at all.\""
+  },
+  endKraken: {
+    type: "ending", scene: "sea", art: ["🦑", "🏴‍☠️", "🌊"],
+    ending: { id: "kraken", title: "Kraken Attack", em: "🦑" },
+    text: "{a} cups their hands and yells, \"INKBEEEEEARD!\"\n\nThe sea goes very, very quiet.\n\nThen... WHOOOSH! Eight giant tentacles burst out of the water and wrap around the Rattlebones.\n\n\"WHO'S SQUIDFACE NOW?\" roars Inkbeard.\n\nWith one mighty tug, he drags the whole ghost ship down to the bottom of the sea. Bubble... bubble... gone. The cursed coin turns to sand in {b}'s hand.\n\nInkbeard pops back up and waves a tentacle. \"Same time next week?\""
+  },
+  endChoc: {
+    type: "ending", scene: "ghost", art: ["🍫", "👻", "😋"],
+    ending: { id: "choc", title: "The Chocolate Trick", em: "🍫" },
+    text: "{b} holds out the gold-wrapped chocolate coin. \"Here's your coin, Captain.\"\n\nGrimtide snatches it and bites it. Crunch. His ghostly eyes go wide.\n\n\"It's... it's... CHOCOLATE!\"\n\nHe hasn't tasted chocolate in three hundred years. \"MORE!\" he roars. \"Full sail to the lolly shop!\" And off goes the Rattlebones, forgetting all about you.\n\nWhile nobody's looking, {a} drops the real cursed coin over the side. This time, it doesn't come back."
+  },
+  endDuel: {
+    type: "ending", scene: "ghost", art: ["⚔️", "🍳", "🧹"],
+    ending: { id: "duel", title: "Duel at Midnight", em: "⚔️" },
+    text: "CLANG! Cutlass meets frying pan!\n\nGrimtide swings. {a} ducks. {b} slips on the wet deck and slides right between the captain's legs. \"Oi!\"\n\nGrimtide spins around, gets tangled in his own crabby beard, and... BONK! {a} bops him on the nose with the mop.\n\nThe captain topples over the rail. SPLOSH! The salt wears off, he goes see-through again, and sinks to the bottom of the sea, grumbling.\n\nThe skeleton crew throw their hats in the air. \"NEW CAPTAINS!\" they cheer. \"NEW CAPTAINS!\""
+  },
+  endScrub: {
+    type: "ending", scene: "dawn", art: ["🧽", "👻", "🍳"],
+    ending: { id: "scrub", title: "Saved by Mum", em: "🧽" },
+    text: "You run around the deck screaming. Grimtide runs around after you. The skeletons run around after him. Round and round and round, until everyone is too dizzy to stand.\n\n\"Fine,\" puffs Grimtide. \"Now SCRUB.\"\n\nSo you scrub, and scrub, and scrub all night long... until, as the sun comes up, a voice rings out across the water:\n\n\"BREAKFAAAAST!\"\n\nGrimtide goes pale. (Paler.) \"Is that... your MOTHER?\"\n\nEven ghosts are scared of mums. He lets you go. Just this once."
+  },
+  endFrog: {
+    type: "ending", scene: "light", art: ["🐸", "🐸", "👻"],
+    ending: { id: "frog", title: "Two Frogs and a Ghost", em: "🐸" },
+    text: "\"You WANT to be a frog?\" The witch shrugs. \"Suit yourselves.\" ZAP! ZAP!\n\nNow there are two small green frogs on the doorstep. And frogs don't have pockets. The cursed coin drops, clinks down the cliff, and lands right in a seagull's nest.\n\nAt midnight the Rattlebones arrives. Grimtide searches everywhere for the cursed kids. All he finds are two frogs, who say \"ribbit\" in a very innocent way.\n\nThe next morning, the seagull is wearing a skull-coin necklace and looking VERY nervous. And the frogs? They hop home in time for breakfast, and turn back into kids just before Mum sees."
+  },
+  endRock: {
+    type: "ending", scene: "sea", art: ["🪨", "🦑", "🐦"],
+    ending: { id: "rock", title: "Stuck on a Rock", em: "🪨" },
+    text: "You row so fast the oars start to smoke. But the tentacle simply lifts your whole boat out of the water and plonks it on top of the tallest, pointiest rock.\n\n\"MINE,\" booms a voice from the deep.\n\nYou spend the rest of the night stuck on the rock, waving at seagulls. At midnight the Rattlebones sails past, and Grimtide hooks his coin out of your pocket with a fishing rod. \"Har har! Ye can keep the rock!\"\n\nNobody joins his crew. But Mum is NOT happy about the soggy pyjamas."
+  }
+};
+
+</script>
+<script>
+const ORDER = [
+  ["Getting started", ["welcome", "intro1", "gameFish", "coinFind", "intro2", "hide", "feathers"]],
+  ["The island map", ["map-start", "map-middle", "map-last"]],
+  ["Skull Rock Caves", ["skull1", "gameTorch", "skull2", "skullSneak", "skullChat", "skullJoke", "skullLantern"]],
+  ["Kraken Reef", ["gameReef", "reef1", "reefChat", "endRock"]],
+  ["The Witch's Lighthouse", ["light1", "lightFrog", "endFrog", "lightChat", "gameBrew", "lightRight", "lightWrong"]],
+  ["Smugglers' Alley", ["alley1", "gameRoof", "alleyRoof", "gameCatch", "alleyBanana"]],
+  ["Midnight", ["midnight", "grimChat", "saltFight", "gameDuel"]],
+  ["The endings", ["endMusic", "endKraken", "endChoc", "endDuel", "endScrub"]]
+];
+/* any page not listed above still gets a card */
+const listed = new Set(ORDER.flatMap(o => o[1]));
+const extra = Object.keys(STORY).filter(k => STORY[k].type !== "map" && !listed.has(k));
+if (extra.length) ORDER.push(["Other pages", extra]);
+
+const fillG = t => t.replace(/\{a\}/g, GENERIC.a).replace(/\{b\}/g, GENERIC.b);
+const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+
+/* ---------- storage (IndexedDB) ---------- */
+let db = null;
+function openDB() {
+  return new Promise(res => {
+    try {
+      const r = indexedDB.open("grimtide-studio", 1);
+      r.onupgradeneeded = () => r.result.createObjectStore("clips");
+      r.onsuccess = () => { db = r.result; res(); };
+      r.onerror = () => res();
+    } catch (e) { res(); }
+  });
+}
+const mem = {};
+function putClip(id, rec) { mem[id] = rec; if (!db) return; try { db.transaction("clips", "readwrite").objectStore("clips").put(rec, id); } catch (e) {} }
+function delClip(id) { delete mem[id]; if (!db) return; try { db.transaction("clips", "readwrite").objectStore("clips").delete(id); } catch (e) {} }
+function loadAll() {
+  return new Promise(res => {
+    if (!db) return res();
+    try {
+      const st = db.transaction("clips").objectStore("clips");
+      const r = st.openCursor();
+      r.onsuccess = () => { const c = r.result; if (c) { mem[c.key] = c.value; c.continue(); } else res(); };
+      r.onerror = () => res();
+    } catch (e) { res(); }
+  });
+}
+
+/* ---------- recording ---------- */
+const MIMES = ["audio/mp4;codecs=mp4a.40.2", "audio/mp4", "audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus"];
+const extFor = t => /mp4|m4a|aac/.test(t) ? "m4a" : /mpeg|mp3/.test(t) ? "mp3" : /ogg/.test(t) ? "ogg" : /wav/.test(t) ? "wav" : "webm";
+let stream = null, recorder = null, recId = null, chunks = [], tStart = 0, tTimer = null, player = null;
+
+async function getMic() {
+  if (stream) return stream;
+  stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+  return stream;
+}
+function warn(msg) { const w = document.getElementById("warn"); w.textContent = msg; w.style.display = msg ? "block" : "none"; }
+
+async function startRec(id) {
+  if (recorder) return;
+  stopPlay();
+  try { await getMic(); } catch (e) { warn("The microphone isn't available. Allow microphone access in your browser, and make sure you're on the Vercel (https) address."); return; }
+  warn("");
+  const type = MIMES.find(m => window.MediaRecorder && MediaRecorder.isTypeSupported(m)) || "";
+  try { recorder = new MediaRecorder(stream, type ? { mimeType: type, audioBitsPerSecond: 96000 } : undefined); }
+  catch (e) { warn("This browser can't record audio. Try Chrome, Edge or Safari."); return; }
+  chunks = []; recId = id;
+  recorder.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+  recorder.onstop = () => {
+    const mt = recorder.mimeType || type || "audio/webm";
+    const blob = new Blob(chunks, { type: mt });
+    putClip(recId, { blob, type: mt, ext: extFor(mt), secs: Math.round((Date.now() - tStart) / 1000) });
+    const done = recId; recorder = null; recId = null; clearInterval(tTimer);
+    refreshAll(); playClip(done);
+  };
+  recorder.start();
+  tStart = Date.now();
+  tTimer = setInterval(() => { const t = document.querySelector(`[data-timer="${id}"]`); if (t) t.textContent = fmt((Date.now() - tStart) / 1000); }, 250);
+  refreshAll();
+}
+function stopRec() { if (recorder && recorder.state !== "inactive") recorder.stop(); }
+function stopPlay() { if (player) { player.pause(); player = null; } }
+function playClip(id) {
+  stopPlay();
+  const r = mem[id]; if (!r) return;
+  player = new Audio(URL.createObjectURL(r.blob));
+  player.play().catch(() => {});
+}
+const fmt = s => Math.floor(s / 60) + ":" + String(Math.floor(s % 60)).padStart(2, "0");
+
+/* ---------- script cards ---------- */
+function scriptFor(id) {
+  const box = el("div", "script");
+  if (id === "welcome") { box.appendChild(el("p", null, WELCOME)); return box; }
+  if (MAP_TIPS[id]) {
+    box.appendChild(el("p", null, fillG(MAP_TIPS[id])));
+    box.appendChild(el("p", "dir", id === "map-start" ? "(Plays the first time they see the map.)" : id === "map-last" ? "(Plays when there's one hour left.)" : "(Plays on the map in between.)"));
+    return box;
+  }
+  const p = STORY[id];
+  if (p.type === "game") {
+    box.appendChild(el("p", null, p.title + ". " + fillG(p.how)));
+    box.appendChild(el("p", "dir", "(Optional. Plays on the game's start screen, before they press Play.)"));
+    return box;
+  }
+  if (p.ending) box.appendChild(el("p", "end", "The End: " + p.ending.title));
+  if (p.type === "chat") {
+    p.lines.forEach(([who, text]) => {
+      const c = CHARS[who] || CHARS.n;
+      const line = el("div", "line");
+      if (who === "n") { line.appendChild(el("span", "narr", "(Narrator) " + fillG(text))); }
+      else {
+        line.appendChild(el("span", "who " + (who === "a" || who === "b" ? who : ""), fillG(c.name) + " "));
+        line.appendChild(el("span", "dir", "(" + c.dir + ") "));
+        line.appendChild(document.createTextNode(fillG(text)));
+      }
+      box.appendChild(line);
+    });
+  } else {
+    box.appendChild(el("p", null, fillG(p.text)));
+  }
+  if (!p.ending && p.choices && p.choices.some(ch => ch.need)) {
+    box.appendChild(el("div", "choices", "")).appendChild(el("em", null, "Skip the choices here: which ones appear depends on what's in their bag."));
+  } else if (!p.ending && p.choices && p.choices.length) {
+    const c = el("div", "choices");
+    c.appendChild(el("em", null, "Choices (optional): "));
+    c.appendChild(document.createTextNode(p.choices.map((ch, i) => (i + 1) + ". " + ch.label + (ch.need ? " (only if they have it)" : "")).join("   ")));
+    box.appendChild(c);
+  }
+  return box;
+}
+function titleFor(id) {
+  if (id === "welcome") return "Welcome (after picking Captain Dad)";
+  if (MAP_TIPS[id]) return "Map: " + (id === "map-start" ? "first look" : id === "map-last" ? "last hour" : "in between");
+  const p = STORY[id];
+  if (p.type === "game") return "Game: " + p.title + " (instructions)";
+  if (p.ending) return "Ending: " + p.ending.title;
+  return (p.type === "chat" ? "Chat: " : "Page: ") + (fillG(p.type === "chat" ? p.lines[0][1] : p.text).split(/[.!?\n]/)[0].slice(0, 48));
+}
+
+const ALL = ORDER.flatMap(o => o[1]);
+function render() {
+  const list = document.getElementById("list"); list.innerHTML = "";
+  let n = 0;
+  ORDER.forEach(([sec, ids]) => {
+    list.appendChild(el("div", "section", sec));
+    ids.forEach(id => {
+      n++;
+      const card = el("div", "clip"); card.dataset.id = id;
+      const head = el("div", "head");
+      const left = el("div");
+      left.appendChild(el("div", "t", n + ". " + titleFor(id)));
+      left.appendChild(el("div", "id", id));
+      head.appendChild(left);
+      head.appendChild(el("span", "pill", "Not recorded"));
+      card.appendChild(head);
+      card.appendChild(scriptFor(id));
+      const ctl = el("div", "ctl");
+      const rec = el("button", "rec", "● Record"); rec.type = "button";
+      rec.addEventListener("click", () => recorder && recId === id ? stopRec() : startRec(id));
+      const play = el("button", null, "▶ Play"); play.type = "button"; play.addEventListener("click", () => playClip(id));
+      const upl = el("label", "upl", "⬆ Upload");
+      const inp = document.createElement("input"); inp.type = "file"; inp.accept = "audio/*";
+      inp.addEventListener("change", () => {
+        const f = inp.files && inp.files[0]; if (!f) return;
+        const ext = (f.name.split(".").pop() || extFor(f.type)).toLowerCase();
+        putClip(id, { blob: f, type: f.type || "audio/" + ext, ext, secs: 0 }); refreshAll(); inp.value = "";
+      });
+      upl.appendChild(inp);
+      const del = el("button", null, "🗑"); del.type = "button"; del.title = "Delete this recording";
+      del.addEventListener("click", () => { delClip(id); refreshAll(); });
+      const timer = el("span", "timer", ""); timer.dataset.timer = id;
+      [rec, play, upl, del, timer].forEach(x => ctl.appendChild(x));
+      card.appendChild(ctl);
+      list.appendChild(card);
+    });
+  });
+  refreshAll();
+}
+function refreshAll() {
+  let done = 0;
+  document.querySelectorAll(".clip").forEach(card => {
+    const id = card.dataset.id, r = mem[id], isRec = recorder && recId === id;
+    if (r) done++;
+    card.classList.toggle("done", !!r);
+    const pill = card.querySelector(".pill");
+    pill.textContent = isRec ? "Recording…" : r ? "✓ Recorded" + (r.secs ? " · " + fmt(r.secs) : "") : "Not recorded";
+    pill.classList.toggle("ok", !!r && !isRec);
+    const [rec, play, , del] = card.querySelectorAll(".ctl > *");
+    rec.textContent = isRec ? "■ Stop" : r ? "● Re-record" : "● Record";
+    rec.classList.toggle("on", !!isRec);
+    rec.disabled = !!recorder && !isRec;
+    play.disabled = !r || !!recorder; del.disabled = !r || !!recorder;
+    if (!isRec) { const t = card.querySelector(".timer"); t.textContent = ""; }
+  });
+  document.getElementById("plbl").textContent = done + " of " + ALL.length + " recorded";
+  document.getElementById("pfill").style.width = (100 * done / ALL.length) + "%";
+}
+
+/* ---------- tiny zip maker (no compression needed: audio is already compressed) ---------- */
+const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(buf) { let c = 0xFFFFFFFF; for (let i = 0; i < buf.length; i++) c = CRC[(c ^ buf[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+async function makeZip(files) { /* files: [{name, data: Uint8Array}] */
+  const enc = new TextEncoder(), parts = [], central = []; let offset = 0;
+  const u16 = n => [n & 255, (n >>> 8) & 255], u32 = n => [n & 255, (n >>> 8) & 255, (n >>> 16) & 255, (n >>> 24) & 255];
+  for (const f of files) {
+    const name = enc.encode(f.name), crc = crc32(f.data), size = f.data.length;
+    const local = new Uint8Array([...u32(0x04034b50), ...u16(20), ...u16(0), ...u16(0), ...u16(0), ...u16(0x21), ...u32(crc), ...u32(size), ...u32(size), ...u16(name.length), ...u16(0)]);
+    parts.push(local, name, f.data);
+    central.push(new Uint8Array([...u32(0x02014b50), ...u16(20), ...u16(20), ...u16(0), ...u16(0), ...u16(0), ...u16(0x21), ...u32(crc), ...u32(size), ...u32(size), ...u16(name.length), ...u16(0), ...u16(0), ...u16(0), ...u16(0), ...u32(0), ...u32(offset)]), name);
+    offset += local.length + name.length + size;
+  }
+  const cdSize = central.reduce((a, b) => a + b.length, 0);
+  const end = new Uint8Array([...u32(0x06054b50), ...u16(0), ...u16(0), ...u16(files.length), ...u16(files.length), ...u32(cdSize), ...u32(offset), ...u16(0)]);
+  return new Blob([...parts, ...central, end], { type: "application/zip" });
+}
+
+document.getElementById("dl").addEventListener("click", async () => {
+  const ids = ALL.filter(id => mem[id]);
+  if (!ids.length) { warn("Record at least one page first."); return; }
+  warn("");
+  const files = [], manifest = {};
+  for (const id of ids) { const r = mem[id]; const name = id + "." + r.ext; manifest[id] = name; files.push({ name: "audio/" + name, data: new Uint8Array(await r.blob.arrayBuffer()) }); }
+  files.push({ name: "audio/manifest.json", data: new TextEncoder().encode(JSON.stringify(manifest, null, 2)) });
+  const blob = await makeZip(files);
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "grimtide-audio.zip";
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+});
+
+openDB().then(loadAll).then(render);
+</script>
+</body>
+</html>

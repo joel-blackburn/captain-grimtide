@@ -192,6 +192,34 @@
   .bigbtn { font: inherit; font-size: 22px; font-weight: 800; cursor: pointer; padding: 13px 28px; border-radius: 999px; border: 3px solid #000; background: var(--red); color: #fff; box-shadow: 0 5px 0 #000; }
   .bigbtn.alt { background: var(--paper); color: var(--ink); font-size: 17px; padding: 10px 18px; }
   .bigbtn:active { transform: translateY(4px); box-shadow: 0 1px 0 #000; }
+  .stage { position: relative; aspect-ratio: 4 / 3; max-height: 82vh; max-height: 82dvh; margin: 0 auto; overflow: hidden; border-bottom: 4px solid #000; background: #000; container-type: size; }
+  .stage > svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .gamehost { position: absolute; inset: 0; }
+  .gamecanvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  .overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: safe center; gap: clamp(6px, 2.2cqh, 14px); padding: clamp(8px, 3cqh, 20px); text-align: center; background: rgba(10,8,4,.66); color: #fff; overflow-y: auto; }
+  .gtitle { font-family: "Pirata One", serif; font-size: clamp(26px, 9cqh, 58px); color: var(--gold); text-shadow: 0 3px 0 #000; line-height: 1; }
+  .ghow { margin: 0; font-size: clamp(14px, 4.4cqh, 22px); line-height: 1.4; max-width: 560px; font-weight: 700; text-shadow: 0 2px 0 #000; }
+  .overlay .bigbtn { font-size: clamp(15px, 5cqh, 22px); padding: clamp(7px, 2cqh, 13px) clamp(14px, 4cqw, 28px); }
+  .overlay .row { gap: 8px; }
+  .tiltTip { font-size: 13px; font-weight: 700; color: #ffe9a8; }
+  .lvl { display: flex; gap: 8px; }
+  .lvlbtn { font: inherit; font-weight: 800; font-size: 16px; padding: 8px 14px; border-radius: 999px; border: 3px solid #000; background: #fff; cursor: pointer; }
+  .lvlbtn[aria-pressed="true"] { background: var(--gold); }
+  .skipgame { font: inherit; background: none; border: 0; color: #e8dcc0; text-decoration: underline; font-size: 14px; cursor: pointer; }
+  .won { font-size: clamp(18px, 6cqh, 30px); font-weight: 800; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .best { display: block; font-size: 15px; font-weight: 700; opacity: .85; }
+  .p8 { display: inline-grid; place-items: center; width: 1.35em; height: 1.35em; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #f4f6fa, #c3cad4); border: 2px solid #000; color: #4b5563; font-weight: 900; font-size: .9em; line-height: 1; vertical-align: -.2em; }
+  .purse { font-weight: 800; font-size: 18px; background: #fff; border: 2px solid #000; border-radius: 999px; padding: 3px 12px; }
+  .loot { margin-top: 10px; font-weight: 800; font-size: 20px; }
+  .pickhead { font-weight: 800; font-size: 15px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 8px; }
+  .pick { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 520px; margin: 0 auto 18px; }
+  @media (max-width: 460px) { .pick { grid-template-columns: 1fr; } }
+  .pickcard { font: inherit; text-align: left; cursor: pointer; display: flex; gap: 10px; align-items: center;
+    padding: 12px; border-radius: 14px; border: 3px solid #000; background: #fff; box-shadow: 0 4px 0 #000; color: var(--ink); }
+  .pickcard[aria-pressed="true"] { background: var(--gold); }
+  .pickcard .pem { font-size: 34px; }
+  .pickcard .ptxt { display: flex; flex-direction: column; gap: 2px; font-size: 14px; line-height: 1.3; }
+  .pickcard strong { font-family: "Pirata One", serif; font-weight: 400; font-size: 24px; }
   .reveal { display: grid; gap: 12px; margin: 6px auto 18px; max-width: 520px; }
   .pname { background: #fff; border: 3px solid #000; border-radius: 14px; padding: 12px; animation: pop .5s ease; }
   .pname .real { font-size: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; opacity: .6; }
@@ -210,6 +238,7 @@
     <div class="tools">
       <button class="tbtn" id="readBtn" aria-pressed="false">🔈 Read to me</button>
       <button class="tbtn" id="backBtn">↩️ Back</button>
+      <button class="tbtn" id="musicBtn" aria-label="Music on or off">🎵</button>
       <button class="tbtn" id="homeBtn" aria-label="Start again">🏠</button>
     </div>
   </header>
@@ -657,19 +686,687 @@ const ART = (() => {
   return { scene };
 })();
 </script>
+<script>/* =====================================================================
+   MINI-GAMES — each one draws on a canvas (800 x 600 logical units)
+   and works with fingers first, mouse second.
+   GAMES[name](api) returns { update(dt), draw(ctx), down(x,y), move(x,y), up(x,y), hud() }
+   api: { W, H, easy, sfx(name), end(pieces, message) }
+   ===================================================================== */
+const GAMES = (() => {
+  const W = 800, H = 600;
+  const rand = (a, b) => a + Math.random() * (b - a);
+  const dist = (ax, ay, bx, by) => Math.hypot(ax - bx, ay - by);
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+  /* ---------- drawing helpers (bold-outline cartoon style) ---------- */
+  function outline(ctx, w = 4) { ctx.lineWidth = w; ctx.strokeStyle = "#000"; ctx.lineJoin = "round"; ctx.lineCap = "round"; }
+  function circle(ctx, x, y, r, fill, lw = 4) { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fillStyle = fill; ctx.fill(); if (lw) { outline(ctx, lw); ctx.stroke(); } }
+  function rrect(ctx, x, y, w, h, r, fill, lw = 4) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.fillStyle = fill; ctx.fill(); if (lw) { outline(ctx, lw); ctx.stroke(); } }
+  function text(ctx, s, x, y, size = 28, fill = "#fff", align = "center") {
+    ctx.font = `800 ${size}px Nunito, system-ui, sans-serif`; ctx.textAlign = align; ctx.textBaseline = "middle";
+    ctx.lineWidth = Math.max(4, size / 5); ctx.strokeStyle = "#000"; ctx.strokeText(s, x, y); ctx.fillStyle = fill; ctx.fillText(s, x, y);
+  }
+  function coin8(ctx, x, y, r = 18, spin = 0) {
+    const sx = Math.abs(Math.cos(spin)) * .8 + .2;
+    ctx.save(); ctx.translate(x, y); ctx.scale(sx, 1);
+    circle(ctx, 0, 0, r, "#d9dee6", 3); circle(ctx, 0, 0, r * .72, "#c3cad4", 0);
+    ctx.restore();
+    if (sx > .5) { ctx.font = `900 ${r * 1.1}px Nunito, sans-serif`; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillStyle = "#5b6470"; ctx.fillText("8", x, y + 1); }
+  }
+  function fish(ctx, x, y, ang = 0, s = 1, col = "#b9c7d6") {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.scale(s, s);
+    ctx.beginPath(); ctx.moveTo(-34, 0); ctx.quadraticCurveTo(-4, -22, 26, -4); ctx.lineTo(44, -18); ctx.lineTo(38, 0); ctx.lineTo(44, 18); ctx.lineTo(26, 4); ctx.quadraticCurveTo(-4, 22, -34, 0);
+    ctx.fillStyle = col; ctx.fill(); outline(ctx, 4); ctx.stroke();
+    circle(ctx, -20, -4, 5, "#fff", 2); circle(ctx, -20, -4, 2, "#000", 0);
+    ctx.restore();
+  }
+  function sparkles(list, x, y, n = 8, col = "#fff6c8") { for (let i = 0; i < n; i++) list.push({ x, y, vx: rand(-160, 160), vy: rand(-220, -40), life: rand(.4, .8), col }); }
+  function updSparkles(list, dt) { for (const p of list) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 500 * dt; p.life -= dt; } for (let i = list.length - 1; i >= 0; i--) if (list[i].life <= 0) list.splice(i, 1); }
+  function drawSparkles(ctx, list) { for (const p of list) { ctx.globalAlpha = clamp(p.life * 2, 0, 1); circle(ctx, p.x, p.y, 5, p.col, 0); } ctx.globalAlpha = 1; }
+  function floaters(list, dt) { for (const f of list) { f.y -= 50 * dt; f.life -= dt; } for (let i = list.length - 1; i >= 0; i--) if (list[i].life <= 0) list.splice(i, 1); }
+  function drawFloaters(ctx, list) { for (const f of list) { ctx.globalAlpha = clamp(f.life * 2, 0, 1); text(ctx, f.s, f.x, f.y, 30, f.col || "#ffe14a"); } ctx.globalAlpha = 1; }
+  function heart(ctx, x, y, on) { ctx.save(); ctx.translate(x, y); ctx.beginPath(); ctx.moveTo(0, 8); ctx.bezierCurveTo(-18, -6, -10, -20, 0, -10); ctx.bezierCurveTo(10, -20, 18, -6, 0, 8); ctx.fillStyle = on ? "#e8413a" : "#555"; ctx.fill(); outline(ctx, 3); ctx.stroke(); ctx.restore(); }
+  function kid(ctx, x, y, col, band, s = 1, pose = 0) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+    ctx.strokeStyle = "#000"; ctx.lineWidth = 9; ctx.lineCap = "round";
+    const lk = Math.sin(pose) * 12;
+    ctx.beginPath(); ctx.moveTo(-6, -30); ctx.lineTo(-8 - lk, 0); ctx.moveTo(6, -30); ctx.lineTo(8 + lk, 0); ctx.stroke();
+    ctx.strokeStyle = "#3a2a1a"; ctx.lineWidth = 5; ctx.stroke();
+    ctx.strokeStyle = "#000"; ctx.lineWidth = 9; ctx.beginPath(); ctx.moveTo(-14, -56); ctx.lineTo(-24 + lk, -34); ctx.moveTo(14, -56); ctx.lineTo(24 - lk, -34); ctx.stroke();
+    ctx.strokeStyle = "#f2c9a0"; ctx.lineWidth = 5; ctx.stroke();
+    rrect(ctx, -18, -64, 36, 36, 8, col, 3.5);
+    circle(ctx, 0, -80, 16, "#f2c9a0", 3.5);
+    ctx.beginPath(); ctx.moveTo(-16, -84); ctx.quadraticCurveTo(0, -104, 16, -84); ctx.closePath(); ctx.fillStyle = band; ctx.fill(); outline(ctx, 3); ctx.stroke();
+    circle(ctx, -6, -80, 2.4, "#000", 0); circle(ctx, 6, -80, 2.4, "#000", 0);
+    ctx.restore();
+  }
+  function rowboat(ctx, x, y, s = 1, lantern = true) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+    ctx.beginPath(); ctx.moveTo(-60, -10); ctx.lineTo(62, -10); ctx.lineTo(48, 18); ctx.quadraticCurveTo(0, 28, -46, 18); ctx.closePath(); ctx.fillStyle = "#8b5a2b"; ctx.fill(); outline(ctx, 4); ctx.stroke();
+    circle(ctx, -22, -26, 12, "#2f7fb5", 3); circle(ctx, 20, -28, 13, "#c9502e", 3);
+    ctx.beginPath(); ctx.moveTo(-34, -32); ctx.quadraticCurveTo(-22, -46, -10, -32); ctx.fillStyle = "#b8372b"; ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(7, -34); ctx.quadraticCurveTo(20, -52, 33, -34); ctx.fillStyle = "#111"; ctx.fill(); ctx.stroke();
+    if (lantern) { ctx.globalAlpha = .35; circle(ctx, 46, -36, 26, "#ffcf6b", 0); ctx.globalAlpha = 1; rrect(ctx, 40, -44, 12, 14, 2, "#ffcf6b", 2.5); }
+    ctx.restore();
+  }
+
+  /* =====================================================================
+     1. FISH FLING — drag back and let go to fling fish into the barrel
+     ===================================================================== */
+  function fishFling(api) {
+    const A = { x: 150, y: 430 }, TOTAL = 8;
+    let left = TOTAL, score = 0, f = null, drag = null, barrel = null, fx = [], fl = [], doneT = -1, wob = 0;
+    const mouth = api.easy ? 120 : 84;
+    function newBarrel() { barrel = { x: rand(470, 690), y: 470, dir: api.easy ? 0 : (Math.random() < .5 ? -1 : 1) }; }
+    function newFish() { f = { x: A.x, y: A.y, vx: 0, vy: 0, fly: false, ang: 0, col: left === 1 ? "#cfd9e6" : "#b9c7d6" }; }
+    newBarrel(); newFish();
+    return {
+      hud: () => [`Fish left: ${left}`, `In the barrel: ${score}`],
+      down(x, y) { if (f && !f.fly && doneT < 0) drag = { x, y }; },
+      move(x, y) { if (drag) { drag.x = x; drag.y = y; } },
+      up() {
+        if (!drag || !f || f.fly) { drag = null; return; }
+        let px = A.x - drag.x, py = A.y - drag.y; const L = Math.hypot(px, py), M = 170;
+        if (L < 20) { drag = null; return; }
+        if (L > M) { px *= M / L; py *= M / L; }
+        f.vx = px * 5.6; f.vy = py * 5.6; f.fly = true; drag = null; api.sfx("whoosh");
+      },
+      update(dt) {
+        wob += dt;
+        if (barrel.dir) { barrel.x += barrel.dir * 60 * dt; if (barrel.x > 700 || barrel.x < 440) barrel.dir *= -1; }
+        updSparkles(fx, dt); floaters(fl, dt);
+        if (doneT >= 0) { doneT -= dt; if (doneT < 0) api.end(score, score === TOTAL ? "Every fish in the barrel! Pudding for everyone!" : `${score} of ${TOTAL} fish in the barrel. Not bad for cabin kids!`); return; }
+        if (!f) return;
+        if (drag && !f.fly) { let px = drag.x - A.x, py = drag.y - A.y; const L = Math.hypot(px, py); if (L > 170) { px *= 170 / L; py *= 170 / L; } f.x = A.x + px; f.y = A.y + py; }
+        if (f.fly) {
+          const py0 = f.y;
+          f.vy += 900 * dt; f.x += f.vx * dt; f.y += f.vy * dt; f.ang = Math.atan2(f.vy, f.vx);
+          const top = barrel.y - 96;
+          if (py0 < top && f.y >= top && Math.abs(f.x - barrel.x) < mouth / 2 && f.vy > 0) {
+            score++; sparkles(fx, barrel.x, top, 14); fl.push({ s: "+1", x: barrel.x, y: top - 20, life: 1 }); api.sfx("splash"); api.sfx("coin");
+            nextFish(); return;
+          }
+          if (f.y > H + 60 || f.x > W + 60 || f.x < -60) { api.sfx("plop"); nextFish(); }
+        }
+        function nextFish() { left--; f = null; if (left <= 0) { doneT = .8; return; } setTimeout(() => { newBarrel(); newFish(); }, 350); }
+      },
+      draw(ctx) {
+        /* dock */
+        rrect(ctx, -10, 470, 320, 160, 0, "#7a4b2a", 4);
+        ctx.strokeStyle = "#4a2c16"; ctx.lineWidth = 3; for (const yy of [500, 535, 570]) { ctx.beginPath(); ctx.moveTo(0, yy); ctx.lineTo(310, yy); ctx.stroke(); }
+        /* crate + barrel */
+        rrect(ctx, barrel.x - 70, barrel.y, 140, 140, 4, "#9a6232", 4);
+        ctx.strokeStyle = "#5a3418"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(barrel.x - 70, barrel.y); ctx.lineTo(barrel.x + 70, barrel.y + 140); ctx.stroke();
+        const top = barrel.y - 96, mw = mouth;
+        ctx.beginPath(); ctx.moveTo(barrel.x - mw / 2 - 6, top); ctx.lineTo(barrel.x - mw / 2 + 6, barrel.y); ctx.lineTo(barrel.x + mw / 2 - 6, barrel.y); ctx.lineTo(barrel.x + mw / 2 + 6, top); ctx.closePath();
+        ctx.fillStyle = "#9a6232"; ctx.fill(); outline(ctx, 4); ctx.stroke();
+        ctx.strokeStyle = "#3a2414"; ctx.lineWidth = 4; for (const yy of [top + 26, top + 64]) { ctx.beginPath(); ctx.moveTo(barrel.x - mw / 2 - 2, yy); ctx.lineTo(barrel.x + mw / 2 + 2, yy); ctx.stroke(); }
+        ctx.beginPath(); ctx.ellipse(barrel.x, top, mw / 2 + 6, 12, 0, 0, Math.PI * 2); ctx.fillStyle = "#3a2414"; ctx.fill(); outline(ctx, 4); ctx.stroke();
+        /* thrower */
+        kid(ctx, 70, 500, "#2f7fb5", "#b8372b", 1.1);
+        kid(ctx, 250, 506, "#c9502e", "#1a1a1a", 1, Math.sin(wob * 6));
+        /* aiming */
+        if (drag && f && !f.fly) {
+          ctx.strokeStyle = "#5a3418"; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(A.x - 30, A.y - 10); ctx.lineTo(f.x, f.y); ctx.lineTo(A.x + 30, A.y - 10); ctx.stroke();
+          if (api.easy) {
+            let vx = (A.x - f.x) * 5.6, vy = (A.y - f.y) * 5.6, x = A.x, y = A.y;
+            for (let i = 0; i < 14; i++) { for (let k = 0; k < 4; k++) { vy += 900 * .012; x += vx * .012; y += vy * .012; } ctx.globalAlpha = 1 - i / 14; circle(ctx, x, y, 6, "#fff", 0); }
+            ctx.globalAlpha = 1;
+          }
+        }
+        if (f) fish(ctx, f.x, f.y, f.fly ? f.ang : 0, 1.1, f.col);
+        if (f && !f.fly && !drag && left === TOTAL) text(ctx, "Drag the fish back, then let go!", 400, 250, 30);
+        if (f && !f.fly && left === 1) text(ctx, "Last fish... it's a fat one!", 400, 250, 28, "#ffe14a");
+        drawSparkles(ctx, fx); drawFloaters(ctx, fl);
+      }
+    };
+  }
+
+  /* =====================================================================
+     2. TORCH PANIC — tap torches before they go out
+     ===================================================================== */
+  function torchPanic(api) {
+    const SPOTS = [[110, 210], [250, 150], [400, 120], [550, 150], [690, 210], [180, 360], [620, 360]];
+    const T = SPOTS.map(([x, y]) => ({ x, y, fuel: 1, dying: false }));
+    const DUR = 30, rate = api.easy ? .32 : .55;
+    let t = 0, score = 0, spawn = 1, fx = [], fl = [], shake = 0, over = false;
+    return {
+      hud: () => [`Torches lit: ${score}`, `⏱ ${Math.max(0, Math.ceil(DUR - t))}`],
+      down(x, y) {
+        for (const tc of T) if (dist(x, y, tc.x, tc.y - 20) < 70 && (tc.dying || tc.fuel <= 0)) {
+          tc.fuel = 1; tc.dying = false; score++; sparkles(fx, tc.x, tc.y - 40, 10, "#ffcf6b"); fl.push({ s: "+1", x: tc.x, y: tc.y - 70, life: .8 }); api.sfx("whoosh"); return;
+        }
+      },
+      move() {}, up() {},
+      update(dt) {
+        if (over) return;
+        t += dt; shake += dt; updSparkles(fx, dt); floaters(fl, dt);
+        spawn -= dt;
+        if (spawn <= 0) {
+          const lit = T.filter(tc => !tc.dying && tc.fuel >= 1);
+          if (lit.length) { lit[Math.floor(Math.random() * lit.length)].dying = true; }
+          spawn = (api.easy ? 1.5 : 1) * (1 - t / DUR * .4);
+        }
+        for (const tc of T) if (tc.dying) { tc.fuel -= rate * dt; if (tc.fuel <= 0) { tc.fuel = 0; tc.dying = false; api.sfx("fizz"); } }
+        if (t >= DUR) { over = true; const out = T.filter(tc => tc.fuel <= 0).length; api.end(Math.min(15, Math.round(score / 2)), out === 0 ? `${score} torches relit and not one went out. The skeletons stopped shaking!` : `${score} torches relit! The skeletons are still a bit wobbly.`); }
+      },
+      draw(ctx) {
+        const out = T.filter(tc => tc.fuel <= 0).length;
+        ctx.fillStyle = `rgba(0,0,0,${.15 + out * .1})`; ctx.fillRect(0, 0, W, H);
+        /* skeletons huddled in the middle */
+        for (let i = 0; i < 3; i++) {
+          const sx = 330 + i * 70 + Math.sin(shake * 40 + i) * (2 + out), sy = 520;
+          ctx.strokeStyle = "#000"; ctx.lineWidth = 8; ctx.beginPath(); ctx.moveTo(sx - 14, sy - 50); ctx.lineTo(sx - 32, sy - 80); ctx.moveTo(sx + 14, sy - 50); ctx.lineTo(sx + 32, sy - 80); ctx.stroke();
+          ctx.strokeStyle = "#e9e2d0"; ctx.lineWidth = 4; ctx.stroke();
+          rrect(ctx, sx - 14, sy - 56, 28, 50, 8, "#2a1b10", 3);
+          circle(ctx, sx, sy - 74, 18, "#e9e2d0", 3.5);
+          circle(ctx, sx - 7, sy - 76, 5, "#000", 0); circle(ctx, sx + 7, sy - 76, 5, "#000", 0);
+        }
+        for (const tc of T) {
+          rrect(ctx, tc.x - 6, tc.y - 10, 12, 50, 3, "#5a3418", 3);
+          rrect(ctx, tc.x - 14, tc.y - 16, 28, 10, 3, "#3a2414", 3);
+          if (tc.fuel > 0) {
+            const s = .35 + tc.fuel * .65, flick = 1 + Math.sin(shake * 18 + tc.x) * .08;
+            ctx.globalAlpha = .3 * tc.fuel; circle(ctx, tc.x, tc.y - 40, 70 * s, "#ffb347", 0); ctx.globalAlpha = 1;
+            ctx.save(); ctx.translate(tc.x, tc.y - 16); ctx.scale(s, s * flick);
+            ctx.beginPath(); ctx.moveTo(-18, 0); ctx.quadraticCurveTo(-22, -32, 0, -60); ctx.quadraticCurveTo(22, -32, 18, 0); ctx.closePath(); ctx.fillStyle = "#ff9d2e"; ctx.fill(); outline(ctx, 4 / s); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(-8, 0); ctx.quadraticCurveTo(-8, -18, 0, -30); ctx.quadraticCurveTo(8, -18, 8, 0); ctx.closePath(); ctx.fillStyle = "#ffe17a"; ctx.fill();
+            ctx.restore();
+            if (tc.dying && tc.fuel < .6) text(ctx, "TAP!", tc.x, tc.y - 90, 24, "#ffe14a");
+          } else {
+            ctx.globalAlpha = .6; text(ctx, "~", tc.x, tc.y - 30, 30, "#999"); ctx.globalAlpha = 1;
+            text(ctx, "TAP!", tc.x, tc.y - 70, 24, "#ff7b6b");
+          }
+        }
+        drawSparkles(ctx, fx); drawFloaters(ctx, fl);
+        if (t < 2.5) text(ctx, "Tap the torches before they go out!", 400, 60, 30);
+      }
+    };
+  }
+
+  /* =====================================================================
+     3. REEF RUN — drag the boat left and right, dodge rocks and tentacles
+     ===================================================================== */
+  function reefRun(api) {
+    const DUR = 35; let t = 0, bx = 400, tx = 400, hearts = 3, inv = 0, score = 0, objs = [], spawn = .5, fx = [], fl = [], waves = [], over = false;
+    for (let i = 0; i < 12; i++) waves.push({ x: rand(0, W), y: rand(0, H) });
+    const speed = () => (api.easy ? 170 : 240) + t * (api.easy ? 3 : 5);
+    const finish = () => { over = true; api.end(Math.min(20, score), hearts > 0 ? `You made it through the reef with ${score} pieces of eight!` : `Bonk! The boat needs patching, but you grabbed ${score} pieces of eight on the way.`); };
+    return {
+      hud: () => [`Pieces of eight: ${score}`, `⏱ ${Math.max(0, Math.ceil(DUR - t))}`],
+      hearts: () => hearts,
+      down(x) { tx = x; }, move(x) { tx = x; }, up() {},
+      update(dt) {
+        if (over) return;
+        t += dt; inv -= dt; updSparkles(fx, dt); floaters(fl, dt);
+        bx += (clamp(tx, 70, 730) - bx) * Math.min(1, dt * 10);
+        for (const w of waves) { w.y += speed() * dt * .6; if (w.y > H + 10) { w.y = -10; w.x = rand(0, W); } }
+        spawn -= dt;
+        if (spawn <= 0) {
+          const r = Math.random();
+          objs.push(r < .45 ? { k: "coin", x: rand(60, 740), y: -40, r: 20 } : r < .8 ? { k: "rock", x: rand(60, 740), y: -60, r: api.easy ? 34 : 42 } : { k: "tent", x: rand(80, 720), y: -80, r: 30, ph: rand(0, 6) });
+          spawn = (api.easy ? .75 : .55) - t * .005;
+        }
+        for (const o of objs) {
+          o.y += speed() * dt; if (o.k === "tent") { o.ph += dt * 3; o.x += Math.sin(o.ph) * 60 * dt; }
+          if (!o.gone && dist(o.x, o.y, bx, 500) < o.r + 44) {
+            if (o.k === "coin") { o.gone = true; score++; api.sfx("coin"); sparkles(fx, o.x, o.y, 6, "#e6ecf4"); fl.push({ s: "+1", x: o.x, y: o.y - 20, life: .7 }); }
+            else if (inv <= 0) { hearts--; inv = 1.2; api.sfx("bonk"); o.gone = true; if (hearts <= 0) { finish(); return; } }
+          }
+        }
+        objs = objs.filter(o => o.y < H + 80 && !(o.gone && o.k === "coin"));
+        if (t >= DUR) finish();
+      },
+      draw(ctx) {
+        ctx.fillStyle = "rgba(6,26,40,.35)"; ctx.fillRect(0, 0, W, H);
+        ctx.strokeStyle = "rgba(160,210,240,.45)"; ctx.lineWidth = 3;
+        for (const w of waves) { ctx.beginPath(); ctx.moveTo(w.x - 20, w.y); ctx.quadraticCurveTo(w.x - 10, w.y - 6, w.x, w.y); ctx.quadraticCurveTo(w.x + 10, w.y - 6, w.x + 20, w.y); ctx.stroke(); }
+        for (const o of objs) {
+          if (o.gone) continue;
+          if (o.k === "coin") coin8(ctx, o.x, o.y, 20, t * 4 + o.x);
+          else if (o.k === "rock") { ctx.beginPath(); ctx.moveTo(o.x - o.r, o.y + o.r * .6); ctx.lineTo(o.x - o.r * .5, o.y - o.r); ctx.lineTo(o.x + o.r * .2, o.y - o.r * .7); ctx.lineTo(o.x + o.r, o.y + o.r * .6); ctx.closePath(); ctx.fillStyle = "#3a3f47"; ctx.fill(); outline(ctx, 4); ctx.stroke(); }
+          else {
+            ctx.lineCap = "round"; ctx.strokeStyle = "#000"; ctx.lineWidth = 30;
+            const path = () => { ctx.beginPath(); ctx.moveTo(o.x, o.y + 40); ctx.quadraticCurveTo(o.x + Math.sin(o.ph) * 30, o.y, o.x - 10, o.y - 40); ctx.quadraticCurveTo(o.x - 30, o.y - 60, o.x - 20, o.y - 46); };
+            path(); ctx.stroke(); ctx.strokeStyle = "#7b3fa0"; ctx.lineWidth = 22; path(); ctx.stroke();
+          }
+        }
+        ctx.globalAlpha = inv > 0 && Math.floor(inv * 10) % 2 ? .4 : 1;
+        rowboat(ctx, bx, 500, 1.1, !api.flags.noLantern);
+        ctx.globalAlpha = 1;
+        drawSparkles(ctx, fx); drawFloaters(ctx, fl);
+        if (t < 3) text(ctx, "Drag to steer. Grab the coins, dodge the rocks!", 400, 70, 26);
+      }
+    };
+  }
+
+  /* =====================================================================
+     4. BREW THE MOONLIGHT SALT — copy the witch's pattern
+     ===================================================================== */
+  function brew(api) {
+    const JARS = [{ x: 160, c: "#4caf50", n: "green" }, { x: 320, c: "#9b59d0", n: "purple" }, { x: 480, c: "#3d9be9", n: "blue" }, { x: 640, c: "#f39c33", n: "orange" }];
+    const Y = 450, R = 62, rounds = api.easy ? [2, 3, 4, 5] : [3, 4, 5, 6, 7];
+    let round = 0, seq = [], phase = "wait", pt = 1.2, idx = 0, glow = -1, glowT = 0, input = 0, retries = api.easy ? 2 : 1, passed = 0, msg = "Watch Old Mother Brine...", bubble = 0, potion = "#5fbf98", fx = [], over = false;
+    function newRound() { seq = []; for (let i = 0; i < rounds[round]; i++) seq.push(Math.floor(Math.random() * 4)); startShow(); }
+    function startShow() { phase = "show"; idx = 0; pt = .7; input = 0; msg = "Watch closely..."; }
+    function finish() { over = true; const total = rounds.length; api.end(passed * 2, passed === total ? "Perfect! The Moonlight Salt glitters like the stars." : `You brewed ${passed} of ${total} spells. Brine grumbles and finishes the rest herself.`); }
+    newRound();
+    return {
+      hud: () => [`Spell ${Math.min(round + 1, rounds.length)} of ${rounds.length}`, `Pieces of eight: ${passed * 2}`],
+      down(x, y) {
+        if (phase !== "input" || over) return;
+        const j = JARS.findIndex(jr => dist(x, y, jr.x, Y) < R + 12); if (j < 0) return;
+        glow = j; glowT = .3; api.sfx("note" + j);
+        if (j === seq[input]) {
+          input++; potion = JARS[j].c;
+          if (input >= seq.length) { passed++; round++; sparkles(fx, 400, 190, 16, "#d9fff0"); api.sfx("cheer"); if (round >= rounds.length) { phase = "end"; setTimeout(finish, 900); } else { phase = "wait"; pt = 1.2; msg = "Yes! Now a longer one..."; setTimeout(newRound, 1100); } }
+        } else {
+          api.sfx("error"); retries--;
+          if (retries < 0) { phase = "end"; msg = "Oops! Wrong jar!"; setTimeout(finish, 900); }
+          else { msg = "Oops! Watch again..."; phase = "wait"; setTimeout(startShow, 900); }
+        }
+      },
+      move() {}, up() {},
+      update(dt) {
+        bubble += dt; glowT -= dt; updSparkles(fx, dt);
+        if (phase === "show") {
+          pt -= dt;
+          if (pt <= 0) {
+            if (idx < seq.length) { glow = seq[idx]; glowT = api.easy ? .55 : .4; api.sfx("note" + seq[idx]); idx++; pt = api.easy ? .8 : .6; }
+            else { phase = "input"; msg = "Your turn! Tap the jars in the same order."; }
+          }
+        }
+      },
+      draw(ctx) {
+        /* cauldron */
+        ctx.beginPath(); ctx.ellipse(400, 230, 120, 80, 0, 0, Math.PI); ctx.fillStyle = "#2b2b2b"; ctx.fill(); outline(ctx, 5); ctx.stroke();
+        ctx.beginPath(); ctx.ellipse(400, 230, 120, 24, 0, 0, Math.PI * 2); ctx.fillStyle = potion; ctx.fill(); outline(ctx, 5); ctx.stroke();
+        for (let i = 0; i < 5; i++) { const bx = 330 + i * 35, by = 210 - ((bubble * 40 + i * 23) % 60); ctx.globalAlpha = .7; circle(ctx, bx, by, 6 + (i % 3) * 2, potion, 2); } ctx.globalAlpha = 1;
+        rrect(ctx, 300, 300, 18, 30, 4, "#2b2b2b", 3); rrect(ctx, 482, 300, 18, 30, 4, "#2b2b2b", 3);
+        text(ctx, msg, 400, 70, 28, phase === "input" ? "#ffe14a" : "#fff");
+        JARS.forEach((jr, i) => {
+          const lit = glow === i && glowT > 0;
+          if (lit) { ctx.globalAlpha = .5; circle(ctx, jr.x, Y, R + 30, jr.c, 0); ctx.globalAlpha = 1; }
+          rrect(ctx, jr.x - R * .75, Y - R, R * 1.5, R * 2, 18, lit ? "#ffffff" : jr.c, 5);
+          rrect(ctx, jr.x - R * .55, Y - R - 22, R * 1.1, 24, 6, "#8b5a2b", 4);
+          circle(ctx, jr.x - 14, Y - 10, 10, "rgba(255,255,255,.5)", 0);
+        });
+        drawSparkles(ctx, fx);
+      }
+    };
+  }
+
+  /* =====================================================================
+     5. ROOFTOP RUN — tap to jump the gaps and catch the monkey
+     ===================================================================== */
+  function rooftop(api) {
+    const DUR = 28, GR = 1900, JV = -760, speed = api.easy ? 230 : 300;
+    let t = 0, roofs = [], coins = [], k = { x: 190, y: 0, vy: 0, on: true, jumps: 0 }, score = 0, fx = [], fl = [], respawn = 0, run = 0, over = false, caught = false;
+    function addRoof(x) { const gap = api.easy ? rand(70, 120) : rand(100, 170), w = rand(220, 380), y = clamp(rand(400, 480), 380, 500); roofs.push({ x: x + gap, w, y }); if (Math.random() < .8) for (let i = 0; i < 3; i++) coins.push({ x: x + gap + w * (.25 + i * .25), y: y - rand(90, 170), got: false }); return x + gap + w; }
+    let edge = -50; roofs.push({ x: -50, w: 600, y: 450 }); edge = 550; while (edge < W + 400) edge = addRoof(edge);
+    k.y = 450;
+    return {
+      hud: () => [`Pieces of eight: ${score}`, `Catch the monkey! ${Math.max(0, Math.ceil(DUR - t))}`],
+      down() { if (respawn > 0 || over) return; const max = api.easy ? 2 : 1; if (k.on || k.jumps < max) { k.vy = JV; k.on = false; k.jumps++; api.sfx("jump"); } },
+      move() {}, up() {},
+      update(dt) {
+        if (over) return;
+        t += dt; run += dt; updSparkles(fx, dt); floaters(fl, dt);
+        const dx = speed * dt;
+        for (const r of roofs) r.x -= dx; for (const c of coins) c.x -= dx; edge -= dx;
+        roofs = roofs.filter(r => r.x + r.w > -60); coins = coins.filter(c => c.x > -40);
+        while (edge < W + 400) edge = addRoof(edge);
+        if (respawn > 0) { respawn -= dt; if (respawn <= 0) { const r = roofs.find(rf => rf.x > 120 && rf.x < 400) || roofs[1]; k.y = r.y - 200; k.x = Math.max(r.x + 40, 190); k.vy = 0; } }
+        else {
+          const prevY = k.y; k.vy += GR * dt; k.y += k.vy * dt; k.on = false;
+          for (const r of roofs) if (k.x > r.x && k.x < r.x + r.w && prevY <= r.y && k.y >= r.y) { k.y = r.y; k.vy = 0; k.on = true; k.jumps = 0; }
+          k.x += (190 - k.x) * dt;
+          if (k.y > H + 80) { respawn = .7; api.sfx("plop"); fl.push({ s: "Whoops!", x: 200, y: 300, life: 1, col: "#ff9b8b" }); }
+          for (const c of coins) if (!c.got && dist(c.x, c.y, k.x, k.y - 50) < 50) { c.got = true; score++; api.sfx("coin"); sparkles(fx, c.x, c.y, 6, "#e6ecf4"); }
+        }
+        if (t >= DUR) { over = true; caught = true; score += 3; api.sfx("cheer"); setTimeout(() => api.end(Math.min(20, score), `Gotcha! You grabbed the monkey's tail, and ${score} pieces of eight on the way.`), 900); }
+      },
+      draw(ctx) {
+        for (const r of roofs) {
+          rrect(ctx, r.x, r.y, r.w, H - r.y + 20, 0, "#5a3a2a", 4);
+          ctx.beginPath(); ctx.moveTo(r.x - 10, r.y); ctx.lineTo(r.x + r.w + 10, r.y); ctx.lineTo(r.x + r.w, r.y - 18); ctx.lineTo(r.x, r.y - 18); ctx.closePath(); ctx.fillStyle = "#8a3a2a"; ctx.fill(); outline(ctx, 4); ctx.stroke();
+          for (let wx = r.x + 30; wx < r.x + r.w - 40; wx += 90) rrect(ctx, wx, r.y + 40, 34, 40, 4, "#ffcf6b", 3);
+        }
+        for (const c of coins) if (!c.got) coin8(ctx, c.x, c.y, 18, t * 5 + c.x);
+        /* monkey ahead */
+        const mx = caught ? 260 : 620 - (t / DUR) * 300, my = 200 + Math.abs(Math.sin(t * 6)) * -40;
+        circle(ctx, mx, my, 22, "#8b5a2b", 4); circle(ctx, mx, my - 34, 20, "#8b5a2b", 4); circle(ctx, mx, my - 30, 13, "#e8c49a", 0);
+        circle(ctx, mx - 5, my - 34, 2.5, "#000", 0); circle(ctx, mx + 5, my - 34, 2.5, "#000", 0);
+        rrect(ctx, mx - 15, my - 16, 30, 22, 6, "#b8372b", 3);
+        coin8(ctx, mx + 30, my - 10, 12, t * 6);
+        if (respawn <= 0) kid(ctx, k.x, k.y, "#c9502e", "#1a1a1a", 1, k.on ? run * 14 : 1.2);
+        drawSparkles(ctx, fx); drawFloaters(ctx, fl);
+        if (t < 3) text(ctx, api.easy ? "Tap to jump. Tap again in the air for a double jump!" : "Tap to jump the gaps!", 400, 80, 26);
+      }
+    };
+  }
+
+  /* =====================================================================
+     6. COIN CATCH — drag the hat, catch chocolate coins, dodge rotten fish
+     ===================================================================== */
+  function coinCatch(api) {
+    const DUR = 30, HW = api.easy ? 150 : 110;
+    let t = 0, hx = 400, tx = 400, score = 0, drops = [], spawn = .3, stun = 0, fx = [], fl = [], over = false;
+    return {
+      hud: () => [`Chocolate coins: ${score}`, `⏱ ${Math.max(0, Math.ceil(DUR - t))}`],
+      down(x) { tx = x; }, move(x) { tx = x; }, up() {},
+      update(dt) {
+        if (over) return;
+        t += dt; stun -= dt; updSparkles(fx, dt); floaters(fl, dt);
+        if (stun <= 0) hx += (clamp(tx, 80, 720) - hx) * Math.min(1, dt * 12);
+        spawn -= dt;
+        if (spawn <= 0) { const r = Math.random(); drops.push({ k: r < .68 ? "choc" : r < .9 ? "fish" : "banana", x: rand(50, 750), y: -30, vy: rand(160, 240) * (api.easy ? .8 : 1.1), rot: rand(0, 6) }); spawn = (api.easy ? .6 : .45) - t * .004; }
+        for (const d of drops) {
+          d.y += d.vy * dt; d.rot += dt * 3;
+          if (!d.gone && d.y > 470 && d.y < 530 && Math.abs(d.x - hx) < HW / 2) {
+            d.gone = true;
+            if (d.k === "fish") { stun = .8; score = Math.max(0, score - 1); api.sfx("splat"); fl.push({ s: "Pee-yew!", x: hx, y: 420, life: 1, col: "#a8e07a" }); }
+            else { const v = d.k === "banana" ? 2 : 1; score += v; api.sfx("coin"); sparkles(fx, d.x, 480, 6, "#ffe17a"); fl.push({ s: "+" + v, x: d.x, y: 440, life: .7 }); }
+          }
+        }
+        drops = drops.filter(d => d.y < H + 40 && !d.gone);
+        if (t >= DUR) { over = true; api.end(Math.min(20, score), `You caught ${score} chocolate coins! Your hat smells a bit fishy, though.`); }
+      },
+      draw(ctx) {
+        for (const d of drops) {
+          if (d.k === "choc") { circle(ctx, d.x, d.y, 20, "#f2b632", 4); ctx.beginPath(); ctx.arc(d.x + 4, d.y - 4, 12, -.5, 1.2); ctx.strokeStyle = "#6b3a1c"; ctx.lineWidth = 5; ctx.stroke(); }
+          else if (d.k === "fish") { fish(ctx, d.x, d.y, d.rot, .9, "#8fa36b"); ctx.globalAlpha = .7; text(ctx, "~", d.x, d.y - 30, 26, "#a8e07a"); ctx.globalAlpha = 1; }
+          else { ctx.save(); ctx.translate(d.x, d.y); ctx.rotate(d.rot); ctx.beginPath(); ctx.moveTo(-20, 6); ctx.quadraticCurveTo(0, 24, 22, -8); ctx.quadraticCurveTo(4, 6, -16, -4); ctx.closePath(); ctx.fillStyle = "#ffe14a"; ctx.fill(); outline(ctx, 3); ctx.stroke(); ctx.restore(); }
+        }
+        /* hat */
+        const wob = stun > 0 ? Math.sin(t * 50) * 6 : 0;
+        ctx.save(); ctx.translate(hx + wob, 500);
+        ctx.beginPath(); ctx.moveTo(-HW / 2 - 14, 14); ctx.lineTo(HW / 2 + 14, 14); ctx.lineTo(HW / 2, -26); ctx.quadraticCurveTo(0, -50, -HW / 2, -26); ctx.closePath(); ctx.fillStyle = "#1a1a1a"; ctx.fill(); outline(ctx, 4); ctx.stroke();
+        ctx.beginPath(); ctx.arc(0, -18, 9, 0, Math.PI * 2); ctx.fillStyle = "#e9e2d0"; ctx.fill(); ctx.stroke();
+        ctx.restore();
+        kid(ctx, hx, 600, "#2f7fb5", "#b8372b", .9);
+        drawSparkles(ctx, fx); drawFloaters(ctx, fl);
+        if (t < 3) text(ctx, "Drag the hat! Catch chocolate, dodge rotten fish!", 400, 70, 26);
+      }
+    };
+  }
+
+  /* =====================================================================
+     7. SWORD DUEL — block when the cutlass flashes, then bonk his nose
+     ===================================================================== */
+  function duel(api) {
+    const WIN = api.easy ? 4 : 5, WIND = api.easy ? 1.1 : .75, WINDOW = api.easy ? .6 : .38, DIZZY = api.easy ? 1.8 : 1.1;
+    let phase = "idle", pt = 1.4, hearts = 3, bonks = 0, msg = "", msgT = 0, t = 0, fx = [], fl = [], over = false, shake = 0;
+    const nose = { x: 560, y: 230 };
+    function say(s) { msg = s; msgT = 1.1; }
+    function finish(win) { over = true; setTimeout(() => api.end(bonks * 2, win ? `BONK! ${bonks} bonks on the nose. Grimtide is seeing stars!` : `Grimtide got the better of you this time... but you gave him ${bonks} good bonks!`), 900); }
+    return {
+      hud: () => [`Bonks: ${bonks} / ${WIN}`, ""],
+      hearts: () => hearts,
+      down(x, y) {
+        if (over) return;
+        if (phase === "windup") { say("Too soon!"); phase = "strike"; pt = .01; return; }
+        if (phase === "now") { api.sfx("clang"); sparkles(fx, 470, 260, 14, "#fff"); say("BLOCKED!"); phase = "dizzy"; pt = DIZZY; return; }
+        if (phase === "dizzy" && dist(x, y, nose.x, nose.y) < 80) {
+          bonks++; api.sfx("bonk"); sparkles(fx, nose.x, nose.y, 14, "#ffe14a"); fl.push({ s: "BONK!", x: nose.x, y: nose.y - 60, life: 1 }); shake = .3;
+          if (bonks >= WIN) { phase = "end"; api.sfx("cheer"); finish(true); } else { phase = "idle"; pt = rand(.9, 1.6); }
+        }
+      },
+      move() {}, up() {},
+      update(dt) {
+        if (over) return;
+        t += dt; pt -= dt; msgT -= dt; shake -= dt; updSparkles(fx, dt); floaters(fl, dt);
+        if (pt > 0) return;
+        if (phase === "idle") { phase = "windup"; pt = WIND * rand(.8, 1.3); api.sfx("tick"); }
+        else if (phase === "windup") { phase = "now"; pt = WINDOW; api.sfx("swish"); }
+        else if (phase === "now" || phase === "strike") { hearts--; api.sfx("ouch"); say("Ouch! Watch the cutlass!"); phase = hearts <= 0 ? "end" : "idle"; pt = 1.2; if (hearts <= 0) finish(false); }
+        else if (phase === "dizzy") { say("He's recovered!"); phase = "idle"; pt = rand(.8, 1.4); }
+      },
+      draw(ctx) {
+        ctx.fillStyle = "rgba(0,0,0,.2)"; ctx.fillRect(0, 0, W, H);
+        const sx = shake > 0 ? rand(-6, 6) : 0;
+        /* Grimtide */
+        ctx.save(); ctx.translate(560 + sx, 560);
+        const dizzy = phase === "dizzy";
+        ctx.beginPath(); ctx.moveTo(-70, -200); ctx.lineTo(70, -200); ctx.lineTo(84, -20); ctx.quadraticCurveTo(40, 6, 0, -14); ctx.quadraticCurveTo(-40, 6, -84, -20); ctx.closePath(); ctx.fillStyle = "#5a8f7e"; ctx.fill(); outline(ctx, 5); ctx.stroke();
+        circle(ctx, 0, -250, 46, "#7fb3a2", 5);
+        if (dizzy) { text(ctx, "@", -16, -256, 26, "#0a2a22"); text(ctx, "@", 16, -256, 26, "#0a2a22"); }
+        else { circle(ctx, -16, -256, 10, "#0a2a22", 0); circle(ctx, 16, -256, 10, "#0a2a22", 0); circle(ctx, -16, -254, 4, "#7ef0c4", 0); circle(ctx, 16, -254, 4, "#7ef0c4", 0); }
+        ctx.beginPath(); ctx.moveTo(-50, -232); ctx.quadraticCurveTo(-60, -170, 0, -160); ctx.quadraticCurveTo(60, -170, 50, -232); ctx.quadraticCurveTo(0, -214, -50, -232); ctx.fillStyle = "#4f7f70"; ctx.fill(); outline(ctx, 4); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(-70, -288); ctx.lineTo(70, -288); ctx.lineTo(54, -316); ctx.quadraticCurveTo(0, -342, -54, -316); ctx.closePath(); ctx.fillStyle = "#141414"; ctx.fill(); outline(ctx, 4); ctx.stroke();
+        /* cutlass arm */
+        const raise = phase === "windup" ? -1 : phase === "now" || phase === "strike" ? .3 : 0;
+        ctx.save(); ctx.translate(-60, -170); ctx.rotate(-1.2 + raise * 1.1);
+        ctx.strokeStyle = "#000"; ctx.lineWidth = 18; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-60, 0); ctx.stroke(); ctx.strokeStyle = "#5a8f7e"; ctx.lineWidth = 11; ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(-60, -8); ctx.lineTo(-170, -24); ctx.lineTo(-176, -10); ctx.lineTo(-62, 8); ctx.closePath(); ctx.fillStyle = phase === "now" ? "#ffffff" : "#9aa3ad"; ctx.fill(); outline(ctx, 4); ctx.stroke();
+        ctx.restore();
+        ctx.restore();
+        if (phase === "now") { ctx.globalAlpha = .35; circle(ctx, 430, 260, 140, "#fff", 0); ctx.globalAlpha = 1; text(ctx, "NOW! TAP!", 330, 140, 46, "#ffe14a"); }
+        if (phase === "windup") text(ctx, "Get ready...", 330, 140, 34, "#fff");
+        if (dizzy) { ctx.globalAlpha = .6 + Math.sin(t * 12) * .3; circle(ctx, nose.x, nose.y, 46, "rgba(255,225,74,.35)", 4); ctx.globalAlpha = 1; text(ctx, "Bonk his nose!", nose.x, nose.y - 110, 30, "#ffe14a"); }
+        /* the kids */
+        kid(ctx, 150, 580, "#2f7fb5", "#b8372b", 1.3);
+        kid(ctx, 270, 586, "#c9502e", "#1a1a1a", 1.2);
+        ctx.save(); ctx.translate(320, 470); ctx.rotate(-.6); rrect(ctx, -6, -10, 60, 12, 4, "#3a2a1a", 3); circle(ctx, 76, -4, 26, "#333", 4); ctx.restore();
+        if (msgT > 0) text(ctx, msg, 300, 330, 32, "#fff");
+        drawSparkles(ctx, fx); drawFloaters(ctx, fl);
+        if (t < 3 && phase !== "now") text(ctx, "When his sword flashes white, TAP to block!", 400, 60, 26);
+      }
+    };
+  }
+
+  const LIST = { fishFling, torchPanic, reefRun, brew, rooftop, coinCatch, duel };
+
+  /* =====================================================================
+     RUNNER — sizes the canvas, runs the loop, routes touches
+     ===================================================================== */
+  function run(name, host, opts) {
+    const canvas = document.createElement("canvas");
+    canvas.className = "gamecanvas";
+    host.appendChild(canvas);
+    const ctx = canvas.getContext("2d");
+    let ended = false, raf = 0, last = 0, stopped = false;
+    const api = { W, H, easy: opts.easy, flags: opts.flags || {}, sfx: opts.sfx || (() => {}),
+      end(pieces, message) { if (ended) return; ended = true; setTimeout(() => opts.onEnd(Math.max(0, Math.round(pieces)), message), 50); } };
+    const g = LIST[name](api);
+    function size() {
+      const r = host.getBoundingClientRect(), dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.round(r.width * dpr); canvas.height = Math.round(r.height * dpr);
+      ctx.setTransform(canvas.width / W, 0, 0, canvas.height / H, 0, 0);
+    }
+    size();
+    const ro = window.ResizeObserver ? new ResizeObserver(size) : null; if (ro) ro.observe(host);
+    const pos = e => { const r = canvas.getBoundingClientRect(); return [(e.clientX - r.left) / r.width * W, (e.clientY - r.top) / r.height * H]; };
+    let downId = null;
+    canvas.addEventListener("pointerdown", e => { e.preventDefault(); downId = e.pointerId; try { canvas.setPointerCapture(e.pointerId); } catch (x) {} g.down(...pos(e)); });
+    canvas.addEventListener("pointermove", e => { if (downId === e.pointerId || e.pointerType === "mouse") g.move(...pos(e)); });
+    const upH = e => { if (downId === e.pointerId) { g.up(...pos(e)); downId = null; } };
+    canvas.addEventListener("pointerup", upH); canvas.addEventListener("pointercancel", upH);
+    function frame(ts) {
+      if (stopped) return;
+      const dt = Math.min(.05, last ? (ts - last) / 1000 : 0); last = ts;
+      g.update(dt);
+      ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.restore();
+      g.draw(ctx);
+      const [l, r] = g.hud();
+      rrect(ctx, 10, 10, 330, 46, 12, "rgba(0,0,0,.55)", 0); text(ctx, l, 22, 34, 24, "#fff", "left");
+      if (g.hearts) { for (let i = 0; i < 3; i++) heart(ctx, 690 + i * 36, 34, i < g.hearts()); }
+      if (r) { rrect(ctx, W - 270 - (g.hearts ? 130 : 0), 10, 260, 46, 12, "rgba(0,0,0,.55)", 0); text(ctx, r, W - 140 - (g.hearts ? 130 : 0), 34, 22, "#fff"); }
+      raf = requestAnimationFrame(frame);
+    }
+    raf = requestAnimationFrame(frame);
+    return { stop() { stopped = true; cancelAnimationFrame(raf); if (ro) ro.disconnect(); canvas.remove(); } };
+  }
+
+  return { run, list: Object.keys(LIST), coin8 };
+})();
+</script>
+<script>/* =====================================================================
+   MUSIC & SOUND — original tunes played live with Web Audio (no files)
+   MUSIC.play("shanty" | "cave" | "sea" | "witch" | "market" | "spooky" | "game" | "dawn")
+   MUSIC.sfx("coin" | "splash" | ...), MUSIC.duck(true/false), MUSIC.setOn(bool)
+   ===================================================================== */
+const MUSIC = (() => {
+  let ac = null, master, musicBus, sfxBus, on = true, current = null, wanted = null, timer = null, nextT = 0, step = 0, ducked = false;
+  const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
+  const N = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+  /* "D4 F4 A4 -" style note strings; "-" holds, "." rests */
+  const notes = s => s.trim().split(/\s+/).map(t => {
+    if (t === "." || t === "-") return t;
+    const m = t.match(/^([A-G])(#|b)?(\d)$/); if (!m) return ".";
+    return 12 * (+m[3] + 1) + N[m[1]] + (m[2] === "#" ? 1 : m[2] === "b" ? -1 : 0);
+  });
+
+  /* ---------- the tunes (all original) ---------- */
+  const TRACKS = {
+    shanty: { bpm: 112, sub: 2, vol: .9, voices: [
+      { wave: "square", gain: .07, decay: .22, n: notes(`D5 - A4 D5 F5 - E5 D5 C5 - A4 - D5 - A4 D5 F5 - G5 F5 E5 - - - F5 - E5 D5 C5 - A4 C5 D5 - F5 E5 D5 - - -`) },
+      { wave: "triangle", gain: .16, decay: .3, n: notes(`D3 . A2 . D3 . A2 . C3 . G2 . C3 . G2 . D3 . A2 . D3 . A2 . C3 . G2 . A2 . E2 . D3 . A2 . C3 . A2 . D3 . . .`) },
+      { drum: true, pattern: "k.h.s.h.k.h.s.h.k.h.s.h.k.h.s.h.k.h.s.h.k.h.s.h.k.h.s.h.k.h.s.h.k.h.s.h.k.h.s.h" } ] },
+    game: { bpm: 150, sub: 2, vol: .8, voices: [
+      { wave: "square", gain: .06, decay: .14, n: notes(`D5 F5 A5 F5 D5 F5 A5 F5 C5 E5 G5 E5 C5 E5 G5 E5 D5 F5 A5 F5 D5 F5 A5 D6 C6 A5 G5 E5 D5 - - -`) },
+      { wave: "triangle", gain: .16, decay: .18, n: notes(`D3 . D3 . A2 . A2 . C3 . C3 . G2 . G2 . D3 . D3 . A2 . A2 . C3 . A2 . D3 . . .`) },
+      { drum: true, pattern: "k.h.s.h.k.k.s.h.k.h.s.h.k.k.s.h.k.h.s.h.k.k.s.h.k.h.s.h.k.s.s.s" } ] },
+    cave: { bpm: 60, sub: 2, vol: 1, voices: [
+      { wave: "sine", gain: .14, decay: 2.2, n: notes(`D2 - - - - - - - F2 - - - - - - - C2 - - - - - - - D2 - - - - - - -`) },
+      { wave: "triangle", gain: .05, decay: .6, n: notes(`. . A4 . . . . . . F4 . . . . . . . . E4 . . . . G4 . . . . D4 . . .`) },
+      { drip: true, every: 7 } ] },
+    sea: { bpm: 76, sub: 2, vol: 1, voices: [
+      { wave: "sine", gain: .13, decay: 1.2, n: notes(`D2 - - - A2 - - - Bb1 - - - F2 - - - G2 - - - D2 - - - A1 - - - E2 - - -`) },
+      { wave: "triangle", gain: .07, decay: .5, n: notes(`D4 F4 A4 . E4 . A4 . D4 F4 Bb4 . A4 . F4 . G4 Bb4 D5 . A4 . F4 . E4 . C#4 . A3 . . .`) },
+      { swell: true } ] },
+    witch: { bpm: 96, sub: 1, vol: 1, voices: [
+      { wave: "sine", gain: .09, decay: .5, n: notes(`E5 G5 B5 A5 G5 E5 F#5 A5 C6 B5 A5 F#5 E5 G5 B5 C6 B5 G5 D#5 F#5 B5 A5 F#5 D#5`) },
+      { wave: "triangle", gain: .12, decay: .8, n: notes(`E3 . . E3 . . D3 . . D3 . . C3 . . C3 . . B2 . . B2 . .`) } ] },
+    market: { bpm: 128, sub: 2, vol: .8, voices: [
+      { wave: "square", gain: .055, decay: .14, n: notes(`G5 . E5 G5 . E5 C5 . D5 . E5 F5 G5 . . . A5 . G5 F5 . E5 D5 . C5 . D5 E5 C5 . . .`) },
+      { wave: "triangle", gain: .15, decay: .2, n: notes(`C3 . G2 . C3 . G2 . F2 . C3 . G2 . D3 . F2 . C3 . A2 . F2 . G2 . D3 . C3 . G2 .`) },
+      { drum: true, pattern: "k.h.s.hhk.h.s.h.k.h.s.hhk.h.s.s." } ] },
+    spooky: { bpm: 66, sub: 2, vol: 1, voices: [
+      { wave: "triangle", gain: .07, decay: .7, n: notes(`D4 F4 A4 C#5 D5 . . . D4 F4 Bb4 D5 C#5 . . . D4 G4 Bb4 D5 F5 . E5 . C#5 . A4 . . . . .`) },
+      { wave: "sine", gain: .14, decay: 2.5, n: notes(`D2 - - - - - - - Bb1 - - - - - - - G1 - - - - - - - A1 - - - - - - -`) },
+      { bell: true, every: 16 } ] },
+    dawn: { bpm: 100, sub: 2, vol: .9, voices: [
+      { wave: "triangle", gain: .09, decay: .4, n: notes(`D5 . F#5 . A5 - - . G5 . F#5 . E5 - - . D5 . E5 . F#5 . A5 . B5 - A5 . F#5 - - .`) },
+      { wave: "sine", gain: .14, decay: .6, n: notes(`D3 . A3 . D3 . A3 . G2 . D3 . G2 . D3 . D3 . A3 . D3 . A3 . G2 . A2 . D3 . . .`) } ] }
+  };
+
+  function ensure() {
+    if (ac) return true;
+    try {
+      ac = new (window.AudioContext || window.webkitAudioContext)();
+      master = ac.createGain(); master.gain.value = .9; master.connect(ac.destination);
+      musicBus = ac.createGain(); musicBus.gain.value = on ? .55 : 0; musicBus.connect(master);
+      sfxBus = ac.createGain(); sfxBus.gain.value = .8; sfxBus.connect(master);
+      return true;
+    } catch (e) { ac = null; return false; }
+  }
+  function unlock() { if (!ensure()) return; if (ac.state === "suspended") ac.resume(); if (wanted && !current) start(wanted); }
+
+  function tone(freq, t, dur, wave, gain, bus, slideTo) {
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = wave; o.frequency.setValueAtTime(freq, t);
+    if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t + dur);
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(gain, t + .01); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+    o.connect(g); g.connect(bus); o.start(t); o.stop(t + dur + .05);
+  }
+  let noiseBuf = null;
+  function noise(t, dur, gain, bus, freq = 1000, q = 1, type = "bandpass", sweepTo) {
+    if (!noiseBuf) { noiseBuf = ac.createBuffer(1, ac.sampleRate, ac.sampleRate); const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+    const s = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
+    s.buffer = noiseBuf; f.type = type; f.frequency.setValueAtTime(freq, t); f.Q.value = q;
+    if (sweepTo) f.frequency.exponentialRampToValueAtTime(sweepTo, t + dur);
+    g.gain.setValueAtTime(gain, t); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+    s.connect(f); f.connect(g); g.connect(bus); s.start(t); s.stop(t + dur + .05);
+  }
+  function drum(ch, t) {
+    if (ch === "k") tone(110, t, .18, "sine", .5, musicBus, 40);
+    else if (ch === "s") noise(t, .12, .22, musicBus, 1800, .8);
+    else if (ch === "h") noise(t, .04, .08, musicBus, 7000, 1, "highpass");
+  }
+
+  function start(name) {
+    stopLoop();
+    const tr = TRACKS[name]; if (!tr || !ac) return;
+    current = name; step = 0; nextT = ac.currentTime + .1;
+    const stepDur = 60 / tr.bpm / tr.sub;
+    const len = Math.max(...tr.voices.filter(v => v.n || v.pattern).map(v => v.n ? v.n.length : v.pattern.length));
+    timer = setInterval(() => {
+      while (nextT < ac.currentTime + .25) {
+        for (const v of tr.voices) {
+          if (v.n) {
+            const n = v.n[step % v.n.length];
+            if (typeof n === "number") {
+              let hold = 1; while (v.n[(step + hold) % v.n.length] === "-" && hold < 8) hold++;
+              tone(mtof(n), nextT, Math.max(v.decay, stepDur * hold * .95), v.wave, v.gain * tr.vol, musicBus);
+            }
+          } else if (v.drum) { const ch = v.pattern[step % v.pattern.length]; if (ch !== ".") drum(ch, nextT); }
+          else if (v.drip && step % v.every === 0 && Math.random() < .7) tone(rand(1200, 1800), nextT, .12, "sine", .05, musicBus, 600);
+          else if (v.bell && step % v.every === 0) { tone(mtof(62), nextT, 2.5, "sine", .08, musicBus); tone(mtof(62) * 2.76, nextT, 1.5, "sine", .03, musicBus); }
+          else if (v.swell && step % 16 === 0) noise(nextT, 3, .05, musicBus, 400, .5, "lowpass", 1200);
+        }
+        nextT += stepDur; step = (step + 1) % (len * 4);
+      }
+    }, 60);
+  }
+  function stopLoop() { if (timer) clearInterval(timer); timer = null; current = null; }
+  const rand = (a, b) => a + Math.random() * (b - a);
+
+  function play(name) {
+    wanted = name;
+    if (!ac || ac.state !== "running") return;
+    if (current === name) return;
+    /* quick fade between tunes */
+    const g = musicBus.gain, t = ac.currentTime, target = on ? (ducked ? .15 : .55) : 0;
+    g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(0, t + .25);
+    setTimeout(() => { start(name); const t2 = ac.currentTime; g.cancelScheduledValues(t2); g.setValueAtTime(0, t2); g.linearRampToValueAtTime(target, t2 + .6); }, 260);
+  }
+  function setLevel() { if (!ac) return; const t = ac.currentTime, g = musicBus.gain; g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(on ? (ducked ? .15 : .55) : 0, t + .3); }
+  function duck(d) { ducked = d; setLevel(); }
+  function setOn(v) { on = v; setLevel(); }
+
+  const SFX = {
+    coin: t => { tone(1320, t, .08, "square", .08, sfxBus); tone(1980, t + .07, .18, "square", .08, sfxBus); },
+    splash: t => noise(t, .45, .35, sfxBus, 2500, .7, "lowpass", 300),
+    plop: t => tone(420, t, .2, "sine", .3, sfxBus, 120),
+    whoosh: t => noise(t, .3, .25, sfxBus, 400, 2, "bandpass", 2400),
+    fizz: t => noise(t, .5, .12, sfxBus, 5000, 1, "highpass"),
+    bonk: t => { tone(320, t, .25, "sine", .45, sfxBus, 90); noise(t, .05, .2, sfxBus, 900); },
+    clang: t => { tone(1400, t, .4, "square", .07, sfxBus); tone(2100, t, .35, "triangle", .08, sfxBus); noise(t, .15, .2, sfxBus, 5000, 2); },
+    swish: t => noise(t, .2, .2, sfxBus, 1200, 3, "bandpass", 4000),
+    ouch: t => tone(300, t, .3, "sawtooth", .12, sfxBus, 150),
+    jump: t => tone(300, t, .18, "square", .07, sfxBus, 700),
+    splat: t => { noise(t, .25, .3, sfxBus, 600, .6, "lowpass", 150); tone(180, t, .2, "sawtooth", .08, sfxBus, 90); },
+    error: t => { tone(160, t, .25, "sawtooth", .12, sfxBus); tone(150, t + .15, .3, "sawtooth", .12, sfxBus); },
+    tick: t => tone(1800, t, .03, "square", .05, sfxBus),
+    cheer: t => [0, 4, 7, 12].forEach((s, i) => tone(mtof(74 + s), t + i * .09, .3, "square", .07, sfxBus)),
+    win: t => [0, 4, 7, 12, 7, 12].forEach((s, i) => tone(mtof(74 + s), t + i * .12, i === 5 ? .7 : .2, "triangle", .14, sfxBus)),
+    lose: t => [7, 5, 3, 0].forEach((s, i) => tone(mtof(62 + s), t + i * .16, .3, "triangle", .12, sfxBus)),
+    page: t => noise(t, .15, .08, sfxBus, 3000, .7, "bandpass", 1500),
+    note0: t => tone(mtof(72), t, .45, "sine", .2, sfxBus), note1: t => tone(mtof(76), t, .45, "sine", .2, sfxBus),
+    note2: t => tone(mtof(79), t, .45, "sine", .2, sfxBus), note3: t => tone(mtof(83), t, .45, "sine", .2, sfxBus)
+  };
+  function sfx(name) { if (!ac || ac.state !== "running") return; const f = SFX[name]; if (f) try { f(ac.currentTime + .01); } catch (e) {} }
+
+  /* first touch anywhere unlocks sound (needed on iPad and iPhone) */
+  ["pointerdown", "keydown", "touchend"].forEach(ev => window.addEventListener(ev, unlock, { passive: true }));
+
+  return { play, sfx, duck, setOn, unlock, isOn: () => on };
+})();
+</script>
 <script>
 /* =====================================================================
    CHARACTERS — avatar, name, and read-aloud voice (pitch 0–2, rate)
    ===================================================================== */
 const CHARS = {
-  n:        { name: "",                pitch: 1.0,  rate: 0.95 },
-  a:        { name: "{a}",             pitch: 1.35, rate: 1.0,  side: "right", cls: "hero-a", av: "🧒" },
-  b:        { name: "{b}",             pitch: 1.6,  rate: 1.05, side: "right", cls: "hero-b", av: "👦" },
-  feathers: { name: "Mister Feathers", pitch: 1.9,  rate: 1.15, av: "🦜" },
-  bones:    { name: "Bones McGee",     pitch: 0.7,  rate: 1.1,  av: "💀" },
-  ink:      { name: "Inkbeard",        pitch: 0.1,  rate: 0.75, av: "🦑" },
-  brine:    { name: "Old Mother Brine",pitch: 1.3,  rate: 0.8,  av: "🧙‍♀️" },
-  grim:     { name: "Captain Grimtide",pitch: 0.2,  rate: 0.72, av: "👻", cls: "char-grim" }
+  n:        { name: "",                pitch: 1.0,  rate: 0.95, dir: "Narrator" },
+  a:        { name: "{a}",             pitch: 1.35, rate: 1.0,  side: "right", cls: "hero-a", av: "🧒", dir: "kid voice, brave" },
+  b:        { name: "{b}",             pitch: 1.6,  rate: 1.05, side: "right", cls: "hero-b", av: "👦", dir: "kid voice, cheeky" },
+  feathers: { name: "Mister Feathers", pitch: 1.9,  rate: 1.15, av: "🦜", dir: "squawky, cranky old parrot" },
+  bones:    { name: "Bones McGee",     pitch: 0.7,  rate: 1.1,  av: "💀", dir: "nervous, teeth chattering" },
+  ink:      { name: "Inkbeard",        pitch: 0.1,  rate: 0.75, av: "🦑", dir: "big, booming, but friendly" },
+  brine:    { name: "Old Mother Brine",pitch: 1.3,  rate: 0.8,  av: "🧙‍♀️", dir: "croaky old witch, cackles" },
+  grim:     { name: "Captain Grimtide",pitch: 0.2,  rate: 0.72, av: "👻", cls: "char-grim", dir: "slow, deep and spooky" }
 };
 
 const ITEMS = {
@@ -683,12 +1380,23 @@ const ITEMS = {
 /* Places on the island map. x/y are % across the map picture. */
 const PLACES = [
   { id: "skull", name: "Skull Rock Caves",    em: "💀", x: 20, y: 24, start: "skull1" },
-  { id: "reef",  name: "Kraken Reef",          em: "🐙", x: 76, y: 22, start: "reef1" },
+  { id: "reef",  name: "Kraken Reef",          em: "🐙", x: 76, y: 22, start: "gameReef" },
   { id: "light", name: "Witch's Lighthouse",   em: "🗼", x: 80, y: 74, start: "light1" },
   { id: "alley", name: "Smugglers' Alley",     em: "🏮", x: 30, y: 74, start: "alley1" }
 ];
 const PORT = { x: 46, y: 62 };
 const HOURS = 3; /* stops before midnight */
+
+/* When Captain Dad narrates, the heroes use these fixed names so the recordings match */
+const GENERIC = { a: "Sonny", b: "Wylie" };
+
+/* Words for the map screen (also recorded as map-start, map-middle, map-last) */
+const MAP_TIPS = {
+  "map-start":  "The moon is rising. Where will {a} and {b} row first? Tap a place on the map.",
+  "map-middle": "The fog is getting thicker, and the bell is getting louder. Where to next?",
+  "map-last":   "The bell is ringing louder. Time for ONE more stop... or sail out to face Grimtide now!"
+};
+const WELCOME = "Ahoy, me hearties! Tonight, Sonny and Wylie are the cabin kids of Gullwhistle Harbour. Sonny, you're the pirate in blue. Wylie, you're the pirate in orange. Ready? Then set sail!";
 
 /* =====================================================================
    THE STORY
@@ -699,7 +1407,17 @@ const HOURS = 3; /* stops before midnight */
 const STORY = {
   intro1: {
     type: "page", scene: "dusk", art: ["🐟", "🪙", "⛵"],
-    text: "Gullwhistle Harbour smells of fish, tar and trouble.\n\n{a} and {b} are the cabin kids on a grumpy old fishing boat, and tonight's job is the worst job of all: gutting fish.\n\n{b} slices open a fat silver fish and... CLINK! Out rolls a gold coin, slimy and gleaming. On one side is a grinning skull. On the other is a name: GRIMTIDE.",
+    text: "Gullwhistle Harbour smells of fish, tar and trouble.\n\n{a} and {b} are the cabin kids on a grumpy old fishing boat. Tonight's job: fling the whole day's catch into the fish barrel before Captain Crabbe gets back.\n\n\"Every fish in that barrel,\" he bellowed, \"or NO PUDDING!\"\n\nHow hard can it be?",
+    choices: [ { label: "Start flinging fish!", em: "🐟", to: "gameFish" } ]
+  },
+  gameFish: {
+    type: "game", game: "fishFling", title: "Fish Fling", next: "coinFind",
+    how: "Drag the fish back, aim, and let go to fling it into the barrel. The barrel moves after every throw!",
+    pic: { bg: "harbour", mode: "dusk" }
+  },
+  coinFind: {
+    type: "page",
+    text: "Splat! Splat! SPLAT! Just one fish is left on the dock: a fat, shiny silver one.\n\n{b} picks it up to throw... and something inside it goes CLINK.\n\n{a} slices it open. Out rolls a gold coin, slimy and gleaming. On one side is a grinning skull. On the other is a name: GRIMTIDE.",
     choices: [ { label: "Pocket the gold coin", em: "🪙", to: "intro2", give: "coin" } ]
   },
   intro2: {
@@ -733,8 +1451,18 @@ const STORY = {
 
   /* ---------- Skull Rock Caves ---------- */
   skull1: {
-    type: "page", scene: "cave", art: ["💀", "🔥", "🦴"],
-    text: "Skull Rock is a giant stone skull poking out of the sea. You row straight into its gaping mouth.\n\nInside, torches flicker and something rattles in the dark. Clickety-clack. Clickety-clack.\n\nA whole crew of skeletons is huddled in the middle of the cave... and they're shaking.",
+    type: "page",
+    text: "Skull Rock is a giant stone skull poking out of the sea. You row straight into its gaping mouth.\n\nInside, torches flicker along the cave walls... and one by one, they start to fizzle out.\n\nFrom somewhere in the dark, a voice whimpers: \"N-n-no! Not the DARK! Somebody light the torches!\"",
+    choices: [ { label: "Relight the torches!", em: "🔥", to: "gameTorch" } ]
+  },
+  gameTorch: {
+    type: "game", game: "torchPanic", title: "Torch Panic", next: "skull2",
+    how: "The torches keep going out! Tap each one to relight it before the cave goes dark.",
+    pic: { bg: "cave" }
+  },
+  skull2: {
+    type: "page",
+    text: "The torches blaze bright again. Now you can see who was whimpering.\n\nA whole crew of skeletons is huddled in the middle of the cave, hugging each other... and shaking like jelly. Clickety-clack. Clickety-clack.",
     choices: [
       { label: "Sneak past them", em: "🤫", to: "skullSneak" },
       { label: "Say hello", em: "👋", to: "skullChat" }
@@ -755,7 +1483,7 @@ const STORY = {
     ],
     choices: [
       { label: "Tell them a joke", em: "😂", to: "skullJoke", give: "musicbox" },
-      { label: "Give them your boat lantern", em: "🏮", to: "skullLantern", give: "musicbox" }
+      { label: "Give them your boat lantern", em: "🏮", to: "skullLantern", give: "musicbox", flag: "noLantern" }
     ]
   },
   skullJoke: {
@@ -770,9 +1498,14 @@ const STORY = {
   },
 
   /* ---------- Kraken Reef ---------- */
+  gameReef: {
+    type: "game", game: "reefRun", title: "Reef Run", next: "reef1",
+    how: "Kraken Reef is full of rocks, wrecks and wriggly tentacles! Drag left and right to steer, and grab the pieces of eight.",
+    pic: { bg: "reef" }
+  },
   reef1: {
     type: "page", scene: "sea", art: ["🌊", "🦑", "🪨"],
-    text: "The water around Kraken Reef is black and still. Wrecked ships poke out of the rocks like broken teeth.\n\nThen the sea begins to bubble. Blub. Blub. BLUB.\n\nA tentacle as thick as a tree trunk rises out of the water, drips all over {a}... and wraps around your boat!",
+    text: "Phew! You've rowed right into the middle of Kraken Reef. Wrecked ships poke out of the rocks like broken teeth, and the water is black and still.\n\nThen the sea begins to bubble. Blub. Blub. BLUB.\n\nA tentacle as thick as a tree trunk rises out of the water, drips all over {a}... and wraps around your boat!",
     choices: [
       { label: "Row for your lives!", em: "🚣", to: "endRock" },
       { label: "Tickle the tentacle", em: "🪶", to: "reefChat", give: "kraken" }
@@ -816,9 +1549,14 @@ const STORY = {
       ["brine", "Nothing's free, dearie. Answer my riddle. I have a head and a tail, but no body. What am I?"]
     ],
     choices: [
-      { label: "A coin!", em: "🪙", to: "lightRight", give: "salt" },
+      { label: "A coin!", em: "🪙", to: "gameBrew" },
       { label: "A snake!", em: "🐍", to: "lightWrong" }
     ]
+  },
+  gameBrew: {
+    type: "game", game: "brew", title: "Brew the Moonlight Salt", next: "lightRight", give: "salt",
+    how: "\"Correct!\" cackles Brine. \"Now help me brew it.\" Watch which jars glow, then tap them in the same order.",
+    pic: { bg: "lighthouse" }
   },
   lightRight: {
     type: "chat", scene: "light", art: ["🧂", "✨", "🧙‍♀️"],
@@ -841,20 +1579,30 @@ const STORY = {
 
   /* ---------- Smugglers' Alley ---------- */
   alley1: {
-    type: "page", scene: "alley", art: ["🐒", "🪙", "🏮"],
+    type: "page", scene: "alley", art: ["🐒", "🪙", "🏮"], take: "coin",
     text: "Back in Gullwhistle, Smugglers' Alley is packed with lanterns, stalls and shady pirates selling shady things.\n\n\"Lucky eyeballs! Pickled rats! Gold chocolate coins!\" shouts a lolly-seller.\n\nSuddenly a little monkey in a waistcoat drops from a roof, snatches the cursed coin out of {b}'s pocket, and scampers away!",
     choices: [
-      { label: "Chase it over the rooftops", em: "🏃", to: "alleyRoof", give: "choc" },
-      { label: "Buy a banana and wait", em: "🍌", to: "alleyBanana", give: "choc" }
+      { label: "Chase it over the rooftops", em: "🏃", to: "gameRoof" },
+      { label: "Buy a banana and wait", em: "🍌", to: "gameCatch" }
     ]
   },
+  gameRoof: {
+    type: "game", game: "rooftop", title: "Rooftop Run", next: "alleyRoof",
+    how: "After that monkey! Tap to jump over the gaps between the roofs. Grab pieces of eight as you go.",
+    pic: { bg: "alley" }
+  },
+  gameCatch: {
+    type: "game", game: "coinCatch", title: "Coin Catch", next: "alleyBanana",
+    how: "While you wait, the lolly stall wobbles... and chocolate coins rain down! Drag your hat to catch them, but dodge the rotten fish!",
+    pic: { bg: "alley" }
+  },
   alleyRoof: {
-    type: "page", scene: "alley", art: ["🍫", "🐒", "💥"],
+    type: "page", scene: "alley", art: ["🍫", "🐒", "💥"], give: ["coin", "choc"],
     text: "You climb, leap and slide across the slippery rooftops. {a} grabs the monkey's tail. {b} grabs the coin. And all three of you crash through a roof...\n\n...straight into the lolly-seller's stall. CRASH! Chocolate coins everywhere!\n\nThe lolly-seller laughs so hard she lets you keep one: a gold-wrapped chocolate coin.\n\nHmm. It looks EXACTLY like Grimtide's coin...",
     choices: [ { label: "Back to the map", em: "🗺️", to: "map" } ]
   },
   alleyBanana: {
-    type: "page", scene: "alley", art: ["🍌", "🐒", "🍫"],
+    type: "page", scene: "alley", art: ["🍌", "🐒", "🍫"], give: ["coin", "choc"],
     text: "The monkey sniffs the air. It can't resist. It creeps back down, swaps the cursed coin for the banana, and eats it in three bites, peel and all.\n\nThe lolly-seller claps. \"Smart thinking!\" She flips you a gold-wrapped chocolate coin.\n\nHmm. It looks EXACTLY like Grimtide's coin...",
     choices: [ { label: "Back to the map", em: "🗺️", to: "map" } ]
   },
@@ -884,7 +1632,12 @@ const STORY = {
   saltFight: {
     type: "page", scene: "ghost", art: ["🧂", "👻", "🍳"],
     text: "You fling the Moonlight Salt. It sparkles all over Grimtide. He sneezes. ACHOO!\n\nThen he looks down at his hands. They're not see-through any more. They're SOLID.\n\n\"Uh oh,\" says Grimtide.\n\n{a} grabs a mop. {b} grabs a frying pan. Grimtide draws his rusty cutlass.",
-    choices: [ { label: "CHARGE!", em: "⚔️", to: "endDuel" } ]
+    choices: [ { label: "CHARGE!", em: "⚔️", to: "gameDuel" } ]
+  },
+  gameDuel: {
+    type: "game", game: "duel", title: "Sword Duel", next: "endDuel",
+    how: "When Grimtide's cutlass flashes white, TAP to block it. Then bonk him on the nose while he's dizzy!",
+    pic: { bg: "deck", mode: "night" }
   },
 
   /* ---------- Endings ---------- */
@@ -933,7 +1686,9 @@ const PICS = {
   intro2:      { bg: "harbour", mode: "fog",   parts: ["kidA:up@140,372,1", "kidB:up@250,374,1", "coin@330,330,.9", "bell@720,110,.8"] },
   hide:        { bg: "harbour", mode: "fog",   parts: ["net@220,375,1.15"] },
   feathers:    { bg: "harbour", mode: "night", parts: ["parrot:map@320,340,1.35", "kidA@90,374,.95", "kidB@160,376,.95"] },
+  coinFind:    { bg: "harbour", mode: "dusk",  parts: ["barrel@235,300,1", "coin@300,236,1.2", "kidA@100,372,.95", "kidB:up@370,374,.95"] },
   skull1:      { bg: "skullRock", parts: ["boat@380,330,1"] },
+  skull2:      { bg: "cave", parts: ["skeleton:scared@330,332,1", "skeleton:scared@420,326,.95", "skeleton:scared@510,334,1"] },
   skullSneak:  { bg: "cave", parts: ["skeleton:scared@440,330,1", "skeleton:scared@530,326,.95", "skeleton:scared@620,332,1", "toeBone@500,190,1.3", "kidA:up@200,372,1", "kidB@280,374,1"] },
   skullChat:   { bg: "cave", parts: ["skeleton:scared@450,332,1", "skeleton:scared@535,326,.95", "skeleton:scared@620,334,1", "kidA@210,372,1", "kidB@290,374,1"] },
   skullJoke:   { bg: "cave", parts: ["skeleton:dance@460,334,1", "skeletonPieces@590,356,1", "musicbox@360,378,.8", "kidA@190,372,1", "kidB:up@270,374,1"] },
@@ -995,7 +1750,12 @@ const store = {
 };
 
 let S = { a: "", b: "", node: null, items: [], visited: [], hours: 0, lastPlace: null, history: [],
-          found: store.get("found", []), reading: store.get("reading", false), roll: 0 };
+          found: store.get("found", []), reading: store.get("reading", false), roll: 0,
+          narrator: store.get("narrator", "computer"), flags: {}, eight: {},
+          hard: store.get("hard", false), music: store.get("music", true) };
+let game = null; /* the mini-game that's running */
+const eightTotal = () => Object.values(S.eight).reduce((a, b) => a + b, 0);
+const P8 = n => `<span class="p8" aria-hidden="true">8</span> ${n}`;
 let timers = [];
 
 const book = document.getElementById("book");
@@ -1026,17 +1786,48 @@ function pickVoice() {
   } catch (e) {}
 }
 try { pickVoice(); window.speechSynthesis.onvoiceschanged = pickVoice; } catch (e) {}
-function stopSpeech() { try { window.speechSynthesis.cancel(); } catch (e) {} }
-function say(parts) { /* parts: [[speakerKey, text], ...] */
+/* ---------- Captain Dad's recordings ---------- */
+let clip = null, manifest = null;
+function loadManifest() {
+  if (manifest) return;
+  manifest = {};
+  try {
+    fetch("audio/manifest.json", { cache: "no-store" }).then(r => r.ok ? r.json() : {}).then(m => { manifest = m || {}; }).catch(() => {});
+  } catch (e) {}
+}
+function stopSpeech() {
+  try { window.speechSynthesis.cancel(); } catch (e) {}
+  try { MUSIC.duck(false); } catch (e) {}
+  if (clip) { try { clip.pause(); } catch (e) {} clip = null; }
+}
+function say(parts, clipId) { /* parts: [[speakerKey, text], ...] */
   stopSpeech();
   if (!S.reading) return;
+  if (S.narrator === "dad") {
+    if (!clipId) return;
+    const file = (manifest && manifest[clipId]) || (clipId + ".mp3");
+    const a = new Audio("audio/" + file);
+    let fell = false;
+    const fallback = () => { if (fell || clip !== a) return; fell = true; clip = null; speakTTS(parts); };
+    clip = a;
+    MUSIC.duck(true);
+    a.addEventListener("ended", () => MUSIC.duck(false));
+    a.addEventListener("error", fallback);
+    try { const pr = a.play(); if (pr && pr.catch) pr.catch(fallback); } catch (e) { fallback(); }
+    return;
+  }
+  speakTTS(parts);
+}
+function speakTTS(parts) {
   try {
     parts.forEach(([who, text]) => {
       const c = CHARS[who] || CHARS.n;
       const u = new SpeechSynthesisUtterance(text.replace(/[\u{1F300}-\u{1FAFF}☀-➿️‍]/gu, ""));
       u.pitch = c.pitch; u.rate = c.rate; if (voice) u.voice = voice;
+      u.onend = () => { setTimeout(() => { try { if (!window.speechSynthesis.speaking) MUSIC.duck(false); } catch (e) {} }, 200); };
       window.speechSynthesis.speak(u);
     });
+    if (parts.length) MUSIC.duck(true);
   } catch (e) {}
 }
 function choiceSpeech(list) {
@@ -1065,16 +1856,19 @@ function drawPic(node) {
   if (!node.pic) return drawScene(node.scene, node.art);
   const s = el("div", "scene");
   const label = ((node.text || (node.lines ? node.lines[0][1] : "")) + "").split("\n")[0].slice(0, 120);
-  s.innerHTML = ART.scene(node.pic, fill(label));
+  let pic = node.pic;
+  if (S.flags.noLantern && pic.parts) pic = Object.assign({}, pic, { parts: pic.parts.map(p => p.startsWith("boat@") ? p.replace("boat@", "boat:dark@") : p) });
+  s.innerHTML = ART.scene(pic, fill(label));
   return s;
 }
 
 /* ---------- Navigation ---------- */
-function snapshot() { return { node: S.node, items: S.items.slice(), visited: S.visited.slice(), hours: S.hours, lastPlace: S.lastPlace }; }
+function snapshot() { return { node: S.node, items: S.items.slice(), visited: S.visited.slice(), hours: S.hours, lastPlace: S.lastPlace, flags: Object.assign({}, S.flags) }; }
 function goTo(id, opts = {}) {
   if (S.node && !opts.noHistory) S.history.push(snapshot());
   if (opts.give && !S.items.includes(opts.give)) S.items.push(opts.give);
   if (opts.cost) S.hours += opts.cost;
+  if (opts.flag) S.flags[opts.flag] = true;
   if (id === "map" && S.hours >= HOURS) id = "midnight";
   S.node = id;
   render();
@@ -1085,12 +1879,28 @@ function enterPlace(p) {
   S.node = p.start; render();
 }
 
+function trackFor(node) {
+  if (!node || node.type === "map") return "shanty";
+  if (node.type === "game") return "game";
+  if (node.type === "ending") return "dawn";
+  const p = node.pic || {};
+  return ({ harbour: p.mode === "fog" ? "spooky" : "shanty", skullRock: "cave", cave: "cave", reef: "sea", lighthouse: "witch", alley: "market", ghostShip: "spooky", deck: p.mode === "dawn" ? "dawn" : "spooky", dawnSea: "dawn" })[p.bg] || "shanty";
+}
 function render() {
   clearTimers(); stopSpeech();
+  if (game) { game.stop(); game = null; }
   const node = STORY[S.node];
+  const arr = v => v ? [].concat(v) : [];
+  if (node.type !== "game") {
+    arr(node.take).forEach(it => { S.items = S.items.filter(x => x !== it); });
+    arr(node.give).forEach(it => { if (!S.items.includes(it)) S.items.push(it); });
+  }
+  MUSIC.play(trackFor(node));
+  if (node.type === "ending") MUSIC.sfx("win");
   book.innerHTML = "";
   if (node.type === "map") renderMap();
   else if (node.type === "chat") renderChat(node);
+  else if (node.type === "game") renderGame(node);
   else renderPage(node);
   backBtn.disabled = S.history.length === 0;
   drawShelf();
@@ -1104,7 +1914,7 @@ function makeChoices(node) {
     const b = el("button", "choice"); b.type = "button";
     b.appendChild(el("span", "em", c.em)); b.appendChild(el("span", null, c.label));
     const n = el("span", "num", String(i + 1)); n.setAttribute("aria-hidden", "true"); b.appendChild(n);
-    b.addEventListener("click", () => c.action ? c.action() : goTo(c.to, { give: c.give, cost: c.cost }));
+    b.addEventListener("click", () => { MUSIC.sfx("page"); c.action ? c.action() : goTo(c.to, { give: c.give, cost: c.cost, flag: c.flag }); });
     box.appendChild(b);
   });
   return { box, list };
@@ -1122,11 +1932,15 @@ function renderPage(node) {
     badge.appendChild(el("div", "label", "The End"));
     badge.appendChild(el("div", "title", node.ending.em + " " + node.ending.title));
     if (isNew) badge.appendChild(el("div", "new-flag", "⭐ New ending found!"));
+    const tot = eightTotal(), best = Math.max(store.get("best8", 0), tot);
+    store.set("best8", best);
+    const loot = el("div", "loot"); loot.innerHTML = `You found ${P8(tot)} pieces of eight!` + (best > tot ? `<span class="best">Best ever: ${best}</span>` : tot > 0 ? `<span class="best">⭐ Your best ever!</span>` : "");
+    badge.appendChild(loot);
     content.appendChild(badge);
     speech.push(["n", "The end. " + node.ending.title + "."]);
     node = Object.assign({}, node, { choices: [
       { label: "Play again (same pirates)", em: "🔄", action: () => newGame(false) },
-      { label: "New pirate names", em: "✏️", action: showStart }
+      { label: S.narrator === "dad" ? "Back to the start" : "New pirate names", em: "✏️", action: showStart }
     ]});
   }
   const text = fill(node.text);
@@ -1137,7 +1951,7 @@ function renderPage(node) {
   book.appendChild(wrap);
   speech.push(["n", text]);
   if (node.type !== "ending") speech = speech.concat(choiceSpeech(list));
-  say(speech);
+  say(speech, S.node);
 }
 
 function renderChat(node) {
@@ -1187,7 +2001,67 @@ function renderChat(node) {
   skip.addEventListener("click", finish);
   chat.addEventListener("click", finish);
   step();
-  say(lines.concat(choiceSpeech(list)));
+  say(lines.concat(choiceSpeech(list)), S.node);
+}
+
+/* ---------- Mini-game pages ---------- */
+function renderGame(node) {
+  const wrap = el("div", "page");
+  const stage = el("div", "stage");
+  stage.innerHTML = ART.scene(node.pic || { bg: "harbour", mode: "dusk" }, node.title);
+  const host = el("div", "gamehost"); stage.appendChild(host);
+  const over = el("div", "overlay"); stage.appendChild(over);
+  wrap.appendChild(stage);
+  book.appendChild(wrap);
+
+  function intro() {
+    over.innerHTML = ""; over.style.display = "flex";
+    over.appendChild(el("div", "gtitle", node.title));
+    over.appendChild(el("p", "ghow", fill(node.how)));
+    const lvl = el("div", "lvl");
+    [["easy", "🐣 Easy"], ["hard", "🦈 Hard"]].forEach(([k, label]) => {
+      const b = el("button", "lvlbtn", label); b.type = "button";
+      b.setAttribute("aria-pressed", String((k === "hard") === S.hard));
+      b.addEventListener("click", () => { S.hard = k === "hard"; store.set("hard", S.hard); lvl.querySelectorAll(".lvlbtn").forEach((x, i) => x.setAttribute("aria-pressed", String((i === 1) === S.hard))); });
+      lvl.appendChild(b);
+    });
+    over.appendChild(lvl);
+    const play = el("button", "bigbtn", "Play! ▶"); play.type = "button";
+    play.addEventListener("click", start);
+    over.appendChild(play);
+    if (window.innerWidth < 620 && window.innerHeight > window.innerWidth) over.appendChild(el("div", "tiltTip", "📱 Tip: turn your phone sideways for a bigger game!"));
+    const skip = el("button", "skipgame", "Skip the game"); skip.type = "button";
+    skip.addEventListener("click", carryOn);
+    over.appendChild(skip);
+    say([["n", node.title + ". " + fill(node.how)]], S.node);
+  }
+  function start() {
+    stopSpeech(); MUSIC.unlock();
+    over.style.display = "none";
+    try { stage.scrollIntoView({ block: "center", behavior: "smooth" }); } catch (e) {}
+    if (game) game.stop();
+    game = GAMES.run(node.game, host, { easy: !S.hard, flags: S.flags, sfx: MUSIC.sfx, onEnd: result });
+  }
+  function result(pieces, message) {
+    if (game) { game.stop(); game = null; }
+    const id = S.node, before = S.eight[id] || 0;
+    S.eight[id] = Math.max(before, pieces);
+    const gained = S.eight[id] - before;
+    MUSIC.sfx(pieces > 0 ? "win" : "lose");
+    over.innerHTML = ""; over.style.display = "flex";
+    over.appendChild(el("div", "gtitle", pieces > 0 ? "Arrr, well done!" : "Good try!"));
+    over.appendChild(el("p", "ghow", message));
+    const won = el("div", "won");
+    won.innerHTML = `<span>+ ${P8(pieces)} pieces of eight</span>` + (before && gained === 0 ? `<span class="best">(Your best here is ${before})</span>` : "");
+    over.appendChild(won);
+    const row = el("div", "row");
+    const again = el("button", "bigbtn alt", "🔁 Have another go"); again.type = "button"; again.addEventListener("click", start);
+    const go = el("button", "bigbtn", "Carry on ▶"); go.type = "button"; go.addEventListener("click", carryOn);
+    row.appendChild(again); row.appendChild(go); over.appendChild(row);
+    if (S.reading && S.narrator === "computer") speakTTS([["n", message]]);
+  }
+  function carryOn() { MUSIC.sfx("page"); goTo(node.next, { give: node.give }); }
+  intro();
 }
 
 /* ---------- Map ---------- */
@@ -1229,6 +2103,8 @@ function renderMap() {
   clock.appendChild(pips);
   clock.appendChild(el("span", null, left === 1 ? "1 hour to midnight!" : left + " hours to midnight"));
   head.appendChild(clock);
+  const purse = el("div", "purse"); purse.innerHTML = P8(eightTotal()); purse.title = "Pieces of eight";
+  head.appendChild(purse);
   wrap.appendChild(head);
 
   const mw = el("div", "mapwrap");
@@ -1248,10 +2124,8 @@ function renderMap() {
   wrap.appendChild(mw);
 
   const tip = el("p", "maptip");
-  const tipText = S.visited.length === 0
-    ? "The moon is rising. Where will {a} and {b} row first? Tap a place on the map."
-    : left === 1 ? "The bell is ringing louder. Time for ONE more stop... or sail out to face Grimtide now!"
-    : "The fog is getting thicker. Where to next?";
+  const tipId = S.visited.length === 0 ? "map-start" : left === 1 ? "map-last" : "map-middle";
+  const tipText = MAP_TIPS[tipId];
   tip.textContent = fill(tipText);
   wrap.appendChild(tip);
 
@@ -1272,19 +2146,40 @@ function renderMap() {
   book.appendChild(wrap);
 
   const open = PLACES.filter(p => !S.visited.includes(p.id)).map(p => p.name).join(", ");
-  say([["n", fill(tipText) + " " + (left === 1 ? "One hour" : left + " hours") + " until midnight. You can go to: " + open + "."]]);
+  say([["n", fill(tipText) + " " + (left === 1 ? "One hour" : left + " hours") + " until midnight. You can go to: " + open + "."]], tipId);
 }
 
 /* ---------- Start screen ---------- */
 function showStart() {
   clearTimers(); stopSpeech();
+  if (game) { game.stop(); game = null; }
+  MUSIC.play("shanty");
   S.node = null; S.history = [];
   book.innerHTML = "";
   const wrap = el("div", "page");
   wrap.appendChild(drawPic({ pic: { bg: "ghostShip" }, text: "The ghost ship Rattlebones" }));
   const box = el("div", "start");
   box.appendChild(el("h2", null, "Who dares sail tonight?"));
-  box.appendChild(el("p", null, "Type your first names and we'll turn you into proper pirates. Then break the curse before midnight! There are 7 endings to find."));
+  box.appendChild(el("p", null, "Break the curse before midnight! There are 7 endings to find."));
+
+  /* Who's telling the story? */
+  box.appendChild(el("div", "pickhead", "Who's telling the story?"));
+  const pick = el("div", "pick");
+  const opts = [
+    ["dad", "🎙️", "Captain Dad", "Dad reads the story, starring Sonny and Wylie."],
+    ["computer", "🤖", "Robo-Parrot", "The computer reads it. Make your own pirate names."]
+  ];
+  const cards = {};
+  opts.forEach(([k, em, title, sub]) => {
+    const c = el("button", "pickcard"); c.type = "button";
+    c.setAttribute("aria-pressed", String(S.narrator === k));
+    c.appendChild(el("span", "pem", em));
+    const t = el("span", "ptxt"); t.appendChild(el("strong", null, title)); t.appendChild(el("span", null, sub)); c.appendChild(t);
+    c.addEventListener("click", () => { S.narrator = k; store.set("narrator", k); syncPick(); });
+    cards[k] = c; pick.appendChild(c);
+  });
+  box.appendChild(pick);
+
   const form = el("form");
   const names = el("div", "names");
   const saved = store.get("names", { a: "", b: "" });
@@ -1301,8 +2196,16 @@ function showStart() {
   form.appendChild(err);
   const go = el("button", "bigbtn", "Make us pirates! 🏴‍☠️"); go.type = "submit";
   form.appendChild(go);
+  function syncPick() {
+    Object.entries(cards).forEach(([k, c]) => c.setAttribute("aria-pressed", String(S.narrator === k)));
+    const dad = S.narrator === "dad";
+    names.style.display = dad ? "none" : "";
+    go.textContent = dad ? "Ready, Captain Dad! 🎙️" : "Make us pirates! 🏴‍☠️";
+    err.textContent = "";
+  }
   form.addEventListener("submit", e => {
     e.preventDefault();
+    if (S.narrator === "dad") { S.reading = true; store.set("reading", true); syncRead(); loadManifest(); showDadReveal(); return; }
     const ra = document.getElementById("na").value.trim().replace(/[^\p{L}\-' ]/gu, "");
     const rb = document.getElementById("nb").value.trim().replace(/[^\p{L}\-' ]/gu, "");
     if (!ra || !rb) { err.textContent = "Both pirates need a name!"; return; }
@@ -1313,8 +2216,35 @@ function showStart() {
   box.appendChild(form);
   wrap.appendChild(box);
   book.appendChild(wrap);
+  syncPick();
   backBtn.disabled = true;
-  say([["n", "Who dares sail tonight? Type your first names, and we'll turn you into proper pirates."]]);
+  if (S.narrator === "computer") say([["n", "Who dares sail tonight? Type your first names, and we'll turn you into proper pirates."]]);
+}
+
+function showDadReveal() {
+  stopSpeech();
+  book.innerHTML = "";
+  const wrap = el("div", "page");
+  wrap.appendChild(drawPic({ pic: { bg: "harbour", mode: "dusk", parts: ["parrot@250,330,1.2", "kidA:up@110,372,1", "kidB:up@370,374,1"] }, text: "Sonny and Wylie, the new pirate crew" }));
+  const box = el("div", "start");
+  box.appendChild(el("h2", null, "Arrr! Meet the crew"));
+  box.appendChild(el("p", null, "Tonight's cabin kids, ready for trouble!"));
+  const rv = el("div", "reveal");
+  [["a", "The pirate in blue", GENERIC.a], ["b", "The pirate in orange", GENERIC.b]].forEach(([k, real, full]) => {
+    const c = el("div", "pname " + k);
+    c.appendChild(el("div", "real", real));
+    c.appendChild(el("div", "pirate", full));
+    rv.appendChild(c);
+  });
+  box.appendChild(rv);
+  const row = el("div", "row");
+  const start = el("button", "bigbtn", "Set sail! ⛵"); start.type = "button";
+  start.addEventListener("click", () => { S.a = GENERIC.a; S.b = GENERIC.b; newGame(true); });
+  row.appendChild(start);
+  box.appendChild(row);
+  wrap.appendChild(box);
+  book.appendChild(wrap);
+  say([["n", WELCOME]], "welcome");
 }
 
 function showReveal(ra, rb) {
@@ -1346,6 +2276,7 @@ function showReveal(ra, rb) {
 }
 
 function newGame() {
+  S.flags = {}; S.eight = {};
   S.items = []; S.visited = []; S.hours = 0; S.lastPlace = null; S.history = []; S.node = null;
   goTo("intro1", { noHistory: true });
 }
@@ -1373,6 +2304,10 @@ backBtn.addEventListener("click", () => {
   Object.assign(S, prev); render();
 });
 homeBtn.addEventListener("click", showStart);
+const musicBtn = document.getElementById("musicBtn");
+function syncMusic() { musicBtn.setAttribute("aria-pressed", String(S.music)); musicBtn.textContent = S.music ? "🎵" : "🔇"; MUSIC.setOn(S.music); }
+musicBtn.addEventListener("click", () => { S.music = !S.music; store.set("music", S.music); syncMusic(); MUSIC.unlock(); });
+syncMusic();
 document.addEventListener("keydown", e => {
   if (e.target.tagName === "INPUT") return;
   const n = parseInt(e.key, 10);
@@ -1381,6 +2316,7 @@ document.addEventListener("keydown", e => {
 
 syncRead();
 drawShelf();
+if (S.narrator === "dad") loadManifest();
 showStart();
 </script>
 </body>
