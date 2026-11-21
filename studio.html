@@ -402,6 +402,20 @@ const STORY = {
   }
 };
 
+
+const NUDGES = [
+  "Ready? Tap \u201c{x}\u201d!",
+  "Off you go! Tap \u201c{x}\u201d to keep going.",
+  "Let's go, me hearties! Tap \u201c{x}\u201d!",
+  "Quick, before it's too late! Tap \u201c{x}\u201d!",
+  "What are you waiting for? Tap \u201c{x}\u201d!"
+];
+function nudgeFor(id, label) {
+  let h = 0; for (const ch of String(id)) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  let line = NUDGES[h % NUDGES.length].replace("{x}", label);
+  if (/[!?]$/.test(label)) line = line.replace(/\u201d!$/, "\u201d");
+  return line;
+}
 </script>
 <script>
 const ORDER = [
@@ -526,6 +540,11 @@ function scriptFor(id) {
   }
   if (!p.ending && p.choices && p.choices.some(ch => ch.need)) {
     box.appendChild(el("div", "choices", "")).appendChild(el("em", null, "Skip the choices here: which ones appear depends on what's in their bag."));
+  } else if (!p.ending && p.choices && p.choices.length === 1) {
+    const c = el("div", "choices");
+    c.appendChild(el("em", null, "Then say (optional): "));
+    c.appendChild(document.createTextNode(nudgeFor(id, p.choices[0].label)));
+    box.appendChild(c);
   } else if (!p.ending && p.choices && p.choices.length) {
     const c = el("div", "choices");
     c.appendChild(el("em", null, "Choices (optional): "));

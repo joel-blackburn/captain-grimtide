@@ -115,6 +115,8 @@
   .choice:nth-child(4) { background: #2f7d4f; }
   .choice:nth-child(5) { background: #8a5a2b; }
   .choice:active { transform: translateY(4px); box-shadow: 0 1px 0 #000; }
+  .choice.solo { animation: nudge 1.8s ease-in-out 1.2s infinite; }
+  @keyframes nudge { 0%,100% { transform: scale(1); } 50% { transform: scale(1.035); } }
   .choice .em { font-size: 1.45em; }
   .choice .num { margin-left: auto; font-size: 13px; background: rgba(255,255,255,.2); border-radius: 8px; padding: 2px 8px; }
   button:focus-visible { outline: 4px solid var(--gold); outline-offset: 3px; }
@@ -1830,8 +1832,24 @@ function speakTTS(parts) {
     if (parts.length) MUSIC.duck(true);
   } catch (e) {}
 }
-function choiceSpeech(list) {
-  return list.length ? [["n", "What will you do? " + list.map((c, i) => (i + 1) + ". " + c.label + ".").join(" ")]] : [];
+/* When there's only one way forward, cheer them on instead of asking */
+const NUDGES = [
+  "Ready? Tap \u201c{x}\u201d!",
+  "Off you go! Tap \u201c{x}\u201d to keep going.",
+  "Let's go, me hearties! Tap \u201c{x}\u201d!",
+  "Quick, before it's too late! Tap \u201c{x}\u201d!",
+  "What are you waiting for? Tap \u201c{x}\u201d!"
+];
+function nudgeFor(id, label) {
+  let h = 0; for (const ch of String(id)) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  let line = NUDGES[h % NUDGES.length].replace("{x}", label);
+  if (/[!?]$/.test(label)) line = line.replace(/\u201d!$/, "\u201d");
+  return line;
+}
+function choiceSpeech(list, id) {
+  if (!list.length) return [];
+  if (list.length === 1) return [["n", nudgeFor(id || S.node, list[0].label)]];
+  return [["n", "What will you do? " + list.map((c, i) => (i + 1) + ". " + c.label + ".").join(" ")]];
 }
 
 /* ---------- Scenes ---------- */
@@ -1911,7 +1929,7 @@ function makeChoices(node) {
   const box = el("div", "choices");
   const list = (node.choices || []).filter(c => !c.need || S.items.includes(c.need));
   list.forEach((c, i) => {
-    const b = el("button", "choice"); b.type = "button";
+    const b = el("button", "choice" + (list.length === 1 && !node.ending ? " solo" : "")); b.type = "button";
     b.appendChild(el("span", "em", c.em)); b.appendChild(el("span", null, c.label));
     const n = el("span", "num", String(i + 1)); n.setAttribute("aria-hidden", "true"); b.appendChild(n);
     b.addEventListener("click", () => { MUSIC.sfx("page"); c.action ? c.action() : goTo(c.to, { give: c.give, cost: c.cost, flag: c.flag }); });
@@ -1950,7 +1968,7 @@ function renderPage(node) {
   wrap.appendChild(content);
   book.appendChild(wrap);
   speech.push(["n", text]);
-  if (node.type !== "ending") speech = speech.concat(choiceSpeech(list));
+  if (node.type !== "ending") speech = speech.concat(choiceSpeech(list, S.node));
   say(speech, S.node);
 }
 
@@ -2001,7 +2019,7 @@ function renderChat(node) {
   skip.addEventListener("click", finish);
   chat.addEventListener("click", finish);
   step();
-  say(lines.concat(choiceSpeech(list)), S.node);
+  say(lines.concat(choiceSpeech(list, S.node)), S.node);
 }
 
 /* ---------- Mini-game pages ---------- */
