@@ -1345,6 +1345,7 @@ const MUSIC = (() => {
     win: t => [0, 4, 7, 12, 7, 12].forEach((s, i) => tone(mtof(74 + s), t + i * .12, i === 5 ? .7 : .2, "triangle", .14, sfxBus)),
     lose: t => [7, 5, 3, 0].forEach((s, i) => tone(mtof(62 + s), t + i * .16, .3, "triangle", .12, sfxBus)),
     page: t => noise(t, .15, .08, sfxBus, 3000, .7, "bandpass", 1500),
+    bell: t => { tone(mtof(57), t, 2.4, "sine", .22, sfxBus); tone(mtof(57) * 2.76, t, 1.4, "sine", .07, sfxBus); tone(mtof(57) * 5.4, t, .6, "sine", .03, sfxBus); },
     note0: t => tone(mtof(72), t, .45, "sine", .2, sfxBus), note1: t => tone(mtof(76), t, .45, "sine", .2, sfxBus),
     note2: t => tone(mtof(79), t, .45, "sine", .2, sfxBus), note3: t => tone(mtof(83), t, .45, "sine", .2, sfxBus)
   };
@@ -1442,7 +1443,7 @@ const STORY = {
       ["a", "It keeps coming back! What do we do?"],
       ["feathers", "Captain Grimtide was the meanest ghost on the seven seas. I should know. I was his parrot. Brrrk."],
       ["feathers", "At midnight his ship comes for that coin. Whoever holds it joins his skeleton crew. FOREVER."],
-      ["b", "Forever?! I haven't even had dinner!"],
+      ["b", "FOREVER?! But Captain Crabbe still owes us PUDDING!"],
       ["feathers", "Then listen close. This island is full of things that can help ye. Take this map, take that rowboat, and don't dawdle."],
       ["feathers", "You've got time for THREE stops before midnight. Choose wisely!"]
     ],
