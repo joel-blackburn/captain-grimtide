@@ -30,6 +30,22 @@
   .badge { font-family: Bungee, sans-serif; font-size: 11px; background: var(--pink); color: #fff; border: 3px solid var(--navy); border-radius: 10px; padding: 4px 8px; box-shadow: 0 3px 0 var(--navy); }
   #hud { display: none; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
   .chip { font-weight: 900; font-size: 15px; background: #fff; border: 3px solid var(--navy); border-radius: 999px; padding: 4px 12px; box-shadow: 0 3px 0 var(--navy); display: flex; align-items: center; gap: 6px; }
+  .bagbtn { font-family: inherit; color: var(--navy); cursor: pointer; font-size: 15px; }
+  .bagbtn .bagit { display: inline-grid; place-items: center; width: 34px; height: 34px; font-size: 24px; background: #fff6d6; border: 2px solid var(--navy); border-radius: 50%; margin-left: -4px; }
+  .bagbtn .bagit:first-child { margin-left: 0; }
+  .bagbtn .bagempty { font-size: 13px; opacity: .6; }
+  .bagbtn.grew { animation: bagpop .9s ease 2; background: var(--yellow); }
+  @keyframes bagpop { 0%, 100% { transform: scale(1); } 40% { transform: scale(1.25) rotate(-4deg); } 70% { transform: scale(.95); } }
+  #bag { position: fixed; inset: 0; background: rgba(11, 13, 31, .55); display: none; place-items: center; z-index: 40; padding: 16px; }
+  #bag.show { display: grid; animation: pop .2s ease; }
+  .bagbox { background: var(--paper); border: 4px solid var(--navy); border-radius: 24px; box-shadow: 0 8px 0 var(--navy); padding: 18px 18px 20px; width: min(520px, 100%); max-height: calc(100% - 20px); overflow-y: auto; color: var(--navy); }
+  .bagbox h2 { font-family: Bungee, sans-serif; font-weight: 400; font-size: 26px; margin: 0 0 12px; color: var(--pink); }
+  .bagcard { display: flex; gap: 14px; align-items: center; background: #fff; border: 3px solid var(--navy); border-radius: 18px; padding: 10px 14px; margin-bottom: 10px; box-shadow: 0 4px 0 var(--navy); }
+  .bagbig { font-size: 54px; line-height: 1; width: 72px; height: 72px; display: grid; place-items: center; background: #fff6d6; border-radius: 50%; border: 3px solid var(--navy); flex: none; }
+  .bagcard b { font-family: Bungee, sans-serif; font-weight: 400; font-size: 18px; }
+  .bagcard p { margin: 4px 0 0; font-size: 16px; line-height: 1.35; font-weight: 700; }
+  .bagnone { font-size: 18px; font-weight: 800; }
+  .bagbox .btn { width: 100%; margin-top: 6px; font: inherit; font-family: Bungee, sans-serif; font-size: 18px; padding: 12px; border-radius: 16px; border: 3px solid var(--navy); background: var(--yellow); color: var(--navy); box-shadow: 0 4px 0 var(--navy); cursor: pointer; }
   .pip { width: 16px; height: 16px; border-radius: 50%; background: var(--yellow); border: 2px solid var(--navy); display: inline-block; }
   .pip.gone { background: #4a4f73; }
   .p8 { display: inline-grid; place-items: center; width: 1.4em; height: 1.4em; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff, #c9ced6); border: 2px solid var(--navy); font-weight: 900; font-size: .85em; color: #4a4f73; }
@@ -143,6 +159,7 @@
   <div id="labels"></div>
   <div id="mapbar"></div>
   <div class="panel" id="panel"></div>
+  <div id="bag" onclick="if (event.target === this) closeBag()"></div>
 </div>
 <div id="dim"></div>
 <div id="fade"></div>
@@ -552,7 +569,79 @@ const WORLD = (() => {
     t.userData = { flame, fuel: 1, dying: false };
     return t;
   }
-  const make = { skeleton, witch, frog, monkey, inkbeard, grimtide, gull, musicBox, saltJar, chocCoin, torch, kid, makeFish, rowboat };
+  /* a tapering tentacle that curls over at the tip */
+  function tentacleGeo(len = 14, rad = 1, curl = 1, seed = 1) {
+    const pts = [], N = 26; let x = 0, y = 0, a = 0; const ds = len / N;
+    for (let i = 0; i <= N; i++) {
+      const t = i / N; pts.push(new THREE.Vector3(x, y, Math.sin(t * 3 + seed) * .5 * t));
+      const k = Math.sin(t * 4 + seed) * .06 + (t > .55 ? Math.pow((t - .55) / .45, 1.6) * .55 * curl : 0);
+      a += k; x += Math.sin(a) * ds; y += Math.cos(a) * ds;
+    }
+    const curve = new THREE.CatmullRomCurve3(pts), TS = 48, RS = 8;
+    const g = new THREE.TubeGeometry(curve, TS, rad, RS, false), p = g.attributes.position;
+    for (let i = 0; i <= TS; i++) {
+      const c = curve.getPointAt(i / TS), r = Math.max(.04, 1 - .96 * Math.pow(i / TS, .85));
+      for (let j = 0; j <= RS; j++) { const v = i * (RS + 1) + j; p.setXYZ(v, c.x + (p.getX(v) - c.x) * r, c.y + (p.getY(v) - c.y) * r, c.z + (p.getZ(v) - c.z) * r); }
+    }
+    g.computeVertexNormals(); return { g, curve };
+  }
+  function tentacle(len, rad, curl, seed, col = C.purple) {
+    const t = group(); const { g, curve } = tentacleGeo(len, rad, curl, seed);
+    mesh(g, flat(col), 0, 0, 0, t);
+    const sm = flat(0xf3b6ff);
+    for (let i = 3; i < 15; i += 2) { const u = i / 18, c = curve.getPointAt(u), tg = curve.getTangentAt(u), r = rad * (1 - .96 * Math.pow(u, .85));
+      const sk = mesh(new THREE.CylinderGeometry(r * .42, r * .42, r * .25, 7), sm, c.x - tg.y * r * .9, c.y + tg.x * r * .9, c.z, t); sk.rotation.z = Math.atan2(-tg.x, tg.y) + Math.PI / 2; }
+    return t;
+  }
+  /* a ragged ghost sail with holes */
+  function tatterSail(w, h, seed = 1) {
+    const sp = new THREE.Shape(); sp.moveTo(-w / 2, h / 2); sp.lineTo(w / 2, h / 2);
+    let r = seed * 9.7; const rn = () => (r = (r * 16807) % 2147483647) / 2147483647;
+    sp.lineTo(w / 2 + .3, -h * .1);
+    const teeth = 7; for (let i = 0; i <= teeth; i++) { const x = w / 2 - i * w / teeth; sp.lineTo(x, -h / 2 - rn() * h * .12 + (i % 2 ? h * .22 * rn() : 0)); }
+    sp.lineTo(-w / 2 - .3, -h * .05); sp.lineTo(-w / 2, h / 2);
+    for (let k = 0; k < 3; k++) { const hx = (rn() - .5) * w * .6, hy = (rn() - .5) * h * .5, hr = Math.min(w, h) * (.06 + rn() * .07); const ho = new THREE.Path(); for (let a = 0; a < 6; a++) { const an = a / 6 * Math.PI * 2, rr = hr * (.7 + rn() * .5); a ? ho.lineTo(hx + Math.cos(an) * rr, hy + Math.sin(an) * rr) : ho.moveTo(hx + Math.cos(an) * rr, hy + Math.sin(an) * rr); } sp.holes.push(ho); }
+    const g = new THREE.ShapeGeometry(sp); const p = g.attributes.position;
+    for (let v = 0; v < p.count; v++) p.setZ(v, Math.cos(p.getX(v) / w * Math.PI) * w * .07);
+    g.computeVertexNormals(); return g;
+  }
+  /* Jolly Roger: canvas skull and crossbones on a waving flag */
+  function jollyRoger(w = 6, h = 4, fogOn = true) {
+    const cv = document.createElement("canvas"); cv.width = 256; cv.height = 170; const x = cv.getContext("2d");
+    x.fillStyle = "#111"; x.fillRect(0, 0, 256, 170);
+    x.strokeStyle = "#f4f1e6"; x.lineWidth = 20; x.lineCap = "round";
+    x.beginPath(); x.moveTo(70, 140); x.lineTo(186, 40); x.moveTo(70, 40); x.lineTo(186, 140); x.stroke();
+    x.fillStyle = "#f4f1e6"; [[64, 34], [192, 34], [64, 146], [192, 146]].forEach(([a, b]) => { x.beginPath(); x.arc(a, b, 14, 0, 7); x.fill(); });
+    x.beginPath(); x.arc(128, 78, 44, 0, 7); x.fill(); x.fillRect(100, 100, 56, 34);
+    x.fillStyle = "#111"; x.beginPath(); x.arc(110, 76, 13, 0, 7); x.arc(146, 76, 13, 0, 7); x.fill();
+    x.beginPath(); x.moveTo(128, 92); x.lineTo(120, 106); x.lineTo(136, 106); x.fill();
+    for (let i = 0; i < 4; i++) x.fillRect(106 + i * 13, 120, 4, 14);
+    x.fillStyle = "#111"; [[0, 0], [256, 0], [256, 170]].forEach(() => {}); for (let i = 0; i < 6; i++) { x.beginPath(); x.moveTo(256, i * 30); x.lineTo(236, i * 30 + 15); x.lineTo(256, i * 30 + 30); x.fill(); }
+    const tex = new THREE.CanvasTexture(cv); tex.encoding = THREE.sRGBEncoding;
+    const g = new THREE.PlaneGeometry(w, h, 12, 4); g.translate(w / 2, 0, 0);
+    const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ map: tex, side: THREE.DoubleSide, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: .35, transparent: true, alphaTest: .1, fog: fogOn }));
+    m.userData.base = g.attributes.position.array.slice(); m.userData.w = w; m.castShadow = false;
+    (W.flags = W.flags || []).push(m); return m;
+  }
+  function rod(a, b, th, mat, parent) {
+    const d = new THREE.Vector3().subVectors(b, a), m = new THREE.Mesh(new THREE.BoxGeometry(th, d.length(), th), mat);
+    m.position.copy(a).add(b).multiplyScalar(.5); m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize()); parent.add(m); return m;
+  }
+  function signBoard(text, w, h, bg = "#6b3f1e", fg = "#ffe7a3") {
+    const cv = document.createElement("canvas"); cv.width = 512; cv.height = Math.round(512 * h / w); const x = cv.getContext("2d");
+    x.fillStyle = bg; x.fillRect(0, 0, cv.width, cv.height); x.strokeStyle = "#3a2010"; x.lineWidth = 16; x.strokeRect(8, 8, cv.width - 16, cv.height - 16);
+    x.fillStyle = fg; x.textAlign = "center"; x.textBaseline = "middle"; let fs = cv.height * .42; x.font = `900 ${fs}px Impact, sans-serif`; while (x.measureText(text).width > cv.width - 60) { fs -= 2; x.font = `900 ${fs}px Impact, sans-serif`; }
+    x.fillText(text, cv.width / 2, cv.height / 2 + 4);
+    const tex = new THREE.CanvasTexture(cv); tex.encoding = THREE.sRGBEncoding;
+    return new THREE.Mesh(new THREE.BoxGeometry(w, h, .15), [flat(0x3a2010), flat(0x3a2010), flat(0x3a2010), flat(0x3a2010), new THREE.MeshStandardMaterial({ map: tex, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: .25 }), new THREE.MeshStandardMaterial({ map: tex, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: .25 })]);
+  }
+  /* a hanging lantern on a cord: pivot at the top so it can swing */
+  function hangLantern(col, cord = .6) {
+    const p = group(); box(.04, cord, .04, 0x222222, 0, -cord / 2, 0, p);
+    box(.42, .1, .42, 0x2a2a2a, 0, -cord - .02, 0, p); box(.34, .44, .34, glowMat(col), 0, -cord - .3, 0, p); box(.42, .08, .42, 0x2a2a2a, 0, -cord - .55, 0, p);
+    p.userData.ph = Math.random() * 6; (W.swing = W.swing || []).push(p); return p;
+  }
+  const make = { tentacle, jollyRoger, skeleton, witch, frog, monkey, inkbeard, grimtide, gull, musicBox, saltJar, chocCoin, torch, kid, makeFish, rowboat };
 
   /* =====================================================================
      MORE SETS
@@ -577,10 +666,7 @@ const WORLD = (() => {
     const cl = new THREE.PointLight(0xffd23f, 1.2, 10); cl.position.set(0, 1, 0); W.caveLantern.add(cl);
 
     /* ---- Kraken Reef extras ---- */
-    const pts = []; for (let k = 0; k <= 10; k++) pts.push(new THREE.Vector3(Math.sin(k * .45) * 2.2, k * 1.5, Math.cos(k * .35) * 1.2));
-    const tg = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 30, 1.2, 7, false);
-    const tp = tg.attributes.position; for (let v = 0; v < tp.count; v++) { const y = tp.getY(v); const sc = 1 - y / 17; tp.setX(v, tp.getX(v) * (.35 + sc * .65)); tp.setZ(v, tp.getZ(v) * (.35 + sc * .65)); } tg.computeVertexNormals();
-    W.bigTentacle = mesh(tg, flat(C.purple), 0, -30, 0);
+    W.bigTentacle = tentacle(17, 1.3, 1.25, 2); W.bigTentacle.position.set(0, -30, 0); scene.add(W.bigTentacle);
     W.inkbeard = inkbeard(); W.inkbeard.position.set(0, -30, 0);
     W.gulls = [0, 1, 2].map(i => { const gu = gull(false); gu.position.set(0, -50, 0); return gu; });
 
@@ -601,20 +687,67 @@ const WORLD = (() => {
     W.frogA = frog(C.red); W.frogB = frog(0x222222); [W.frogA, W.frogB].forEach(f => { f.visible = false; W.light.add(f); });
     W.signBoard = door;
 
-    /* ---- Smugglers' Alley stall (in town) ---- */
-    const AO = V3(4, 1.6, -11.5); W.origins.alley = AO;
+    /* ---- Smugglers' Alley: a narrow lane between leaning houses (its own set) ---- */
+    const AO = V3(300, 1.6, -420); W.origins.alley = AO;
     const al = group(AO.x, AO.y, AO.z); W.alley = al;
-    box(6, 2, 2.4, C.wood, 0, 1, 0, al);
-    for (let i = 0; i < 6; i++) box(1.05, .4, 3, i % 2 ? C.white : C.red, -2.6 + i * 1.05, 4.2, .3, al).rotation.x = .25;
-    [-2.8, 2.8].forEach(x => box(.2, 4, .2, C.woodDark, x, 2, 1.4, al));
-    [[-2, 0xff9ec4], [-1, 0x9ef0ff], [0, 0xffe066]].forEach(([x, c]) => mesh(new THREE.CylinderGeometry(.35, .35, .9, 8), flat(c), x, 2.45, 0, al));
-    for (let i = 0; i < 7; i++) { const cc = chocCoin(); cc.position.set(1 + (i % 4) * .45, 2.1 + Math.floor(i / 4) * .12, -.2 + (i % 2) * .3); cc.rotation.set(Math.PI / 2, 0, 0); al.add(cc); }
-    [[-5, 0xff4f8b], [-2, 0xffd23f], [1, 0x06d6a0], [4, 0xff8a3d]].forEach(([x, c]) => { box(.5, .6, .5, glowMat(c), x, 6 - Math.abs(x) * .08, 2.5, al); });
-    const sl = new THREE.PointLight(0xffb06a, 1.4, 18); sl.position.set(0, 6, 4); al.add(sl);
-    W.monkey = monkey(); W.monkey.position.set(-6.5, 6.6, -3.5); al.add(W.monkey);
+    box(80, 1.6, 80, C.sand, 0, -.9, 0, al);
+    box(10.4, .22, 40, 0x5a5f78, 0, -.1, 4, al);
+    for (let i = 0; i < 70; i++) { const x = -4.6 + (i * 7 % 10) * 1.02, z = -14 + Math.floor(i / 10) * 5.4 + (i % 3) * 1.4; box(.9, .08, .7, [0x6e7390, 0x4c5068, 0x7c809c][i % 3], x, .03, z, al); }
+    W.alleyRoofs = [];
+    const houseCols = [0x9b5de5, 0xff8a3d, 0x06d6a0, 0xff4f8b, 0x3a86ff, 0xffd23f, 0xef476f, 0x7fb069];
+    function alleyHouse(side, z, len, top, col, i) {
+      const g = group(side * 8.2, 0, z, al), d = 6.4;
+      box(d, top, len - .2, col, 0, top / 2, 0, g);
+      box(d + .3, .5, len, 0x2a2140, 0, top - .1, 0, g);
+      const r = 3.95, rg = new THREE.CylinderGeometry(r, r, len + .4, 3); rg.rotateX(-Math.PI / 2); rg.scale(1, .62, 1);
+      mesh(rg, flat([0x8a3324, 0x3a3a5a, 0x5a2a6a, 0x2a4a5a][i % 4]), 0, top + .3 * r * .62 * 1.6, 0, g);
+      if (i % 2 === 0) box(1, 2.4, 1, 0x6b4a3a, -side * .5, top + 2.4, len * .25, g);
+      const face = -side * (d / 2 + .05);
+      box(.12, 2.3, 1.3, C.woodDark, face, 1.15, -len * .2, g); box(.14, .2, 1.5, 0x3a2414, face, 2.35, -len * .2, g);
+      [[3.8, len * .2], [6.2, -len * .22], [6.2, len * .25]].forEach(([y, zz], k) => { if (y > top - 1) return; box(.1, 1.1, .9, glowMat(k % 2 ? 0xffd23f : 0xffb347), face, y, zz, g); box(.14, 1.2, .15, 0x3a2414, face, y, zz - .52, g); box(.14, 1.2, .15, 0x3a2414, face, y, zz + .52, g); box(.18, .14, 1.1, 0x3a2414, face, y - .62, zz, g); });
+      W.alleyRoofs.push({ side, z, len, top, x: side * 8.2 });
+      return g;
+    }
+    [[-1, -8, 6, 8, 0], [-1, -1.5, 7, 7, 1], [-1, 5.5, 6.4, 9, 2], [-1, 12, 6.4, 7.6, 3], [-1, 18.5, 6.5, 8.6, 4],
+     [1, -8, 6, 9, 5], [1, -1.6, 6.6, 8.2, 6], [1, 5, 6.2, 7, 7], [1, 11.5, 6.6, 9.4, 0], [1, 18.2, 6.6, 7.8, 1]].forEach(([sd, z, len, top, c], i) => alleyHouse(sd, z, len, top, houseCols[c], i));
+    /* the dead-end house with an archway that sneaks off into the dark */
+    { const g = group(0, 0, -13.6, al); box(10.4, 10, 3, 0xb08968, 0, 5, 0, g); box(10.8, .5, 3.3, 0x2a2140, 0, 9.9, 0, g); box(3, 4, .2, glowMat(0x0b0d1f), 0, 2, 1.55, g);
+      const ar = mesh(new THREE.CylinderGeometry(1.5, 1.5, .2, 8, 1, false, 0, Math.PI), glowMat(0x0b0d1f), 0, 4, 1.55, g); ar.rotation.x = Math.PI / 2; ar.rotation.y = Math.PI / 2;
+      [-3.4, 3.4].forEach(x => box(1, 1.2, .1, glowMat(0xffd23f), x, 6.6, 1.55, g)); }
+    /* the lolly-seller's stall, against the left-hand wall */
+    const stall = group(0, 0, 0, al);
+    box(6, 2, 2.4, C.wood, 0, 1, 0, stall);
+    for (let i = 0; i < 6; i++) box(1.05, .4, 3, i % 2 ? C.white : C.red, -2.6 + i * 1.05, 4.2, .3, stall).rotation.x = .25;
+    [-2.8, 2.8].forEach(x => box(.2, 4, .2, C.woodDark, x, 2, 1.4, stall)); [-2.8, 2.8].forEach(x => box(.2, 4.2, .2, C.woodDark, x, 2.1, -1, stall));
+    [[-2, 0xff9ec4], [-1, 0x9ef0ff], [0, 0xffe066]].forEach(([x, c]) => mesh(new THREE.CylinderGeometry(.35, .35, .9, 8), flat(c), x, 2.45, 0, stall));
+    for (let i = 0; i < 7; i++) { const cc = chocCoin(); cc.position.set(1 + (i % 4) * .45, 2.1 + Math.floor(i / 4) * .12, -.2 + (i % 2) * .3); cc.rotation.set(Math.PI / 2, 0, 0); stall.add(cc); }
+    { const sg = signBoard("LOLLIES", 3.2, .8, "#ff4f8b", "#fff"); sg.position.set(0, 4.95, 1.25); stall.add(sg); }
+    stall.position.set(-1.2, 0, -2.4);
+    /* crates, barrels and a few shady extras along the walls */
+    [[-4.2, 3.4], [3.9, -4], [4.1, 8.4], [-4.1, 10], [4, 15]].forEach(([x, z], i) => { if (i % 2) { mesh(new THREE.CylinderGeometry(.6, .5, 1.3, 8), flat(0xc97a35), x, .65, z, al); } else { box(1.1, 1.1, 1.1, 0xa0571a, x, .55, z, al); box(.8, .8, .8, 0xc97a35, x + .1, 1.5, z + .1, al); } });
+    /* hanging sign over the lane */
+    { box(.2, .2, 3, C.woodDark, -4.8, 6.6, 14, al); const sg = signBoard("SMUGGLERS' ALLEY", 3.8, 1.1); sg.rotation.y = Math.PI / 2; sg.position.set(-3.6, 5.7, 14); al.add(sg); rod(V3(-3.6, 6.25, 13), V3(-3.6, 6.6, 13), .05, flat(0x222222), al); rod(V3(-3.6, 6.25, 15), V3(-3.6, 6.6, 15), .05, flat(0x222222), al); }
+    /* strings of lanterns across the lane, tied to the walls */
+    const lc = [0xff4f8b, 0xffd23f, 0x06d6a0, 0xff8a3d, 0x9b5de5];
+    [-6, 0.6, 7.2, 13.4].forEach((z, row) => {
+      const yTop = 7.4 - (row % 2) * .5, sag = 1.1, N = 8;
+      box(.2, .2, .4, 0x222222, -4.95, yTop, z, al); box(.2, .2, .4, 0x222222, 4.95, yTop, z, al);
+      for (let i = 0; i < N; i++) { const x0 = -4.9 + i * 9.8 / N, x1 = x0 + 9.8 / N, y0 = yTop - sag * (1 - Math.pow(x0 / 4.9, 2)), y1 = yTop - sag * (1 - Math.pow(x1 / 4.9, 2)); rod(V3(x0, y0, z), V3(x1, y1, z), .05, flat(0x222222), al); }
+      [-3, -1, 1, 3].forEach((x, k) => { const l = hangLantern(lc[(row + k) % 5], .35 + (k % 2) * .25); l.position.set(x, yTop - sag * (1 - Math.pow(x / 4.9, 2)), z); al.add(l); });
+    });
+    /* a washing line between two upstairs windows */
+    { const z = 10.2; rod(V3(-4.95, 8.6, z), V3(4.95, 8.6, z), .04, flat(0xeeeeee), al); [[-3, C.red], [-1.4, C.white], [.6, C.blue], [2.4, 0xffd23f]].forEach(([x, c]) => box(1, 1.1, .08, c, x, 8, z, al)); }
+    /* wall lamps on brackets next to the doors */
+    [[-4.9, -2.9], [4.9, -3], [-4.9, 4.3], [4.9, 2.8], [-4.9, 10.7], [4.9, 9.2]].forEach(([x, z]) => { box(.7, .14, .14, 0x222222, x - Math.sign(x) * .35, 3.6, z, al); const l = hangLantern(0xffb347, .25); l.position.set(x - Math.sign(x) * .7, 3.6, z); al.add(l); });
+    const sl = new THREE.PointLight(0xffb06a, 1.5, 22); sl.position.set(0, 6, 2); al.add(sl);
+    const sl2 = new THREE.PointLight(0xff7ab0, 1, 20); sl2.position.set(0, 6, 13); al.add(sl2);
+    /* the monkey, sitting on the edge of a roof */
+    W.monkeyPerch = V3(-5.2, 7.25, -1.5);
+    W.monkey = monkey(); W.monkey.position.copy(W.monkeyPerch); W.monkey.rotation.y = .9; al.add(W.monkey);
     W.chocPile = group(0, -50, 0, al); for (let i = 0; i < 10; i++) { const cc = chocCoin(); cc.position.set((i % 5) * .5 - 1, .06, Math.floor(i / 5) * .6); cc.rotation.set(0, i, 0); W.chocPile.add(cc); }
     W.catchHat = group(0, -50, 0, al);
     box(2.2, .3, 1.4, 0x141414, 0, 0, 0, W.catchHat); box(1.4, .6, 1, 0x141414, 0, .4, 0, W.catchHat); box(.3, .3, .05, glowMat(C.white), 0, .45, .52, W.catchHat);
+    /* a few lanterns strung between the harbour-side houses in town too (tied to walls, not floating) */
 
     /* ---- the rooftops of Gullwhistle (built far away for the chase) ---- */
     W.origins.roofs = V3(420, 0, 300);
@@ -627,14 +760,47 @@ const WORLD = (() => {
     /* ---- the Rattlebones up close (big ship with a walkable deck) ---- */
     const SO = V3(30, 0, 52); W.origins.ship = SO;
     const sh = group(SO.x, -40, SO.z); W.bigShip = sh; sh.visible = false;
-    const hullM = ghostM(0x3a2a1e, .95, 0x0a2a20), sailM = ghostM(0x5fbf98, .62), wood = ghostM(0x5a4030, .97, 0x0a2a20);
-    box(36, 6, 12, hullM, 0, 3, 0, sh); box(36.4, .5, 12.4, wood, 0, 6.1, 0, sh);
-    box(8, 3, 12, hullM, -15, 7.5, 0, sh); box(6, 2.4, 10, hullM, 16, 7, 0, sh);
-    for (let x = -12; x <= 12; x += 2) { box(.3, 1.4, .3, wood, x, 7, -5.8, sh); }
-    box(26, .3, .3, wood, 0, 7.7, -5.8, sh);
-    [-9, 0, 9].forEach((x, i) => { box(.7, 24 - i * 2, .7, wood, x, 18 - i, -1, sh); const sail = box(9, 8, .3, sailM, x, 15 - i, -1, sh); sail.userData.op = .62; box(9.5, .4, .4, wood, x, 19.5 - i, -1, sh); });
-    [-14, -8, -2, 4, 10].forEach(x => { box(1, 1, .3, glowMat(0x7ef0c4), x, 3.5, 6.1, sh); });
-    box(3, .6, .4, flat(0x111111), -9, 27, -1, sh);
+    const hullM = ghostM(0x2c2018, .96, 0x0a2a20), sailM = ghostM(0x6fd8a8, .55, 0x2a9a70), wood = ghostM(0x4a3426, .97, 0x0a2a20), bone = flat(0xe8e2d0), green = glowMat(0x7ef0c4), rope = flat(0x1a1410);
+    sailM.side = THREE.DoubleSide;
+    /* hull: a proper ship silhouette, raised stern and pointed bow */
+    const hp = new THREE.Shape(); [[-19, 10.4], [-19.6, 4], [-16, -.6], [13, -.6], [19, 2.4], [24.5, 8.2], [21.5, 8.4], [18, 6.2], [-11.5, 6.2], [-12, 10.4]].forEach(([x, y], i) => i ? hp.lineTo(x, y) : hp.moveTo(x, y));
+    const hg = new THREE.ExtrudeGeometry(hp, { depth: 12, bevelEnabled: false }); hg.translate(0, 0, -6); mesh(hg, hullM, 0, 0, 0, sh);
+    box(30, .5, 12.2, wood, 3, 6.1, 0, sh); box(7.6, .4, 12.2, wood, -15.5, 10.3, 0, sh);
+    /* plank stripes and rotten holes glowing from inside */
+    [1.4, 3, 4.6].forEach(y => [-6.06, 6.06].forEach(z => box(33, .18, .1, flat(0x1a120c), 1, y, z, sh)));
+    [[-6, 2.2, 3.4, 1.6], [8, 3.4, 2.4, 1.2], [14, 1.6, 2, 1.4], [-14, 6.5, 2, 1.6]].forEach(([x, y, w, h]) => [-6.08, 6.08].forEach(z => { box(w, h, .1, green, x, y, z, sh); [-.4, .3].forEach((o, k) => rod(V3(x - w / 2 + k * w * .6, y + h / 2, z), V3(x - w / 2 + k * w * .6 + .5, y - h / 2 + .2, z), .22, wood, sh)); }));
+    [-10, -4, 2, 8].forEach(x => [-6.08, 6.08].forEach(z => { const ph = mesh(new THREE.CylinderGeometry(.6, .6, .12, 8), green, x, 4.2, z, sh); ph.rotation.x = Math.PI / 2; }));
+    [-17.5, -15, -13.5].forEach(x => box(1.1, 1.3, .1, green, x, 8.2, 6.08, sh)); box(.1, 1.6, 6, green, -19.65, 7.8, 0, sh);
+    /* rails with skull posts */
+    [-5.8, 5.8].forEach(z => { box(29, .25, .3, wood, 3.5, 7.7, z, sh); for (let x = -10; x <= 17; x += 3) { box(.3, 1.4, .3, wood, x, 6.95, z, sh); box(.5, .45, .45, bone, x, 7.95, z, sh); } });
+    [-5.8, 5.8].forEach(z => { box(7.6, .25, .3, wood, -15.5, 11.5, z, sh); for (let x = -19; x <= -12; x += 2.3) box(.3, 1.2, .3, wood, x, 10.9, z, sh); });
+    /* skull figurehead on the bow */
+    const fh = group(24.2, 7.4, 0, sh); mesh(new THREE.IcosahedronGeometry(1.3, 0), bone, 0, 0, 0, fh).scale.set(1.1, 1, 1);
+    [-.45, .45].forEach(z => box(.3, .45, .4, glowMat(0x111111), .95, .15, z, fh)); [-.45, .45].forEach(z => box(.12, .16, .16, green, 1.12, .15, z, fh)); box(.3, .4, .9, bone, .6, -1, 0, fh);
+    rod(V3(24, 8, 0), V3(31, 11.5, 0), .4, wood, sh);
+    /* masts, crow's nest, tattered sails and rigging */
+    const masts = [[-8, 23], [1.5, 27], [11, 21]];
+    masts.forEach(([x, hgt], i) => {
+      box(.8, hgt, .8, wood, x, 6 + hgt / 2, 0, sh);
+      box(10.5, .45, .45, wood, x, 6 + hgt * .78, 0, sh); box(8, .4, .4, wood, x, 6 + hgt * .42, 0, sh);
+      const s1 = mesh(tatterSail(10, hgt * .34, i * 3 + 1), sailM, x, 6 + hgt * .6, .55, sh); s1.userData.op = .55;
+      const s2 = mesh(tatterSail(7.4, hgt * .22, i * 3 + 2), sailM, x, 6 + hgt * .9 - hgt * .02, .5, sh); s2.userData.op = .55; s2.position.y = 6 + hgt * .78 + hgt * .11 + .3; box(7.6, .35, .35, wood, x, 6 + hgt * 1.0 - .4, 0, sh);
+      rod(V3(x, 6 + hgt - .5, 0), V3(x - 6, 7.8, 5.8), .12, rope, sh); rod(V3(x, 6 + hgt - .5, 0), V3(x - 6, 7.8, -5.8), .12, rope, sh); rod(V3(x, 6 + hgt - .5, 0), V3(x + 6, 7.8, 5.8), .12, rope, sh);
+    });
+    const nest = group(1.5, 6 + 27 * .9, 0, sh); mesh(new THREE.CylinderGeometry(1.4, 1.1, 1, 8, 1, true), wood, 0, 0, 0, nest).material.side = THREE.DoubleSide;
+    rod(V3(1.5, 32.5, 0), V3(24, 8.2, 0), .12, rope, sh); rod(V3(1.5, 32.5, 0), V3(-19, 11, 0), .12, rope, sh);
+    /* the Jolly Roger */
+    W.jolly = jollyRoger(7, 4.6); W.jolly.position.set(1.9, 6 + 27 + 1.6, 0); sh.add(W.jolly); box(.25, 3.6, .25, wood, 1.5, 6 + 27 + 1.2, 0, sh);
+    { const sf = jollyRoger(3.4, 2.2); sf.position.set(-19.2, 13.6, 0); sf.rotation.y = Math.PI; sh.add(sf); box(.2, 4, .2, wood, -19.2, 12.4, 0, sh); }
+    /* green lanterns hanging off posts at bow and stern */
+    [[17.5, 5.6], [17.5, -5.6], [-12.4, 5.6], [-12.4, -5.6], [-19, 5.6], [-19, -5.6]].forEach(([x, z]) => { const yb = x < -11 ? 10.6 : 6.4; box(.2, 2.6, .2, wood, x, yb + 1.3, z, sh); box(.9, .2, .2, wood, x + .35, yb + 2.5, z, sh); const l = hangLantern(0x7ef0c4, .5); l.position.set(x + .75, yb + 2.4, z); sh.add(l); });
+    /* barnacles, seaweed and dangling chains */
+    for (let i = 0; i < 16; i++) { const x = -16 + i * 2.2, z = (i % 2 ? 6.1 : -6.1); box(.18, .7 + (i * 37 % 5) * .3, .1, flat(0x2f6b3a), x, 5.4 - (i * 37 % 5) * .15, z, sh); }
+    [-6.2, 6.2].forEach(z => rod(V3(20, 5, z), V3(21, -1, z), .2, flat(0x55585e), sh));
+    /* the ghostly mist at the waterline */
+    const mistM = new THREE.MeshBasicMaterial({ color: 0x9fffe0, transparent: true, opacity: .16, depthWrite: false, side: THREE.DoubleSide });
+    for (let i = 0; i < 5; i++) { const m = mesh(new THREE.CircleGeometry(9 + i * 2, 12), mistM, -14 + i * 8, .6 + (i % 2) * .3, (i % 2 ? 4 : -4), sh); m.rotation.x = -Math.PI / 2; m.castShadow = false; }
+    const shl2 = new THREE.PointLight(0x7ef0c4, 1.6, 50); shl2.position.set(-14, 16, 0); sh.add(shl2);
     W.crew = [-11, -5, 5, 11].map((x, i) => { const s = skeleton(i % 2 === 0); s.position.set(x, 6.3, -4.4); s.scale.setScalar(1.2); sh.add(s); return s; });
     const shl = new THREE.PointLight(0x7ef0c4, 2.2, 60); shl.position.set(0, 14, 6); sh.add(shl);
     W.grim = grimtide(); W.grim.position.set(5, 6.35, 1.5); W.grim.rotation.y = -Math.PI / 2 + .3; sh.add(W.grim);
@@ -702,7 +868,6 @@ const WORLD = (() => {
      [-20, 26, C.yellow, 3, .4], [-17, 21, C.red, 3.4, .5], [-24, 19, C.teal, 2.6, .6], [20, 26, C.pink, 3, -.4]].forEach(([x, z, c, h, r]) => house(x, z, c, h, r, W.town));
     /* Smugglers' Alley lanterns strung between houses */
     W.alleySpot = new THREE.Vector3(-20, 2, -26);
-    for (let i = 0; i < 6; i++) { const l = box(.4, .5, .4, glowMat([C.pink, C.yellow, C.mint][i % 3]), -22 + i * 1.2, 6 - Math.sin(i / 5 * Math.PI) * .8, 23.5, isl); }
 
     /* ---------- the harbour (where the story starts) ---------- */
     const hb = group(0, 0, 0); W.harbour = hb;
@@ -747,8 +912,10 @@ const WORLD = (() => {
     W.parrot = parrot(); W.parrot.position.set(-3.4, 18, 9.4); W.parrot.visible = false; hb.add(W.parrot);
     /* net for hiding */
     W.net = group(0, 12, 6.4, hb); W.net.visible = false;
-    const ng = new THREE.ConeGeometry(2.8, 3.2, 10, 3, true); W.netMesh = mesh(ng, new THREE.MeshStandardMaterial({ color: 0xd8c08a, wireframe: true }), 0, 1.6, 0, W.net);
-    mesh(new THREE.ConeGeometry(2.7, 3.1, 10, 1, true), new THREE.MeshStandardMaterial({ color: 0x4a3a20, transparent: true, opacity: .45, side: THREE.DoubleSide }), 0, 1.6, 0, W.net);
+    const ng = new THREE.ConeGeometry(4.3, 4.6, 12, 4, true); W.netMesh = mesh(ng, new THREE.MeshStandardMaterial({ color: 0xd8c08a, wireframe: true }), 0, 2.3, 0, W.net);
+    mesh(new THREE.ConeGeometry(4.2, 4.5, 12, 1, true), new THREE.MeshStandardMaterial({ color: 0x4a3a20, transparent: true, opacity: .5, side: THREE.DoubleSide }), 0, 2.3, 0, W.net);
+    [0, 1, 2, 3, 4, 5].forEach(i => { const a = i / 6 * Math.PI * 2; box(.34, .34, .34, 0x8a8f99, Math.cos(a) * 4.2, .05, Math.sin(a) * 4.2, W.net); });
+    W.net.position.x = -.1;
 
     /* ---------- Skull Rock ---------- */
     const sk = group(-85, 0, -105); W.skull = sk;
@@ -767,10 +934,7 @@ const WORLD = (() => {
     const wreck = box(6, 2, 2.6, 0x5a3418, 4, .3, 6, rf); wreck.rotation.set(.3, .6, .4);
     W.tentacles = [];
     for (let i = 0; i < 3; i++) {
-      const pts = []; for (let k = 0; k <= 8; k++) pts.push(new THREE.Vector3(Math.sin(k * .5) * 1.5, k * 1.4, Math.cos(k * .4) * 1));
-      const tg = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 24, .8, 6, false);
-      const tp = tg.attributes.position; for (let v = 0; v < tp.count; v++) { const y = tp.getY(v); const s = 1 - y / 14; tp.setX(v, tp.getX(v) * (.4 + s * .6)); tp.setZ(v, tp.getZ(v) * (.4 + s * .6)); } tg.computeVertexNormals();
-      const t = mesh(tg, flat(C.purple), [-10, 12, 2][i], -1, [10, 2, -12][i], rf); t.userData.ph = i * 2; W.tentacles.push(t);
+      const t = tentacle(12, .9, 1.1 + i * .15, i * 2 + 1); t.position.set([-10, 12, 2][i], -1, [10, 2, -12][i]); t.rotation.y = [.6, 2.4, -1.2][i]; rf.add(t); t.userData.ph = i * 2; W.tentacles.push(t);
     }
 
     /* ---------- Witch's Lighthouse ---------- */
@@ -789,7 +953,9 @@ const WORLD = (() => {
     W.ghostShip = group(26, 0, 92); W.ghostShip.scale.setScalar(1.8);
     const gm = (c, op) => { const m = new THREE.MeshStandardMaterial({ color: c, flatShading: true, transparent: true, opacity: op, emissive: 0x1f7a5a, emissiveIntensity: .6, fog: false }); return m; };
     [[box(14, 3, 5, gm(0x2e2016, .9), 0, 1, 0, W.ghostShip), .9]].forEach(([m, op]) => m.userData.op = op);
-    [-4, 0, 4].forEach((x, i) => { const m = box(.4, 12 - i, .4, gm(0x3a281b, .9), x, 8, 0, W.ghostShip); m.userData.op = .9; const s = box(4.4, 5, .2, gm(0x5fbf98, .6), x, 9, 0, W.ghostShip); s.userData.op = .6; });
+    [-4, 0, 4].forEach((x, i) => { const m = box(.4, 12 - i, .4, gm(0x3a281b, .9), x, 8, 0, W.ghostShip); m.userData.op = .9; const sm = gm(0x5fbf98, .6); sm.side = THREE.DoubleSide; const s = mesh(tatterSail(4.6, 5.4, i + 3), sm, x, 9, .3, W.ghostShip); s.userData.op = .6; });
+    { const f = jollyRoger(2.6, 1.7, false); f.position.set(0, 14.6, 0); W.ghostShip.add(f); f.userData.op = 1; }
+    { const fig = mesh(new THREE.IcosahedronGeometry(.9, 0), gm(0xe8e2d0, .95), 7.6, 2.4, 0, W.ghostShip); fig.userData.op = .95; }
     [-5, -2.5, 0, 2.5, 5].forEach(x => { const p = box(.7, .7, .2, new THREE.MeshBasicMaterial({ color: 0x7ef0c4, transparent: true, fog: false }), x, 1.3, 2.6, W.ghostShip); p.userData.op = 1; });
     W.ghostShip.rotation.y = -.3;
     ghostLight = new THREE.PointLight(0x7ef0c4, 0, 60); ghostLight.position.set(26, 10, 84); scene.add(ghostLight);
@@ -832,7 +998,9 @@ const WORLD = (() => {
     [W.kidA, W.kidB].forEach((k, i) => { if (!k.userData.busy) { k.userData.armL.rotation.z = Math.sin(t * 2 + i) * .08; k.userData.armR.rotation.z = -Math.sin(t * 2 + i) * .08; k.userData.head.rotation.y = Math.sin(t * .7 + i * 2) * .15; } });
     W.crabbe.userData.head.rotation.y = Math.sin(t * .9) * .2;
     if (W.parrot.visible) { W.parrot.userData.head.rotation.y = Math.sin(t * 1.7) * .4; const f = W.parrot.userData.flap || 0; W.parrot.userData.wingL.rotation.z = Math.sin(t * 30) * f; W.parrot.userData.wingR.rotation.z = -Math.sin(t * 30) * f; }
-    W.tentacles.forEach(tn => { tn.rotation.z = Math.sin(t * 1.1 + tn.userData.ph) * .25; tn.rotation.x = Math.cos(t * .9 + tn.userData.ph) * .15; });
+    W.tentacles.forEach(tn => { tn.rotation.z = Math.sin(t * 1.1 + tn.userData.ph) * .2; tn.rotation.x = Math.cos(t * .9 + tn.userData.ph) * .12; });
+    (W.flags || []).forEach((f, i) => { if (!f.parent || !f.parent.visible) return; const p = f.geometry.attributes.position, b = f.userData.base, w = f.userData.w; for (let v = 0; v < p.count; v++) { const x = b[v * 3]; p.array[v * 3 + 2] = Math.sin(x * 1.3 - t * 6 + i) * .28 * (x / w); p.array[v * 3 + 1] = b[v * 3 + 1] - (x / w) * .3 * (1 + Math.sin(t * 2 + i) * .3); } p.needsUpdate = true; f.geometry.computeVertexNormals(); });
+    (W.swing || []).forEach(l => { l.rotation.z = Math.sin(t * 1.6 + l.userData.ph) * .12; l.rotation.x = Math.cos(t * 1.3 + l.userData.ph) * .08; });
     W.beam.parent.rotation.y = t * .6;
     sunLight.position.set(camera.position.x - 30, 40, camera.position.z + 60);
     sunLight.target.position.set(camera.position.x, 0, camera.position.z - 10);
@@ -924,7 +1092,10 @@ const SHOTS = {
   map:         [V(8, 150, 128), V(2, 0, -36)]
 };
 const mapShot = () => innerWidth / innerHeight < 1 ? [V(4, 290, 175), V(2, 0, -36)] : SHOTS.map;
-function shot(name, dur = 2.2) { const s = Array.isArray(name) ? name : SHOTS[name]; CAM.follow = null; CAM.orbit = null; CAM.p0 = WORLD.camera.position.clone(); CAM.l0 = CAM.look.clone(); CAM.p1 = s[0].clone(); CAM.l1 = s[1].clone(); CAM.t = 0; CAM.dur = dur; }
+function shot(name, dur = 2.2) { const s = Array.isArray(name) ? name : SHOTS[name]; CAM.follow = null; CAM.orbit = null; CAM.p0 = WORLD.camera.position.clone(); CAM.l0 = CAM.look.clone(); CAM.p1 = s[0].clone(); CAM.l1 = s[1].clone(); CAM.t = 0; CAM.dur = dur;
+  const id = CAM.cut = (CAM.cut || 0) + 1;
+  if (CAM.p0.distanceTo(CAM.p1) > 140 && typeof fadeDo === "function") { const p1 = CAM.p1.clone(), l1 = CAM.l1.clone(); CAM.p1 = CAM.p0.clone(); CAM.l1 = CAM.l0.clone(); CAM.t = 1;
+    fadeDo(() => { if (CAM.cut !== id) return; CAM.p0 = p1.clone(); CAM.p1 = p1; CAM.l0 = l1.clone(); CAM.l1 = l1; CAM.t = 1; WORLD.camera.position.copy(p1); CAM.look.copy(l1); }, 380); } }
 function camTick(t, dt) {
   const cam = WORLD.camera;
   if (CAM.orbit) { const o = CAM.orbit; const a = t * o.speed; const p = V(o.c.x + Math.sin(a) * o.r, o.h, o.c.z + Math.cos(a) * o.r); cam.position.lerp(p, Math.min(1, dt * 1.5)); CAM.look.lerp(o.c, Math.min(1, dt * 2)); }
@@ -981,7 +1152,7 @@ function resetWorld() {
   /* cave */
   H.torches.forEach(t => { t.userData.fuel = 1; t.userData.dying = false; t.userData.flame.visible = true; t.userData.flame.scale.setScalar(1); });
   H.skels.forEach((sk, i) => { sk.position.set(-1.6 + i * 1.6, 1, -2 - (i % 2) * .6); sk.rotation.set(0, 0, 0); sk.scale.setScalar(1); sk.userData.armL.rotation.set(0, 0, 0); sk.userData.armR.rotation.set(0, 0, 0); });
-  H.skels.forEach(sk => { sk.userData.dance = false; sk.userData.head.rotation.set(0, 0, 0); });
+  H.skels.forEach(sk => { sk.userData.dance = false; sk.userData.shake = false; sk.rotation.z = 0; sk.userData.head.rotation.set(0, 0, 0); });
   H.cave.add(H.musicBox); H.musicBox.scale.setScalar(1);
   hideAt(H.toeBone); hideAt(H.footHat); hideAt(H.musicBox); hideAt(H.caveLantern);
   if (H.parrot.parent !== H.harbour) H.harbour.add(H.parrot);
@@ -992,7 +1163,7 @@ function resetWorld() {
   H.witch.visible = false; H.cauldron.visible = false; H.jars.forEach(j => j.visible = false); H.doorPivot.rotation.y = 0; hideAt(H.saltJar);
   H.frogA.visible = H.frogB.visible = false; S.frog = false;
   /* alley */
-  H.monkey.position.set(-6.5, 6.6, -3.5); H.monkey.visible = true; hideAt(H.chocPile); hideAt(H.catchHat);
+  resetMonkey(); hideAt(H.chocPile); hideAt(H.catchHat);
   /* ship */
   H.bigShip.visible = false; H.bigShip.position.set(W.origins.ship.x, -40, W.origins.ship.z); H.bigShip.rotation.set(0, 0, 0); W.bigShipOut = false;
   H.grim.position.set(5, 6.35, 1.5); H.grim.rotation.set(0, -Math.PI / 2 + .3, 0); H.grim.visible = true; setGrimSolid(false);
@@ -1000,6 +1171,7 @@ function resetWorld() {
   H.crew.forEach(c => { c.position.y = 6.3; c.userData.armL.rotation.set(0, 0, 0); c.userData.armR.rotation.set(0, 0, 0); });
   if (W.grimSmall) W.grimSmall.visible = false;
 }
+function resetMonkey() { const m = W.monkey; m.position.copy(W.monkeyPerch); m.rotation.set(0, .9, 0); m.visible = true; m.userData.head.rotation.y = 0; }
 function resetShip() {
   const sh = W.bigShip; sh.rotation.set(0, 0, 0); W.grim.visible = true; W.grim.position.set(5, 6.35, 1.5); W.grim.rotation.set(0, -Math.PI / 2 + .3, 0); setGrimSolid(false);
   W.grim.userData.armL.rotation.set(0, 0, 0); W.grim.userData.armR.rotation.set(0, 0, 0);
@@ -1055,13 +1227,7 @@ const PAGES = {
   skull1: { mood: "night", music: "cave", enter: () => { kidsInBoat(); boatAt(SEA.skull, V(-85, 0, -105)); }, beats: [
     ["n", "Skull Rock is a giant stone skull poking out of the sea. Its eyes glow ghostly green.", () => [V(-62, 14, -60), V(-85, 9, -105)]],
     ["n", "You row straight into its gaping mouth...", () => [V(-74, 7, -70), V(-85, 4, -96)], () => { const rb = W.rowboat, f = rb.position.clone(); tween(2.6, k => rb.position.set(f.x + (-85 - f.x) * k, 0, f.z + (-95 - f.z) * k)); }],
-    ["n", "Inside, torches flicker along the cave walls... and one by one, they start to fizzle out.", sh("cave", 0, 8, 19, 0, 5, -6), () => fadeDo(() => { WORLD.setMood("cave", .1); placeKids(W.cave, V(-3, .95, 9), V(-.8, .95, 9.6), Math.PI); W.torches.forEach((t, i) => { if (i % 2) { t.userData.flame.scale.setScalar(.35); } }); $("dim").style.opacity = .35; })],
-    ["bones", "N-n-no! Not the DARK! Somebody light the torches!", sh("cave", 0, 8, 19, 0, 5, -6)]
-  ], choices: [{ label: "Relight the torches!", em: "🔥", to: "gameTorch" }] },
-  gameTorch: { game: "torch", next: "skull2", title: "Torch Panic", how: "The torches keep going out! Tap each one to relight it before the cave goes dark." },
-  skull2: { mood: "cave", music: "cave", enter: () => { $("dim").style.opacity = 0; W.torches.forEach(t => { t.userData.flame.visible = true; t.userData.flame.scale.setScalar(1); }); placeKids(W.cave, V(-3, .95, 9), V(-.8, .95, 9.6), Math.PI); }, beats: [
-    ["n", "The torches blaze bright again. Now you can see who was whimpering.", sh("cave", 2, 7, 16, 0, 3, -2)],
-    ["n", "A whole crew of skeletons is huddled in the middle of the cave, hugging each other... and shaking like jelly. Clickety-clack!", sh("cave", 1, 4.5, 8, 0, 2.5, -2)]
+    ["n", "Inside, torches flicker along the cave walls. And in the middle of the cave, a whole crew of skeletons is huddled together, hugging each other... and shaking like jelly. Clickety-clack!", sh("cave", 1, 5, 11, 0, 2.5, -2), () => fadeDo(() => { WORLD.setMood("cave", .1); $("dim").style.opacity = 0; W.torches.forEach(t => { t.userData.flame.visible = true; t.userData.flame.scale.setScalar(1); }); placeKids(W.cave, V(-3, .95, 9), V(-.8, .95, 9.6), Math.PI); W.skels.forEach(sk => { sk.userData.head.rotation.y = 0; sk.userData.shake = true; }); })]
   ], choices: [{ label: "Sneak past them", em: "🤫", to: "skullSneak" }, { label: "Say hello", em: "👋", to: "skullChat" }] },
   skullSneak: { mood: "cave", music: "cave", beats: [
     ["n", "You tiptoe past ever so quietly... and {a} steps right on a skeleton's toe.", sh("cave", 6, 4, 8, 0, 2, -1), () => tween(1.2, k => W.kidA.position.set(-3 + k * 1.6, .95, 9 - k * 9.6))],
@@ -1072,7 +1238,14 @@ const PAGES = {
   skullChat: { mood: "cave", music: "cave", enter: () => { placeKids(W.cave, V(-1.6, .95, 3.2), V(.8, .95, 3.6), Math.PI); W.skels.forEach(sk => sk.userData.head.rotation.y = 0); }, beats: [
     ["bones", "W-w-who goes there? Are you GHOSTS?", sh("cave", 3, 4.5, 9, 0, 2.6, -1)],
     ["b", "We're kids. Aren't YOU meant to be the scary ones?", sh("cave", -4, 4, 10, 0, 2.6, 2)],
-    ["bones", "We're skeletons! We're terrified of the dark! Our torches keep going out, and we haven't got any eyeballs!", sh("cave", 3, 4.5, 9, 0, 2.6, -1)],
+    ["bones", "We're skeletons! And skeletons are TERRIFIED of the dark. We haven't got any eyeballs, so when the torches go out, we can't see a THING.", sh("cave", 3, 4.5, 9, 0, 2.6, -1)],
+    ["n", "Right on cue, a cold wind whooshes through the cave. The torches start to fizzle out, one by one...", sh("cave", 0, 8, 19, 0, 5, -6), () => { W.torches.forEach((t, i) => { if (i % 2) t.userData.flame.scale.setScalar(.35); }); $("dim").style.opacity = .35; MUSIC.sfx("whoosh"); }],
+    ["bones", "N-n-no! Not the DARK! Quick, light them again!", sh("cave", 1, 4.5, 8, 0, 2.5, -2)]
+  ], choices: [{ label: "Relight the torches!", em: "🔥", to: "gameTorch" }] },
+  gameTorch: { game: "torch", next: "skull2", title: "Torch Panic", how: "The torches keep going out! Tap each one to relight it before the cave goes dark." },
+  skull2: { mood: "cave", music: "cave", enter: () => { $("dim").style.opacity = 0; W.skels.forEach(sk => { sk.userData.shake = false; sk.rotation.z = 0; sk.userData.head.rotation.z = 0; }); W.torches.forEach(t => { t.userData.flame.visible = true; t.userData.flame.scale.setScalar(1); }); placeKids(W.cave, V(-1.6, .95, 3.2), V(.8, .95, 3.6), Math.PI); }, beats: [
+    ["n", "The torches blaze bright again. The skeletons stop shaking. Well... a little bit.", sh("cave", 2, 7, 16, 0, 3, -2)],
+    ["bones", "Th-th-thank you. That was very brave. But we're still a teeny bit scared.", sh("cave", 3, 4.5, 9, 0, 2.6, -1)],
     ["bones", "Cheer us up, and we'll give you a treasure. Something Captain Grimtide left behind...", sh("cave", 1, 3.8, 6, 0, 2.8, -2)]
   ], choices: [{ label: "Tell them a joke", em: "😂", to: "skullJoke", give: "musicbox" }, { label: "Give them your boat lantern", em: "🏮", to: "skullLantern", give: "musicbox", flag: "noLantern" }] },
   skullJoke: { mood: "cave", music: "cave", beats: [
@@ -1149,19 +1322,21 @@ const PAGES = {
   ] },
 
   /* ================= SMUGGLERS' ALLEY ================= */
-  alley1: { mood: "night", music: "market", take: "coin", enter: () => { kidsInBoat(); boatAt(SEA.harbour, V(0, 0, -10)); placeKids(W.alley, V(-1.4, 0, 5.4), V(1.2, 0, 5.8), Math.PI); }, beats: [
-    ["n", "Back in Gullwhistle, Smugglers' Alley is packed with lanterns, stalls and shady pirates selling shady things.", sh("alley", 4, 7, 18, 0, 3, 0)],
-    ["n", "\"Lucky eyeballs! Pickled rats! Gold chocolate coins!\" shouts a lolly-seller.", sh("alley", 1, 4.5, 11, 0, 2.6, 0)],
-    ["n", "Suddenly a little monkey in a waistcoat drops from a roof, snatches the cursed coin out of {b}'s pocket, and scampers away!", sh("alley", 6, 6, 14, 0, 5, 2), () => { const m = W.monkey; tween(.6, (k, r) => m.position.set(-6.5 + k * 7.7, 6.6 - k * 6 + Math.sin(r * Math.PI) * 2, -3.5 + k * 9.1), () => { MUSIC.sfx("coin"); tween(1.2, (k, r) => m.position.set(1.2 - k * 8, .6 + k * 8 + Math.sin(r * Math.PI) * 2, 5.6 - k * 10)); }); }]
+  alley1: { mood: "night", music: "market", take: "coin", enter: () => { kidsInBoat(); boatAt(SEA.harbour, V(0, 0, -10)); resetMonkey(); }, beats: [
+    ["n", "Back in Gullwhistle, you tie up the rowboat and tiptoe into the town. Down a narrow lane, between the wonky old houses, lanterns are glowing...", () => [V(10, 9, 14), V(0, 5, -16)]],
+    ["n", "This is Smugglers' Alley. It's packed with stalls, and shady pirates selling shady things.", sh("alley", 2.5, 4.4, 21, 0, 3.6, -2), () => fadeDo(() => placeKids(W.alley, V(-1.4, 0, 5.4), V(1.2, 0, 5.8), Math.PI))],
+    ["n", "\"Lucky eyeballs! Pickled rats! Gold chocolate coins!\" shouts a lolly-seller.", sh("alley", 1, 4.5, 11, -1, 2.6, -2)],
+    ["n", "Up on a rooftop, something is watching you. Something small and hairy... in a waistcoat.", sh("alley", 3, 8.6, 5.5, -5, 7.6, -1.5), () => { W.monkey.userData.head.rotation.y = -.6; }],
+    ["n", "The monkey drops off the roof, snatches the cursed coin out of {b}'s pocket, and scrambles straight back up the wall!", sh("alley", 3, 6, 16, 0, 5, 2), () => { const m = W.monkey, P = W.monkeyPerch; tween(.6, (k, r) => m.position.set(P.x + (1.2 - P.x) * k, P.y + (.6 - P.y) * k + Math.sin(r * Math.PI) * 1.5, P.z + (5.6 - P.z) * k), () => { MUSIC.sfx("coin"); tween(1.3, (k, r) => { m.position.set(1.2 + k * 3.6, .6 + k * 8.2, 5.6 - k * 2); m.rotation.y = -Math.PI / 2; }, () => tween(.8, k => m.position.set(4.8 + k * 4, 8.8 + k * 1.6, 3.6 - k * 6))); }); }]
   ], choices: [{ label: "Chase it over the rooftops", em: "🏃", to: "gameRoof" }, { label: "Buy a banana and wait", em: "🍌", to: "gameCatch" }] },
   gameRoof: { game: "roof", next: "alleyRoof", title: "Rooftop Run", how: "After that monkey! Tap to jump over the gaps between the roofs. Grab pieces of eight as you go." },
   alleyRoof: { mood: "night", music: "market", give: ["coin", "choc"], enter: () => placeKids(W.alley, V(-1.4, 0, 5.4), V(1.2, 0, 5.8), Math.PI), beats: [
-    ["n", "You climb, leap and slide across the slippery rooftops. {a} grabs the monkey's tail. {b} grabs the coin. And all three of you crash through a roof...", sh("alley", 4, 7, 16, 0, 4, 0), () => { W.monkey.position.set(0, 9, 2); tween(.7, k => W.monkey.position.y = 9 - k * 8); }],
+    ["n", "You climb, leap and slide across the slippery rooftops. {a} grabs the monkey's tail. {b} grabs the coin. And all three of you crash through the lolly-seller's awning...", sh("alley", 4, 7, 16, -1, 4, -2), () => { W.monkey.position.set(-1, 9, -1); tween(.7, k => W.monkey.position.y = 9 - k * 6.8); }],
     ["n", "...straight into the lolly-seller's stall. CRASH! Chocolate coins everywhere!", sh("alley", 2, 4.5, 10, 0, 1.5, 2), () => { MUSIC.sfx("bonk"); W.chocPile.position.set(-.5, 0, 3); }],
     ["n", "The lolly-seller laughs so hard she lets you keep one: a gold-wrapped chocolate coin. Hmm. It looks EXACTLY like Grimtide's coin...", sh("alley", 1.4, 3.6, 9, 0, 2, 3)]
   ], choices: [{ label: "Back to the map", em: "🗺️", to: "map" }] },
   gameCatch: { game: "catch", next: "alleyBanana", title: "Coin Catch", how: "While you wait, the lolly stall wobbles... and chocolate coins rain down! Drag the hat to catch them, but dodge the rotten fish!" },
-  alleyBanana: { mood: "night", music: "market", give: ["coin", "choc"], enter: () => { hideAt(W.catchHat); placeKids(W.alley, V(-1.4, 0, 5.4), V(1.2, 0, 5.8), Math.PI); W.monkey.position.set(3, .6, 4.5); }, beats: [
+  alleyBanana: { mood: "night", music: "market", give: ["coin", "choc"], enter: () => { hideAt(W.catchHat); placeKids(W.alley, V(-1.4, 0, 5.4), V(1.2, 0, 5.8), Math.PI); W.monkey.position.set(3, 0, 4.5); W.monkey.rotation.y = -.6; }, beats: [
     ["n", "The monkey sniffs the air. It can't resist. It creeps back down, swaps the cursed coin for the banana, and eats it in three bites, peel and all.", sh("alley", 6, 4, 12, 2, 1.5, 4)],
     ["n", "The lolly-seller claps. \"Smart thinking!\" She flips you a gold-wrapped chocolate coin. Hmm. It looks EXACTLY like Grimtide's coin...", sh("alley", 1, 4.5, 11, 0, 2.4, 2), () => MUSIC.sfx("coin")]
   ], choices: [{ label: "Back to the map", em: "🗺️", to: "map" }] },
@@ -1480,7 +1655,7 @@ const GAMES3D = {
       let m;
       if (kind === "coin") { m = new THREE.Mesh(new THREE.CylinderGeometry(.8, .8, .16, 14), WORLD.flat(0xdfe4ea, { metalness: .6, roughness: .3, emissive: 0x555555 })); m.rotation.x = Math.PI / 2; m.position.y = 1.8; }
       else if (kind === "rock") { m = new THREE.Mesh(new THREE.ConeGeometry(rnd(1.8, 2.8), rnd(4, 6), 5), WORLD.flat(0x6b6f92)); m.position.y = 1.5; }
-      else { m = new THREE.Mesh(new THREE.CylinderGeometry(.6, 1.1, 7, 7), WORLD.flat(0x9b5de5)); m.position.y = 2.5; }
+      else { m = WORLD.make.tentacle(8, 1.1, 1.2, Math.random() * 6); m.position.y = -1; m.rotation.y = Math.random() * 6; }
       m.castShadow = true; const x = rnd(-9, 9); m.position.x = LO.x + x; m.position.z = LO.z - 150; WORLD.scene.add(m);
       objs.push({ m, kind, x, z: -150, r: kind === "coin" ? .8 : kind === "rock" ? 2.2 : 1.1, ph: Math.random() * 6 });
     }
@@ -1553,13 +1728,18 @@ const GAMES3D = {
   /* ---------------- ROOFTOP RUN (Gullwhistle rooftops) ---------------- */
   roof() {
     const RO = W.origins.roofs, DUR = 28, GR = 42, JV = 15, speed = S.hard ? 12 : 9;
-    let t = 0, roofs = [], coins = [], ky = 10, vy = 0, on = true, jumps = 0, score = 0, respawn = 0, edge = 0, over = false, mk = null;
+    let back = [], t = 0, roofs = [], coins = [], ky = 10, vy = 0, on = true, jumps = 0, score = 0, respawn = 0, edge = 0, over = false, mk = null;
     const cols = [0x9b5de5, 0xff4f8b, 0x06d6a0, 0xff8a3d, 0x3a86ff, 0xffd23f];
     function addRoof(x) {
       const gap = S.hard ? rnd(3.5, 5.5) : rnd(2.5, 4), w = rnd(7, 12), top = rnd(8, 11);
       const g = new THREE.Group(); g.position.set(RO.x + x + gap + w / 2, 0, RO.z);
       const b = new THREE.Mesh(new THREE.BoxGeometry(w, top, 6), WORLD.flat(cols[Math.floor(Math.random() * cols.length)])); b.position.y = top / 2; b.castShadow = b.receiveShadow = true; g.add(b);
-      const r = new THREE.Mesh(new THREE.BoxGeometry(w + .6, .5, 6.6), WORLD.flat(0x1b1f3b)); r.position.y = top + .2; g.add(r);
+      const r = new THREE.Mesh(new THREE.BoxGeometry(w + .6, .5, 6.6), WORLD.flat([0x8a3324, 0x3a3a5a, 0x5a2a6a][Math.floor(Math.random() * 3)])); r.position.y = top + .2; g.add(r);
+      for (let tx = -w / 2 + .5; tx < w / 2; tx += 1.1) { const tl = new THREE.Mesh(new THREE.BoxGeometry(.12, .12, 6.6), WORLD.flat(0x2a1a14)); tl.position.set(tx, top + .47, 0); g.add(tl); }
+      if (Math.random() < .7) { const ch = new THREE.Mesh(new THREE.BoxGeometry(1, 2.2, 1), WORLD.flat(0x6b4a3a)); ch.position.set(rnd(-w / 3, w / 3), top + 1.4, -2.4); g.add(ch); }
+      { const prevX = x - w / 2 - gap, ln = new THREE.Group(); ln.position.set(-w / 2 - gap / 2, top - 1.2, 2.6); g.add(ln);
+        const cord = new THREE.Mesh(new THREE.BoxGeometry(gap + .4, .05, .05), WORLD.flat(0x222222)); cord.position.y = .2; ln.add(cord);
+        [-gap / 4, gap / 4].forEach((lx, k) => { const l = new THREE.Mesh(new THREE.BoxGeometry(.36, .44, .36), WORLD.glowMat([0xff4f8b, 0xffd23f, 0x06d6a0][(k + Math.floor(x)) % 3])); l.position.set(lx, -.15, 0); ln.add(l); }); }
       for (let wx = -w / 2 + 1.5; wx < w / 2 - 1; wx += 2.5) { const win = new THREE.Mesh(new THREE.BoxGeometry(1, 1.2, .1), WORLD.glowMat(0xffd23f)); win.position.set(wx, top - 2.5, 3.05); g.add(win); }
       WORLD.scene.add(g); roofs.push({ g, x: x + gap + w / 2, w, top: top + .45 });
       if (Math.random() < .8) for (let i = 0; i < 3; i++) { const c = new THREE.Mesh(new THREE.CylinderGeometry(.55, .55, .12, 12), WORLD.flat(0xdfe4ea, { metalness: .6, emissive: 0x555555 })); c.rotation.x = Math.PI / 2; const cx = x + gap + w * (.25 + i * .25); c.position.set(RO.x + cx, top + rnd(2.5, 4.5), RO.z); WORLD.scene.add(c); coins.push({ m: c, x: cx }); }
@@ -1570,6 +1750,11 @@ const GAMES3D = {
         WORLD.setMood("night", 1);
         roofs = []; coins = []; const g = new THREE.Group(); g.position.set(RO.x + 2, 0, RO.z); const b = new THREE.Mesh(new THREE.BoxGeometry(20, 10, 6), WORLD.flat(0xff8a3d)); b.position.y = 5; g.add(b); const r = new THREE.Mesh(new THREE.BoxGeometry(20.6, .5, 6.6), WORLD.flat(0x1b1f3b)); r.position.y = 10.2; g.add(r); WORLD.scene.add(g); roofs.push({ g, x: 2, w: 20, top: 10.45 });
         edge = 12; while (edge < 70) edge = addRoof(edge);
+        back = []; for (let i = 0; i < 11; i++) { const bx = -40 + i * 12, h = rnd(10, 16), bg = new THREE.Group(); bg.position.set(RO.x + bx, 0, RO.z - 16);
+          const b2 = new THREE.Mesh(new THREE.BoxGeometry(10, h, 6), WORLD.flat([0x4a3a7a, 0x3a5a7a, 0x5a3a6a, 0x3a6a5a][i % 4])); b2.position.y = h / 2; bg.add(b2);
+          const rg = new THREE.CylinderGeometry(3.6, 3.6, 10.4, 3); rg.rotateX(-Math.PI / 2); rg.rotateY(Math.PI / 2); rg.scale(1, .6, 1); const rf = new THREE.Mesh(rg, WORLD.flat(0x2a2140)); rf.position.y = h + 1; bg.add(rf);
+          for (let k = 0; k < 3; k++) if (Math.random() < .7) { const wn = new THREE.Mesh(new THREE.BoxGeometry(1, 1.2, .1), WORLD.glowMat(0xffc85a)); wn.position.set(-3 + k * 3, h - 3, 3.05); bg.add(wn); }
+          WORLD.scene.add(bg); back.push({ g: bg, x: bx }); }
         placeKids(WORLD.scene, V(RO.x, 10.45, RO.z + .5), V(RO.x - 50, -40, RO.z), Math.PI / 2); ky = 10.45; W.kidA.visible = true; W.kidB.visible = false;
         mk = WORLD.make.monkey(); mk.scale.setScalar(1.3); mk.rotation.y = Math.PI / 2; WORLD.scene.add(mk); mk.position.set(RO.x + 16, 12, RO.z + .5);
         shot([V(RO.x + 7, 13, RO.z + 26), V(RO.x + 7, 9.5, RO.z)], 1.4);
@@ -1581,7 +1766,7 @@ const GAMES3D = {
       tick(dt, tt) {
         if (over) return; t += dt;
         const dx = speed * dt;
-        roofs.forEach(r => { r.x -= dx; r.g.position.x = RO.x + r.x; }); coins.forEach(c => { c.x -= dx; c.m.position.x = RO.x + c.x; c.m.rotation.z += dt * 4; }); edge -= dx;
+        roofs.forEach(r => { r.x -= dx; r.g.position.x = RO.x + r.x; }); back.forEach(b => { b.x -= dx * .35; if (b.x < -50) b.x += 132; b.g.position.x = RO.x + b.x; }); coins.forEach(c => { c.x -= dx; c.m.position.x = RO.x + c.x; c.m.rotation.z += dt * 4; }); edge -= dx;
         roofs = roofs.filter(r => { if (r.x + r.w / 2 < -30) { WORLD.scene.remove(r.g); return false; } return true; });
         coins = coins.filter(c => { if (c.x < -30 || c.got) { WORLD.scene.remove(c.m); return false; } return true; });
         while (edge < 70) edge = addRoof(edge);
@@ -1599,7 +1784,7 @@ const GAMES3D = {
         if (Math.floor(t * 4) !== Math.floor((t - dt) * 4)) hudGame();
         if (t >= DUR) { over = true; score += 3; MUSIC.sfx("cheer"); popText("Gotcha!", mk.position); setTimeout(() => endGame({ pieces: Math.min(20, score), msg: `Gotcha! You grabbed the monkey's tail, and ${score} pieces of eight on the way.` }), 900); }
       },
-      stop() { roofs.forEach(r => WORLD.scene.remove(r.g)); coins.forEach(c => WORLD.scene.remove(c.m)); roofs = []; coins = []; if (mk) WORLD.scene.remove(mk); W.kidA.visible = W.kidB.visible = true; }
+      stop() { back.forEach(b => WORLD.scene.remove(b.g)); back = []; roofs.forEach(r => WORLD.scene.remove(r.g)); coins.forEach(c => WORLD.scene.remove(c.m)); roofs = []; coins = []; if (mk) WORLD.scene.remove(mk); W.kidA.visible = W.kidB.visible = true; }
     };
   },
 
@@ -1609,17 +1794,17 @@ const GAMES3D = {
     function add() {
       const r = Math.random(), kind = r < .68 ? "choc" : r < .9 ? "fish" : "banana"; let m;
       if (kind === "choc") m = WORLD.make.chocCoin(); else if (kind === "fish") { m = WORLD.makeFish(0x8fa36b); } else { m = new THREE.Mesh(new THREE.BoxGeometry(1, .35, .35), WORLD.flat(0xffe14a)); }
-      const x = rnd(-6, 6); m.position.set(AO.x + x, AO.y + 11, AO.z + 4); WORLD.scene.add(m);
+      const x = rnd(-4.2, 4.2); m.position.set(AO.x + x, AO.y + 11, AO.z + 4); WORLD.scene.add(m);
       drops.push({ m, kind, x, y: 11, vy: rnd(4.5, 6.5) * (S.hard ? 1.3 : 1) });
     }
     return {
-      setup() { WORLD.setMood("night", 1); W.catchHat.position.set(0, .4, 4); placeKids(W.alley, V(0, 0, 5.2), V(-4, 0, 6.6), Math.PI); W.kidA.rotation.y = 0; shot(sh("alley", 0, 6.5, 19, 0, 4, 2)(), 1.6); },
+      setup() { WORLD.setMood("night", 1); W.catchHat.position.set(0, .4, 4); W.monkey.position.set(-5.4, 7.4, 4.2); W.monkey.rotation.y = .9; placeKids(W.alley, V(0, 0, 5.2), V(-3.6, 0, 7.4), Math.PI); W.kidA.rotation.y = 0; shot(innerWidth / innerHeight < 1 ? sh("alley", 0, 7.5, 24, 0, 4.2, 2)() : sh("alley", 0, 6.5, 19, 0, 4, 2)(), 1.6); },
       start() { hint("Drag the hat! Catch chocolate, dodge rotten fish!"); setTimeout(() => hint(null), 2500); },
       hud: () => `<span class="chip">🍫 Caught: ${score}</span><span class="chip">⏱ ${Math.max(0, Math.ceil(DUR - t))}</span>`,
-      down(x) { tx = (x / innerWidth - .5) * 15; }, move(x) { if (pointerDown) tx = (x / innerWidth - .5) * 15; }, up() {},
+      down(x) { tx = (x / innerWidth - .5) * 11; }, move(x) { if (pointerDown) tx = (x / innerWidth - .5) * 11; }, up() {},
       tick(dt, tt) {
         if (over) return; t += dt; stun -= dt; spawn -= dt;
-        if (stun <= 0) hx += (Math.max(-6, Math.min(6, tx)) - hx) * Math.min(1, dt * 12);
+        if (stun <= 0) hx += (Math.max(-4.2, Math.min(4.2, tx)) - hx) * Math.min(1, dt * 12);
         W.catchHat.position.x = hx + (stun > 0 ? Math.sin(tt * 50) * .2 : 0); W.kidA.position.x = hx;
         if (spawn <= 0) { add(); spawn = (S.hard ? .45 : .6) - t * .004; }
         for (const d of drops) {
@@ -1715,10 +1900,27 @@ function enterMap() {
   $("caption").textContent = tip; $("caption").classList.add("show"); setTimeout(() => S.mode === "map" && $("caption").classList.remove("show"), 6000);
 }
 const ITEM_EM = { coin: "🪙", musicbox: "🎶", kraken: "🦑", salt: "🧂", choc: "🍫" };
+const ITEM_INFO = {
+  coin: ["The Cursed Coin", "Captain Grimtide's gold coin. Whoever has it at midnight joins his ghostly crew!"],
+  musicbox: ["Grimtide's Music Box", "A little silver box that plays a sad, sweet tune. Grimtide used to cry when he heard it."],
+  kraken: ["Inkbeard's Promise", "Shout \"INKBEARD!\" and the kraken will come to help you."],
+  salt: ["Moonlight Salt", "Throw it on a ghost and he turns solid. Solid enough to bonk on the nose!"],
+  choc: ["Chocolate Coin", "Gold-wrapped chocolate. It looks EXACTLY like the cursed coin..."]
+};
+let lastBag = 0;
 function drawHud() {
-  const left = Math.max(0, 3 - S.hours);
-  $("hud").innerHTML = `<span class="chip">🌙 ${[0, 1, 2].map(i => `<span class="pip${i < S.hours ? " gone" : ""}"></span>`).join("")} ${left}h</span><span class="chip">🎒 ${S.items.map(i => ITEM_EM[i] || "").join("") || "–"}</span><span class="chip"><span class="p8">8</span> ${eightTotal()}</span>`;
+  const left = Math.max(0, 3 - S.hours), n = S.items.length, grew = n > lastBag; lastBag = n;
+  $("hud").innerHTML = `<span class="chip">🌙 ${[0, 1, 2].map(i => `<span class="pip${i < S.hours ? " gone" : ""}"></span>`).join("")} ${left}h</span><button class="chip bagbtn${grew ? " grew" : ""}" id="bagBtn" aria-label="Open your bag">🎒 ${n ? S.items.map(i => `<span class="bagit">${ITEM_EM[i] || ""}</span>`).join("") : `<span class="bagempty">empty</span>`}</button><span class="chip"><span class="p8">8</span> ${eightTotal()}</span>`;
+  $("bagBtn").onclick = openBag;
 }
+function openBag() {
+  MUSIC.sfx("page");
+  const list = S.items.length ? S.items.map(i => `<div class="bagcard"><div class="bagbig">${ITEM_EM[i]}</div><div><b>${ITEM_INFO[i][0]}</b><p>${ITEM_INFO[i][1]}</p></div></div>`).join("") : `<p class="bagnone">Nothing in here yet. Keep exploring!</p>`;
+  $("bag").innerHTML = `<div class="bagbox"><h2>🎒 Your Bag</h2>${list}<button class="btn" id="bagClose">Close</button></div>`;
+  $("bag").classList.add("show");
+  $("bagClose").onclick = closeBag;
+}
+function closeBag() { $("bag").classList.remove("show"); }
 let labelEls = [];
 function buildLabels() {
   clearLabels(); if (S.mode !== "map") return;
@@ -1830,7 +2032,7 @@ $("homeBtn").onclick = showStart;
 $("next").onclick = e => { e.stopPropagation(); hush(); nextBeat(); };
 
 function idleAnims(t) {
-  W.skels.forEach((sk, i) => { if (sk.userData.dance) { sk.position.y = 1 + Math.abs(Math.sin(t * 6 + i)) * .5; sk.userData.armL.rotation.z = -1.5 + Math.sin(t * 8 + i) * .8; sk.userData.armR.rotation.z = 1.5 - Math.sin(t * 8 + i) * .8; } });
+  W.skels.forEach((sk, i) => { if (sk.userData.shake && !sk.userData.dance) { sk.rotation.z = Math.sin(t * 40 + i * 2) * .04; sk.userData.head.rotation.z = Math.sin(t * 33 + i) * .08; } if (sk.userData.dance) { sk.position.y = 1 + Math.abs(Math.sin(t * 6 + i)) * .5; sk.userData.armL.rotation.z = -1.5 + Math.sin(t * 8 + i) * .8; sk.userData.armR.rotation.z = 1.5 - Math.sin(t * 8 + i) * .8; } });
   [W.kidA, W.kidB].forEach((k, i) => { if (k.userData.scrub) { k.userData.armR.rotation.x = -1.2 + Math.sin(t * 12 + i) * .5; } });
   W.gulls.forEach((g, i) => { const c = g.userData.circle; if (c) { const a = t * c.sp + i * 2; g.position.set(c.c.x + Math.cos(a) * c.r, c.c.y, c.c.z + Math.sin(a) * c.r); g.rotation.y = -a; } g.userData.wL.rotation.x = Math.sin(t * 10 + i) * .6; g.userData.wR.rotation.x = -Math.sin(t * 10 + i) * .6; });
   if (W.witch.visible) W.witch.userData.head.rotation.y = Math.sin(t * .8) * .2;
