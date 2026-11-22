@@ -443,11 +443,19 @@ const WORLD = (() => {
     b.userData = { lantern, oarL, oarR };
     return b;
   }
-  function makeFish(color = C.silver) {
-    const f = group();
-    const body = mesh(new THREE.IcosahedronGeometry(.42, 0), flat(color, { metalness: .35, roughness: .45 }), 0, 0, 0, f); body.scale.set(1.7, .72, .55);
-    const tail = mesh(new THREE.ConeGeometry(.34, .5, 4), flat(color), -.86, 0, 0, f); tail.rotation.z = Math.PI / 2;
-    box(.1, .1, .05, glowMat(0x111111), .46, .1, .2, f); box(.1, .1, .05, glowMat(0x111111), .46, .1, -.2, f);
+  function finGeo(pts, depth = .05) { const sp = new THREE.Shape(); pts.forEach(([x, y], i) => i ? sp.lineTo(x, y) : sp.moveTo(x, y)); const g = new THREE.ExtrudeGeometry(sp, { depth, bevelEnabled: false }); g.translate(0, 0, -depth / 2); return g; }
+  const FISH_TAIL = finGeo([[0, 0], [-.5, .36], [-.36, 0], [-.5, -.36]]), FISH_DORSAL = finGeo([[-.3, 0], [.12, 0], [-.18, .26]]), FISH_SIDE = finGeo([[0, 0], [-.24, .1], [-.2, -.06]], .03);
+  function makeFish(color = C.silver, belly = 0xf4f1ea) {
+    const f = group(), skin = flat(color, { metalness: .3, roughness: .45 }), dark = flat(new THREE.Color(color).multiplyScalar(.7).getHex());
+    mesh(new THREE.IcosahedronGeometry(.42, 1), skin, 0, 0, 0, f).scale.set(1.75, .78, .52);
+    mesh(new THREE.IcosahedronGeometry(.36, 1), flat(belly), .05, -.1, 0, f).scale.set(1.75, .55, .5);
+    mesh(new THREE.BoxGeometry(1.1, .05, .46), dark, -.05, .1, 0, f);
+    mesh(FISH_TAIL, dark, -.62, 0, 0, f);
+    mesh(FISH_DORSAL, dark, 0, .27, 0, f);
+    [-1, 1].forEach(sd => { const pf = mesh(FISH_SIDE, dark, .22, -.1, sd * .2, f); pf.rotation.y = sd * .5;
+      const eye = mesh(new THREE.CylinderGeometry(.085, .085, .03, 10), flat(0xffffff), .48, .08, sd * .19, f); eye.rotation.x = Math.PI / 2;
+      const pu = mesh(new THREE.CylinderGeometry(.045, .045, .03, 8), flat(0x111111), .5, .08, sd * .205, f); pu.rotation.x = Math.PI / 2; });
+    box(.06, .04, .16, 0x5a2a2a, .73, -.04, 0, f);
     return f;
   }
   function house(x, z, color, h = 3, rot = 0, parent) {
@@ -887,8 +895,15 @@ const WORLD = (() => {
     mesh(new THREE.CylinderGeometry(.92, .92, .05, 8), flat(0x3a1f0c), 0, 1.98, 0, W.barrel);
     W.barrelFish = [];
     /* pile of fish waiting on the dock */
-    W.pile = group(1.6, 1.2, 5.2, hb);
-    for (let i = 0; i < 6; i++) { const f = makeFish(); f.position.set((i % 3) * .5 - .5, Math.floor(i / 3) * .3, (i % 2) * .4); f.rotation.y = i; f.scale.setScalar(.7); W.pile.add(f); }
+    /* a wooden tray piled with the day's catch, lying on their sides */
+    { const tr = group(1.55, 1.18, 5.25, hb), tw = flat(0x8a5a32), tl = flat(0x6b4426);
+      box(2, .1, 1.3, tw, 0, .05, 0, tr); [-.62, .62].forEach(z => box(2, .26, .08, tl, 0, .18, z, tr)); [-.96, .96].forEach(x => box(.08, .26, 1.3, tl, x, .18, 0, tr));
+      [[-.5, .4], [.3, -.45], [.7, .35]].forEach(([x, z]) => box(.18, .06, .14, glowMat(0xdff6ff), x, .14, z, tr)); }
+    W.pile = group(1.55, 1.3, 5.25, hb);
+    const pileCols = [[0xc9d3dc], [0xf08a7a], [0x7f9fb8], [0xe8c45a], [0xc9d3dc], [0xf08a7a], [0x9fb4c4], [0xc9d3dc]];
+    const pileAt = [[.05, .58, .05, .4], [-.32, .34, -.18, 2.6], [.38, .34, .2, -2.8], [.02, .32, .26, 1.2], [-.5, .12, .24, .3], [-.08, .12, -.3, 2.9], [.42, .12, -.22, -.2], [.55, .12, .3, 3.3]];
+    pileAt.forEach(([x, y, z, yaw], i) => { const f = makeFish(pileCols[i][0]); f.rotation.order = "YXZ"; f.rotation.set(Math.PI / 2 + (i % 2 ? .12 : -.1), yaw, 0); f.position.set(x, y, z); f.scale.setScalar(.72); W.pile.add(f); });
+    box(1.5, .08, .9, 0xc89b6a, 2.75, 1.19, 5.65, hb);
     W.bigFish = makeFish(0xdfe4ea); W.bigFish.scale.setScalar(1.15); W.bigFish.position.set(2.6, 1.45, 5.6); W.bigFish.rotation.y = .5; hb.add(W.bigFish);
     /* the coin */
     W.coin = mesh(new THREE.CylinderGeometry(.34, .34, .08, 14), flat(C.gold, { metalness: .85, roughness: .25, emissive: 0x5a3c00 }), 0, -10, 0, hb);
