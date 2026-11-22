@@ -131,7 +131,7 @@ const WELCOME = "Ahoy, me hearties! Tonight, Sonny and Wylie are the cabin kids 
 const STORY = {
   intro1: {
     type: "page", scene: "dusk", art: ["🐟", "🪙", "⛵"],
-    text: "Gullwhistle Harbour smells of fish, tar and trouble.\n\n{a} and {b} are the cabin kids on a grumpy old fishing boat. Tonight's job: fling the whole day's catch into the fish barrel before Captain Crabbe gets back.\n\n\"Every fish in that barrel,\" he bellowed, \"or NO PUDDING!\"\n\nHow hard can it be?",
+    text: "Gullwhistle Harbour smells of fish, tar and trouble.\n\n{a} and {b} are the cabin kids on a grumpy old fishing boat. Tonight's job: fling the whole day's catch into the fish barrel before Captain Crabbe gets back.\n\n\"Every fish in that barrel,\" he bellowed, \"or NO MAC AND CHEESE!\"\n\nHow hard can it be?",
     choices: [ { label: "Start flinging fish!", em: "🐟", to: "gameFish" } ]
   },
   gameFish: {
@@ -164,7 +164,7 @@ const STORY = {
       ["a", "It keeps coming back! What do we do?"],
       ["feathers", "Captain Grimtide was the meanest ghost on the seven seas. I should know. I was his parrot. Brrrk."],
       ["feathers", "At midnight his ship comes for that coin. Whoever holds it joins his skeleton crew. FOREVER."],
-      ["b", "FOREVER?! But Captain Crabbe still owes us PUDDING!"],
+      ["b", "FOREVER?! But Captain Crabbe owes us MAC AND CHEESE!"],
       ["feathers", "Then listen close. This island is full of things that can help ye. Take this map, take that rowboat, and don't dawdle."],
       ["feathers", "You've got time for THREE stops before midnight. Choose wisely!"]
     ],
@@ -419,7 +419,7 @@ function nudgeFor(id, label) {
 </script>
 <script>
 const ORDER = [
-  ["Getting started", ["welcome", "intro1", "gameFish", "coinFind", "intro2", "hide", "feathers"]],
+  ["Getting started", ["welcome", "intro1", "gameFish", "coinFind", "intro2", "feathers"]],
   ["The island map", ["map-start", "map-middle", "map-last"]],
   ["Skull Rock Caves", ["skull1", "gameTorch", "skull2", "skullSneak", "skullChat", "skullJoke", "skullLantern"]],
   ["Kraken Reef", ["gameReef", "reef1", "reefChat", "endRock"]],
