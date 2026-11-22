@@ -1562,7 +1562,7 @@ const GAMES3D = {
         placeKids(W.harbour, V(-1.4, 1.15, 7.6), V(1, 1.15, 6.6), 0); W.kidB.rotation.y = Math.PI; W.kidB.userData.busy = true;
         W.barrelFish.forEach(f => f.parent && f.parent.remove(f)); W.barrelFish = []; W.pile.children.forEach(f => f.visible = true);
         WORLD.setMood("dusk", 1); moveBarrel(true);
-        shot(innerWidth / innerHeight < 1 ? [V(-27, 3.6, 3), V(.5, 2.4, 3)] : SHOTS.fishGame, 1.8);
+        shot(innerWidth / innerHeight < 1 ? [V(-27, 3.6, 3), V(.5, 2.4, 3)] : innerWidth / innerHeight > 1.7 ? [V(-11, 3, 2.2), V(.5, 2.3, 2.2)] : SHOTS.fishGame, 1.8);
       },
       start() {
         newFish();
