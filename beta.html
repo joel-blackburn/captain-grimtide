@@ -1088,7 +1088,7 @@ const SHOTS = {
   seaView:     [V(-1.4, 5, -6.8), V(30, 9, 92)],
   netShot:     [V(1, 3.4, 13), V(0, 1.6, 6.4)],
   parrotShot:  [V(1.6, 3.4, 16.8), V(-2.6, 5, 9.2)],
-  fishGame:    [V(-15.5, 5.6, 1.2), V(.5, 2.6, 1.2)],
+  fishGame:    [V(-16, 3.4, 1.2), V(.5, 2.4, 1.2)],
   map:         [V(8, 150, 128), V(2, 0, -36)]
 };
 const mapShot = () => innerWidth / innerHeight < 1 ? [V(4, 290, 175), V(2, 0, -36)] : SHOTS.map;
@@ -1562,7 +1562,7 @@ const GAMES3D = {
         placeKids(W.harbour, V(-1.4, 1.15, 7.6), V(1, 1.15, 6.6), 0); W.kidB.rotation.y = Math.PI; W.kidB.userData.busy = true;
         W.barrelFish.forEach(f => f.parent && f.parent.remove(f)); W.barrelFish = []; W.pile.children.forEach(f => f.visible = true);
         WORLD.setMood("dusk", 1); moveBarrel(true);
-        shot(innerWidth / innerHeight < 1 ? [V(-17, 13, 9.5), V(.8, 1.6, 2)] : SHOTS.fishGame, 1.8);
+        shot(innerWidth / innerHeight < 1 ? [V(-27, 3.6, 3), V(.5, 2.4, 3)] : SHOTS.fishGame, 1.8);
       },
       start() {
         newFish();
