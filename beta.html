@@ -499,6 +499,8 @@ const WORLD = (() => {
     const roof = mesh(new THREE.ConeGeometry(2.5, 2, 4), flat(C.navy), 0, h + 1, 0, g); roof.rotation.y = Math.PI / 4;
     box(.7, .8, .08, glowMat(C.yellow), -.6, h * .6, 1.52, g); box(.7, .8, .08, glowMat(C.yellow), .7, h * .6, 1.52, g);
     box(.8, 1.3, .08, flat(C.woodDark), 0, .65, 1.52, g);
+    box(.08, .7, .6, glowMat(C.yellow), 1.52, h * .6, 0, g); box(.08, .7, .6, glowMat(C.yellow), -1.52, h * .6, 0, g);
+    box(.6, 1.4, .6, 0x6b4a3a, .9, h + 1.1, -.5, g);
     return g;
   }
 
@@ -785,7 +787,7 @@ const WORLD = (() => {
     box(.42, .1, .42, 0x2a2a2a, 0, -cord - .02, 0, p); box(.34, .44, .34, glowMat(col), 0, -cord - .3, 0, p); box(.42, .08, .42, 0x2a2a2a, 0, -cord - .55, 0, p);
     p.userData.ph = Math.random() * 6; (W.swing = W.swing || []).push(p); return p;
   }
-  const make = { conch, tentacle, jollyRoger, skeleton, witch, frog, monkey, inkbeard, grimtide, gull, musicBox, saltJar, chocCoin, torch, kid, makeFish, rowboat };
+  const make = { greenAura, conch, tentacle, jollyRoger, skeleton, witch, frog, monkey, inkbeard, grimtide, gull, musicBox, saltJar, chocCoin, torch, kid, makeFish, rowboat };
 
   /* =====================================================================
      MORE SETS
@@ -1006,6 +1008,35 @@ const WORLD = (() => {
     [[-14, -14, 20, 16], [8, -20, 14, 22], [24, -6, 9, 12], [-28, 4, 8, 10]].forEach(([x, z, r, h], i) => {
       const hill = mesh(jitter(new THREE.ConeGeometry(r, h, 7, 1), 2, 11 + i), flat(i % 2 ? 0x1f9a62 : 0x27a86b), x, 1.6 + h / 2, z, isl);
     });
+    /* rocky peaks with snow caps on the two big mountains, and a waterfall */
+    [[-14, -14, 20, 16], [8, -20, 14, 22]].forEach(([x, z, r, h], i) => {
+      mesh(jitter(new THREE.ConeGeometry(r * .62, h * .9, 6, 1), 1.2, 40 + i), flat(0x7b7f99), x, 1.6 + h * .35 + h * .45, z, isl);
+      mesh(jitter(new THREE.ConeGeometry(r * .26, h * .32, 6, 1), .4, 50 + i), flat(0xf4f7ff), x, 1.6 + h * .35 + h * .9 - h * .16 + .2, z, isl);
+    });
+    { const wf = box(2.2, 13, .3, new THREE.MeshBasicMaterial({ color: 0xbfe9ff }), 7.4, 8.2, -9.6, isl); wf.rotation.x = -.42; mesh(new THREE.CircleGeometry(2.6, 10), new THREE.MeshBasicMaterial({ color: 0xe8f8ff }), 7.6, 1.75, -6.6, isl).rotation.x = -Math.PI / 2; }
+    /* the river winding from the waterfall down to the sea, with a little bridge */
+    const RIVER = new THREE.CatmullRomCurve3([[7.6, -6.5], [11, 0], [16, 8], [21.5, 15], [24.5, 22], [28, 31], [31.5, 40], [34, 48]].map(([x, z]) => new THREE.Vector3(x, 0, z)));
+    { const N = 60, pos = [], idx = []; for (let i = 0; i <= N; i++) { const u = i / N, p = RIVER.getPointAt(u), t = RIVER.getTangentAt(u), w = 1.3 + u * 1.8; pos.push(p.x - t.z * w, 1.74, p.z + t.x * w, p.x + t.z * w, 1.74, p.z - t.x * w); if (i) { const a = (i - 1) * 2; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); } }
+      const rg = new THREE.BufferGeometry(); rg.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); rg.setIndex(idx); rg.computeVertexNormals();
+      W.river = mesh(rg, new THREE.MeshStandardMaterial({ color: 0x3fa9f5, emissive: 0x0e3f7a, emissiveIntensity: .45, roughness: .3, side: THREE.DoubleSide }), 0, 0, 0, isl);
+      const bp = RIVER.getPointAt(.66), bt = RIVER.getTangentAt(.66), br = group(bp.x, 1.9, bp.z, isl); br.rotation.y = Math.atan2(bt.x, bt.z) + Math.PI / 2;
+      box(6, .3, 2, C.wood, 0, .3, 0, br); [-.95, .95].forEach(z => { box(6, .15, .15, C.woodDark, 0, 1.1, z, br); [-2.6, 0, 2.6].forEach(x => box(.18, .9, .18, C.woodDark, x, .7, z, br)); }); }
+    /* forests: instanced pines and round trees, kept off the river, town and harbour */
+    { let r = 77; const rn = () => (r = (r * 16807) % 2147483647) / 2147483647; const pines = [], rounds = [];
+      const riverD = (x, z) => { let d = 1e9; for (let i = 0; i <= 30; i++) { const p = RIVER.getPointAt(i / 30); d = Math.min(d, Math.hypot(p.x - x, p.z - z)); } return d; };
+      const hills = [[-14, -14, 20], [8, -20, 14], [24, -6, 9], [-28, 4, 8]];
+      for (let n = 0; n < 900 && pines.length + rounds.length < 95; n++) {
+        const a = rn() * Math.PI * 2, d = Math.sqrt(rn()) * 37, x = Math.cos(a) * d, z = Math.sin(a) * d - 2;
+        if (z > 15 && x > -28 && x < 24) continue; if (riverD(x, z) < 3.4) continue; if (hills.some(([hx, hz, hr]) => Math.hypot(x - hx, z - hz) < hr * .55)) continue; if (Math.hypot(x + 20, z - 8) < 4) continue;
+        (z < 6 ? pines : rn() < .5 ? pines : rounds).push([x, z, .8 + rn() * .6]);
+      }
+      const im = (geo, mat, list, f) => { const m = new THREE.InstancedMesh(geo, mat, list.length), o = new THREE.Object3D(); list.forEach(([x, z, sc], i) => { f(o, x, z, sc); o.updateMatrix(); m.setMatrixAt(i, o.matrix); }); m.castShadow = true; isl.add(m); return m; };
+      const all = pines.concat(rounds);
+      im(new THREE.CylinderGeometry(.25, .35, 1.6, 5), flat(C.woodDark), all, (o, x, z, sc) => { o.position.set(x, 1.6 + .8 * sc, z); o.scale.setScalar(sc); });
+      im(new THREE.ConeGeometry(1.5, 3.6, 6), flat(0x1b7a4a), pines, (o, x, z, sc) => { o.position.set(x, 1.6 + (1.4 + 1.8) * sc, z); o.scale.setScalar(sc); o.rotation.y = x; });
+      im(new THREE.ConeGeometry(1.1, 2.4, 6), flat(0x23935a), pines, (o, x, z, sc) => { o.position.set(x, 1.6 + 4.4 * sc, z); o.scale.setScalar(sc); o.rotation.y = z; });
+      im(new THREE.IcosahedronGeometry(1.6, 0), flat(0x3cbf6a), rounds, (o, x, z, sc) => { o.position.set(x, 1.6 + 2.9 * sc, z); o.scale.set(sc, sc * .9, sc); o.rotation.y = x * z; });
+    }
     /* palm trees */
     [[-30, 26], [30, 22], [-36, 12], [20, 30], [36, 6]].forEach(([x, z], i) => {
       const t = group(x, 1.4, z, isl);
@@ -1016,6 +1047,17 @@ const WORLD = (() => {
     W.town = group(0, 0, 0, isl);
     [[-12, 32, C.purple, 3.2, .2], [-7, 34, C.pink, 2.6, .1], [-2.5, 35, C.mint, 3.6, 0], [10, 34, C.orange, 3, -.1], [15, 32, C.blue, 2.8, -.25],
      [-20, 26, C.yellow, 3, .4], [-17, 21, C.red, 3.4, .5], [-24, 19, C.teal, 2.6, .6], [20, 26, C.pink, 3, -.4]].forEach(([x, z, c, h, r]) => house(x, z, c, h, r, W.town));
+    /* more of the village: extra houses, a bell tower, a well, paths, lamp posts, a windmill and boats on the beach */
+    [[6, 27, C.teal, 2.8, -.1], [14, 23, C.yellow, 3, -.3], [5, 20, C.purple, 3.4, 0], [-3, 21, C.orange, 2.6, .1], [-12, 17, C.pink, 2.8, .4]].forEach(([x, z, c, h, r]) => house(x, z, c, h, r, W.town));
+    { const tw = group(-8, 1.6, 26, W.town); box(4, 8, 4, 0xf2eee4, 0, 4, 0, tw); const rf = mesh(new THREE.ConeGeometry(3.3, 4, 4), flat(0x8a3324), 0, 10, 0, tw); rf.rotation.y = Math.PI / 4;
+      box(1.6, 1.6, .1, glowMat(C.yellow), 0, 6.2, 2.02, tw); box(1.2, 2, .1, flat(C.woodDark), 0, 1, 2.02, tw); box(.2, 1.6, .2, C.gold, 0, 12.6, 0, tw); box(1, .2, .2, C.gold, 0, 12.8, 0, tw); }
+    { const wl = group(1.5, 1.6, 30.5, W.town); mesh(new THREE.CylinderGeometry(1.1, 1.2, 1.1, 8), flat(0x9aa0b8), 0, .55, 0, wl); mesh(new THREE.CircleGeometry(.85, 8), glowMat(0x2f6fd4), 0, 1.12, 0, wl).rotation.x = -Math.PI / 2;
+      [-1, 1].forEach(x => box(.18, 2, .18, C.woodDark, x, 1.6, 0, wl)); const rf = mesh(new THREE.ConeGeometry(1.6, 1, 4), flat(0x8a3324), 0, 3, 0, wl); rf.rotation.y = Math.PI / 4; }
+    [[0, 38, 1.6, 12, 0], [0, 30, 14, 1.6, 0], [-14, 26, 1.6, 10, .4]].forEach(([x, z, w, d, r]) => box(w, .06, d, 0xe8c98a, x, 1.64, z, W.town).rotation.y = r);
+    [[-3, 38], [3, 38], [-6, 30], [8, 30], [-15, 30]].forEach(([x, z]) => { box(.16, 2.2, .16, C.navy, x, 2.7, z, W.town); box(.5, .55, .5, glowMat(0xffd27a), x, 3.95, z, W.town); });
+    { const wm = group(-20, 1.6, 8, isl); mesh(new THREE.CylinderGeometry(1.4, 2, 6, 8), flat(0xf2eee4), 0, 3, 0, wm); const rf = mesh(new THREE.ConeGeometry(1.8, 2, 8), flat(0x8a3324), 0, 7, 0, wm);
+      box(.8, .8, .1, glowMat(C.yellow), 0, 4, 1.9, wm); W.millBlades = group(0, 5.6, 2.1, wm); for (let i = 0; i < 4; i++) { const b = box(.5, 4.6, .12, 0xf7f0de, 0, 2.3, 0, W.millBlades); b.geometry.translate(0, 0, 0); const arm = group(0, 0, 0, W.millBlades); arm.rotation.z = i * Math.PI / 2; arm.add(b); } }
+    [[-22, .5, 42, .4], [-28, .5, 38, .9]].forEach(([x, y, z, r]) => { const bt = group(x, y, z, isl); bt.rotation.y = r; box(4, .6, 1.6, 0xa0571a, 0, .3, 0, bt); box(4.2, .2, 1.8, C.red, 0, .65, 0, bt); });
     /* Smugglers' Alley lanterns strung between houses */
     W.alleySpot = new THREE.Vector3(-20, 2, -26);
 
@@ -1153,6 +1195,7 @@ const WORLD = (() => {
     /* lamps flicker or fade out */
     W.lamps.forEach((l, i) => { l.on += (l.target - l.on) * Math.min(1, dt * 3); l.light.intensity = l.on * (1.2 + Math.sin(t * 13 + i) * .12); l.bulb.material.color.setHex(l.on > .5 ? C.yellow : 0x3a3a44); });
     /* coin */
+    if (W.millBlades) W.millBlades.rotation.z = t * .6;
     W.coinAura.visible = W.coin.position.y > -5; W.coinAura.material.opacity = .55 + Math.sin(t * 4) * .3;
     if (W.grim && W.grim.userData.wisps) W.grim.userData.wisps.forEach((w, i) => { const a = t * (1.1 + i * .2) + i * 1.6; w.position.set(Math.cos(a) * (1.9 + i * .15), 1.6 + i * 1.5 + Math.sin(t * 2 + i) * .3, Math.sin(a) * (1.4 + i * .1)); });
     if (W.coin.position.y > -5) { W.coin.rotation.y += dt * 2.5; W.coinLight.position.copy(W.coin.position).add(new THREE.Vector3(0, .4, .5)); W.coinLight.intensity = W.coinShine * (1.1 + Math.sin(t * 5) * .4); }
@@ -1348,6 +1391,29 @@ function grimTransform() {
   tween(2.6, (k, r) => { const y = -.5 + r * 10.5; ring.position.y = ring2.position.y = y; ring.rotation.z = r * 6; setGrimK(0, y); if (Math.random() < .25) sparkleAt(g.localToWorld(V(rnd(-1.5, 1.5), y, rnd(-1, 1)))); },
     () => { g.remove(ring); g.remove(ring2); setGrimK(1); MUSIC.sfx("clang"); zap(); });
 }
+/* the coin throw and its spooky return */
+const COIN_SPLASH = V(-3, 0, 26);
+function coinTrail(at) { const sp = new THREE.Sprite(WORLD.make.greenAura()); sp.position.copy(at); sp.scale.setScalar(.9); WORLD.scene.add(sp); tween(.6, k => { sp.material.opacity = 1 - k; sp.scale.setScalar(.9 - k * .6); }, () => WORLD.scene.remove(sp)); }
+function coinThrow() {
+  const c = W.coin, a = W.kidA, arm = a.userData.armR; c.scale.setScalar(1.4); c.position.copy(kidHand(a)); W.coinShine = 1;
+  tween(.35, k => arm.rotation.x = -k * 2.8, () => {
+    MUSIC.sfx("swish"); tween(.25, k => arm.rotation.x = -2.8 + k * 3.6, () => tween(.4, k => arm.rotation.x = .8 * (1 - k)));
+    const from = c.position.clone(); let last = 0;
+    tween(1.6, (k, r) => { c.position.lerpVectors(from, COIN_SPLASH, r); c.position.y += Math.sin(r * Math.PI) * 9; c.rotation.x = r * 20; if (r - last > .05) { last = r; coinTrail(c.position); } },
+      () => { MUSIC.sfx("splash"); bubbles(COIN_SPLASH, 8); c.position.y = -10; W.coinShine = 0; });
+  });
+}
+function coinReturn() {
+  const c = W.coin, glow = new THREE.Sprite(WORLD.make.greenAura()); glow.position.copy(COIN_SPLASH).setY(.4); glow.scale.setScalar(.1); WORLD.scene.add(glow);
+  MUSIC.sfx("bell");
+  tween(1.3, (k, r) => glow.scale.setScalar(.1 + r * 6 + Math.sin(r * 30) * .4), () => {
+    c.scale.setScalar(1.4); c.position.copy(COIN_SPLASH).setY(-.5); W.coinShine = 1; MUSIC.sfx("whoosh"); bubbles(COIN_SPLASH, 10);
+    const to = kidHand(W.kidB), from = c.position.clone(); let last = 0;
+    tween(1.2, (k, r) => { c.position.lerpVectors(from, to, r); c.position.y += Math.sin(r * Math.PI) * 7; c.rotation.x = -r * 20; if (r - last > .05) { last = r; coinTrail(c.position); } },
+      () => { sparkleAt(to); MUSIC.sfx("coin"); zap(); W.kidB.userData.armR.rotation.x = -1; W.kidB.userData.armL.rotation.x = -1; c.rotation.x = Math.PI / 2; });
+    tween(1, k => { glow.scale.setScalar(6 * (1 - k) + .01); }, () => WORLD.scene.remove(glow));
+  });
+}
 function resetShip() {
   const sh = W.bigShip; sh.rotation.set(0, 0, 0); W.grim.visible = true; W.grim.position.set(5, 6.35, 1.5); W.grim.rotation.set(0, -Math.PI / 2 + .3, 0); setGrimSolid(false);
   W.grim.userData.armL.rotation.set(0, 0, 0); W.grim.userData.armR.rotation.set(0, 0, 0);
@@ -1413,8 +1479,9 @@ const PAGES = {
   intro2: { mood: "dusk", music: "spooky", enter: () => { W.kidA.userData.armL.rotation.x = W.kidA.userData.armR.rotation.x = 0; tween(.6, k => W.coin.scale.setScalar(1 - k), () => { W.coin.position.y = -10; W.coin.scale.setScalar(1); W.coinShine = 0; bagToast("coin"); }); WORLD.setMood("fog", 6); }, beats: [
     ["n", "As the sun sinks, a cold fog creeps in. Far out at sea, a bell rings. Dong... dong... dong. And every lantern on the dock flickers out.", "seaView", () => { [0, 900, 1800].forEach(d => setTimeout(() => MUSIC.sfx("bell"), d)); W.lamps.forEach((l, i) => setTimeout(() => { l.target = 0; MUSIC.sfx("fizz"); }, 2600 + i * 700)); }],
     ["crabbe", "The Soggy Biscuit! It's Grimtide's ghost ship!", "crabbeShot", () => tween(.8, k => W.crabbe.position.y = -1.75 + k * 3)],
-    ["n", "{a} throws the cursed coin as far as they can. Plop!", "harbourWide", () => { W.coin.position.set(-1, 3, 6); W.coinShine = .7; arc(W.coin, V(-6, -1, 30), 8, 1.4, () => { W.coin.position.y = -10; W.coinShine = 0; MUSIC.sfx("splash"); }); }],
-    ["b", "Um... it's back in my pocket.", "kidsClose", () => MUSIC.sfx("coin")],
+    ["n", "{a} grabs the cursed coin, winds up... and throws it as far as they possibly can!", () => [V(-3.2, 4.2, 1.5), V(-2.5, 2.4, 22)], () => coinThrow()],
+    ["n", "PLOP! It sinks into the dark water. Phew. But then the sea starts to glow green... and something shoots straight back out of it. ZING!", () => [V(-13, 7, 3), V(-2, 2.2, 17)], () => coinReturn()],
+    ["b", "Um... it's back in my pocket.", "kidsClose", () => { const c = W.coin; tween(.5, k => c.scale.setScalar(1.4 * (1 - k) + .001), () => { c.position.y = -10; c.scale.setScalar(1); W.coinShine = 0; W.kidB.userData.armR.rotation.x = 0; W.kidB.userData.armL.rotation.x = 0; }); MUSIC.sfx("coin"); }],
     ["feathers", "SQUAWK! Oi, you two! Over here, quick!", "parrotShot", () => flyParrotIn()]
   ], choices: [{ label: "Listen to the parrot", em: "🦜", to: "feathers" }] },
   feathers: { mood: "fog", music: "spooky", enter: () => { if (!W.parrot.visible) flyParrotIn(); }, beats: [
