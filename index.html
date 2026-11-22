@@ -1229,10 +1229,19 @@ const MUSIC = (() => {
       { wave: "square", gain: .06, decay: .14, n: notes(`D5 F5 A5 F5 D5 F5 A5 F5 C5 E5 G5 E5 C5 E5 G5 E5 D5 F5 A5 F5 D5 F5 A5 D6 C6 A5 G5 E5 D5 - - -`) },
       { wave: "triangle", gain: .16, decay: .18, n: notes(`D3 . D3 . A2 . A2 . C3 . C3 . G2 . G2 . D3 . D3 . A2 . A2 . C3 . A2 . D3 . . .`) },
       { drum: true, pattern: "k.h.s.h.k.k.s.h.k.h.s.h.k.k.s.h.k.h.s.h.k.k.s.h.k.h.s.h.k.s.s.s" } ] },
-    cave: { bpm: 60, sub: 2, vol: 1, voices: [
-      { wave: "sine", gain: .14, decay: 2.2, n: notes(`D2 - - - - - - - F2 - - - - - - - C2 - - - - - - - D2 - - - - - - -`) },
-      { wave: "triangle", gain: .05, decay: .6, n: notes(`. . A4 . . . . . . F4 . . . . . . . . E4 . . . . G4 . . . . D4 . . .`) },
-      { drip: true, every: 7 } ] },
+    cave: { bpm: 52, sub: 2, vol: 1, voices: [
+      { wave: "sine", gain: .12, decay: 3, n: notes(`D2 - - - - - - - - - - - - - - - D2 - - - - - - - - - - - - - - - Bb1 - - - - - - - - - - - - - - - A1 - - - - - - - - - - - - - - -`) },
+      { wave: "sine", gain: .05, decay: 3, det: 1.06, n: notes(`D2 - - - - - - - - - - - - - - - D2 - - - - - - - - - - - - - - - Bb1 - - - - - - - - - - - - - - - A1 - - - - - - - - - - - - - - -`) },
+      { wave: "triangle", gain: .05, decay: 1.4, n: notes(`. . . . A4 . . . . . G#4 . . . . . . . . . F4 . . . E4 . . . . . . . . . . . D5 . . . . C#5 . . . . . . . . . Bb4 . . . . . A4 . . . . . . . .`) },
+      { wave: "sine", gain: .028, decay: 1, n: notes(`. . . . . . . . . . . . . . . . D6 . Eb6 . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . A5 . Bb5 . . . . . . . . . . . . .`) },
+      { drip: true, every: 5 },
+      { swell: true },
+      { bell: true, every: 32 } ] },
+    caveGame: { bpm: 112, sub: 2, vol: .85, voices: [
+      { wave: "triangle", gain: .14, decay: .22, n: notes(`D2 . D2 . Eb2 . D2 . D2 . D2 . Eb2 . C2 . D2 . D2 . Eb2 . D2 . Bb1 . . . A1 . . .`) },
+      { wave: "sine", gain: .05, decay: .9, n: notes(`. . . . A4 . . . . . . . G#4 . . . . . . . F4 . . . . . . . E4 . . . . . . . D5 . . . . . . . C#5 . . . . . . . Bb4 . . . . . . . A4 . . .`) },
+      { drum: true, pattern: "h.h.h.h.k...h.h.h.h.h.k.h.h.h." },
+      { drip: true, every: 9 } ] },
     sea: { bpm: 76, sub: 2, vol: 1, voices: [
       { wave: "sine", gain: .13, decay: 1.2, n: notes(`D2 - - - A2 - - - Bb1 - - - F2 - - - G2 - - - D2 - - - A1 - - - E2 - - -`) },
       { wave: "triangle", gain: .07, decay: .5, n: notes(`D4 F4 A4 . E4 . A4 . D4 F4 Bb4 . A4 . F4 . G4 Bb4 D5 . A4 . F4 . E4 . C#4 . A3 . . .`) },
@@ -1300,7 +1309,7 @@ const MUSIC = (() => {
             const n = v.n[step % v.n.length];
             if (typeof n === "number") {
               let hold = 1; while (v.n[(step + hold) % v.n.length] === "-" && hold < 8) hold++;
-              tone(mtof(n), nextT, Math.max(v.decay, stepDur * hold * .95), v.wave, v.gain * tr.vol, musicBus);
+              tone(mtof(n) * (v.det || 1), nextT, Math.max(v.decay, stepDur * hold * .95), v.wave, v.gain * tr.vol, musicBus);
             }
           } else if (v.drum) { const ch = v.pattern[step % v.pattern.length]; if (ch !== ".") drum(ch, nextT); }
           else if (v.drip && step % v.every === 0 && Math.random() < .7) tone(rand(1200, 1800), nextT, .12, "sine", .05, musicBus, 600);
@@ -1345,6 +1354,7 @@ const MUSIC = (() => {
     win: t => [0, 4, 7, 12, 7, 12].forEach((s, i) => tone(mtof(74 + s), t + i * .12, i === 5 ? .7 : .2, "triangle", .14, sfxBus)),
     lose: t => [7, 5, 3, 0].forEach((s, i) => tone(mtof(62 + s), t + i * .16, .3, "triangle", .12, sfxBus)),
     page: t => noise(t, .15, .08, sfxBus, 3000, .7, "bandpass", 1500),
+    musicbox: t => [79, 76, 72, 74, 71, 72, 69, 67].forEach((n, i) => { tone(mtof(n), t + i * .32, .9, "sine", .1, sfxBus); tone(mtof(n) * 2, t + i * .32, .3, "sine", .03, sfxBus); }),
     bell: t => { tone(mtof(57), t, 2.4, "sine", .22, sfxBus); tone(mtof(57) * 2.76, t, 1.4, "sine", .07, sfxBus); tone(mtof(57) * 5.4, t, .6, "sine", .03, sfxBus); },
     note0: t => tone(mtof(72), t, .45, "sine", .2, sfxBus), note1: t => tone(mtof(76), t, .45, "sine", .2, sfxBus),
     note2: t => tone(mtof(79), t, .45, "sine", .2, sfxBus), note3: t => tone(mtof(83), t, .45, "sine", .2, sfxBus)
@@ -1725,7 +1735,7 @@ const ENDINGS = Object.values(STORY).filter(p => p.ending).map(p => p.ending.id)
    PIRATE NAMES
    ===================================================================== */
 const PREFIX = ["Barnacle", "Salty", "Stinky-Boots", "Cannonball", "Squid-Lips", "Two-Socks", "Rusty-Hook", "Bilge-Rat",
-  "Thunderpants", "Sharkbait", "Pickle-Beard", "Scurvy", "One-Eye", "Peg-Leg", "Mad-Dog", "Seaweed", "Gunpowder", "Crabclaw"];
+  "Thunderpants", "Sharkbait", "Pickle-Beard", "Scurvy", "One-Eye", "Peg-Leg", "Mad-Dog", "Whirlpool", "Gunpowder", "Crabclaw"];
 const SUFFIX = ["the Bold", "the Sneaky", "the Terrible", "of the Seven Snacks", "the Unwashed", "the Fearless",
   "Saltbeard", "the Loud", "the Wobbly", "Stormbringer", "the Slippery", "Bonecrusher", "the Smelly", "Goldtooth"];
 
