@@ -30,6 +30,11 @@
   .badge { font-family: Bungee, sans-serif; font-size: 11px; background: var(--pink); color: #fff; border: 3px solid var(--navy); border-radius: 10px; padding: 4px 8px; box-shadow: 0 3px 0 var(--navy); }
   #hud { display: none; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
   .chip { font-weight: 900; font-size: 15px; background: #fff; border: 3px solid var(--navy); border-radius: 999px; padding: 4px 12px; box-shadow: 0 3px 0 var(--navy); display: flex; align-items: center; gap: 6px; }
+  #hud .chip { position: relative; }
+  #hud .chip.spot { background: #fff; animation: spotpulse 1s ease-in-out infinite; z-index: 5; box-shadow: 0 0 0 4px #fff, 0 0 0 8px var(--pink), 0 4px 0 var(--navy); }
+  #hud .chip.spot::after { content: "⬆"; position: absolute; left: 50%; top: calc(100% + 8px); transform: translateX(-50%); font-size: 30px; line-height: 1; color: var(--yellow); text-shadow: 0 2px 0 var(--navy), 0 0 6px var(--navy); animation: spotbob .7s ease-in-out infinite; pointer-events: none; }
+  @keyframes spotpulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.12); } }
+  @keyframes spotbob { 0%, 100% { margin-top: 0; } 50% { margin-top: 8px; } }
   .bagbtn { font-family: inherit; color: var(--navy); cursor: pointer; font-size: 15px; }
   .bagbtn .bagit { display: inline-grid; place-items: center; width: 34px; height: 34px; font-size: 24px; background: #fff6d6; border: 2px solid var(--navy); border-radius: 50%; margin-left: -4px; }
   .bagbtn .bagit:first-child { margin-left: 0; }
@@ -1265,7 +1270,15 @@ const PAGES = {
     ["feathers", "At midnight his ghost ship comes for that coin. Whoever's holding it joins his skeleton crew... FOREVER!", "parrotShot"],
     ["b", "FOREVER?! But Captain Crabbe owes us MAC AND CHEESE!", "kidsClose"],
     ["feathers", "Then don't dawdle! This island is full of things that can help ye. Take the map, take the rowboat, and pick THREE stops before midnight!", "parrotShot"]
-  ], choices: [{ label: "Grab the map and row!", em: "🚣", to: "map" }] },
+  ], choices: [{ label: "Grab the map!", em: "🗺️", to: "howto" }] },
+  /* how to play: Mister Feathers explains the quest, the moon clock, the bag and pieces of eight */
+  howto: { mood: "fog", music: "spooky", hud: true, enter: () => { if (!W.parrot.visible) flyParrotIn(); }, beats: [
+    ["feathers", "Listen up, {a} and {b}! From tonight, ye're not cabin kids any more. Ye're PIRATES on a quest: get rid of that cursed coin before midnight!", "parrotShot", () => spotlight(null)],
+    ["feathers", "See the moon up top? That's yer clock. Every stop ye visit takes ONE hour. When all three hours are gone... it's MIDNIGHT!", "parrotShot", () => spotlight("hudMoon")],
+    ["feathers", "That's yer bag. Treasures ye find go in there. Tap it any time to have a look. Some of 'em might save yer skins at midnight!", "parrotShot", () => spotlight("bagBtn")],
+    ["feathers", "And every game ye play wins ye pieces of eight! Shiny pirate coins! Grab as many as ye can, ye scallywags!", "parrotShot", () => spotlight("hudP8")],
+    ["feathers", "Now tap a place on the map, and row like the wind! SQUAWK!", "kidsClose", () => spotlight(null)]
+  ], choices: [{ label: "Row to the first stop!", em: "🚣", to: "map" }] },
   map: { map: true },
 
   /* ================= SKULL ROCK ================= */
@@ -1480,7 +1493,7 @@ function goPage0(id, opts = {}) {
   if (pg.game) return startGameIntro(pg);
   if (pg.map) return enterMap();
   S.mode = "story"; CAM.drift = 1;
-  $("hud").style.display = "none";
+  $("hud").style.display = pg.hud ? "flex" : "none"; if (pg.hud) { lastBag = S.items.length; drawHud(); } else spotlight(null);
   if (pg.mood) WORLD.setMood(pg.mood, 2);
   MUSIC.play(pg.music || "shanty");
   if (pg.enter) pg.enter();
@@ -2004,9 +2017,11 @@ const ITEM_INFO = {
 let lastBag = 0;
 function drawHud() {
   const left = Math.max(0, 3 - S.hours), n = S.items.length, grew = n > lastBag; lastBag = n;
-  $("hud").innerHTML = `<span class="chip">🌙 ${[0, 1, 2].map(i => `<span class="pip${i < S.hours ? " gone" : ""}"></span>`).join("")} ${left}h</span><button class="chip bagbtn${grew ? " grew" : ""}" id="bagBtn" aria-label="Open your bag">🎒 ${n ? S.items.map(i => `<span class="bagit">${ITEM_EM[i] || ""}</span>`).join("") : `<span class="bagempty">empty</span>`}</button><span class="chip"><span class="p8">8</span> ${eightTotal()}</span>`;
-  $("bagBtn").onclick = openBag;
+  $("hud").innerHTML = `<span class="chip" id="hudMoon">🌙 ${[0, 1, 2].map(i => `<span class="pip${i < S.hours ? " gone" : ""}"></span>`).join("")} ${left}h</span><button class="chip bagbtn${grew ? " grew" : ""}" id="bagBtn" aria-label="Open your bag">🎒 ${n ? S.items.map(i => `<span class="bagit">${ITEM_EM[i] || ""}</span>`).join("") : `<span class="bagempty">empty</span>`}</button><span class="chip" id="hudP8"><span class="p8">8</span> ${eightTotal()}</span>`;
+  $("bagBtn").onclick = openBag; if (SPOT) { const e = $(SPOT); if (e) e.classList.add("spot"); }
 }
+let SPOT = null;
+function spotlight(id) { SPOT = id; document.querySelectorAll("#hud .spot").forEach(e => e.classList.remove("spot")); if (id && $(id)) { $(id).classList.add("spot"); MUSIC.sfx("tick"); } }
 function openBag() {
   MUSIC.sfx("page");
   const list = S.items.length ? S.items.map(i => `<div class="bagcard"><div class="bagbig">${ITEM_EM[i]}</div><div><b>${ITEM_INFO[i][0]}</b><p>${ITEM_INFO[i][1]}</p></div></div>`).join("") : `<p class="bagnone">Nothing in here yet. Keep exploring!</p>`;
