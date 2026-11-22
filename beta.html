@@ -531,13 +531,40 @@ const WORLD = (() => {
     w.userData = { head, armL, armR, anchor: group(0, 4.9, 0, w) };
     return w;
   }
+  /* a proper cartoon frog: squat body, big bulging eyes, wide smile, folded back legs, splayed toes, spots, throat sac */
   function frog(band) {
-    const f = group();
-    box(.9, .55, .8, 0x4caf50, 0, .3, 0, f);
-    [-.24, .24].forEach(x => { box(.28, .28, .28, 0x4caf50, x, .7, .18, f); box(.16, .16, .05, glowMat(C.white), x, .72, .33, f); box(.08, .08, .05, glowMat(0x111111), x, .72, .36, f); });
-    box(.5, .06, .05, glowMat(0x1f6b2a), 0, .26, .41, f);
-    if (band) box(.75, .14, .5, band, 0, .9, .1, f);
-    f.userData = { anchor: group(0, 1.6, 0, f) };
+    const f = group(), G = 0x5cbf3a, D = 0x3f8f27, belly = 0xd9ef8a, skin = flat(G), dark = flat(D);
+    const ball = (r, d = 1) => new THREE.IcosahedronGeometry(r, d);
+    mesh(ball(.48), skin, 0, .42, -.05, f).scale.set(1.15, .72, 1.2);                       // body
+    mesh(ball(.4), flat(belly), 0, .34, .14, f).scale.set(1, .6, 1.05);                    // pale belly
+    mesh(ball(.42), skin, 0, .62, .32, f).scale.set(1.2, .62, .9);                         // head
+    const throat = mesh(ball(.16), flat(0xf0f7c0), 0, .45, .58, f); throat.scale.set(1, .6, .5);
+    [-1, 1].forEach(sd => {
+      /* bulging eyes on top of the head */
+      mesh(ball(.17), skin, sd * .25, .86, .38, f);
+      mesh(ball(.135), flat(0xffffff), sd * .25, .9, .44, f);
+      mesh(ball(.075, 0), flat(0x111111), sd * .25, .91, .55, f).scale.set(1, 1.2, .6);
+      mesh(ball(.03, 0), glowMat(0xffffff), sd * .23 + .02, .95, .59, f);
+      const lid = mesh(new THREE.SphereGeometry(.18, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2.6), skin, sd * .25, .87, .38, f); lid.rotation.x = -.35;
+      /* folded back legs: big haunch, shin, flat webbed foot */
+      mesh(ball(.26), skin, sd * .5, .36, -.32, f).scale.set(.75, .9, 1.35);
+      mesh(ball(.13), dark, sd * .6, .18, -.05, f).scale.set(.8, .6, 1.8);
+      const foot = group(sd * .62, .04, .2, f); foot.rotation.y = sd * .35;
+      box(.22, .05, .28, G, 0, 0, 0, foot); [-.1, 0, .1].forEach((x, k) => { box(.06, .05, .2, G, x, 0, .2, foot).rotation.y = (k - 1) * .35; mesh(ball(.045, 0), flat(0x8ad16a), x + (k - 1) * .06, .01, .3, foot); });
+      /* little front legs with toe pads */
+      const arm = box(.09, .26, .09, G, sd * .32, .16, .5, f); arm.rotation.set(.35, 0, sd * .15);
+      [-.06, 0, .06].forEach(x => mesh(ball(.04, 0), flat(0x8ad16a), sd * .34 + x, .03, .6, f));
+      /* cheek blush */
+      mesh(ball(.07, 0), flat(0xff9fb0), sd * .4, .58, .6, f).scale.set(1, .6, .4);
+    });
+    /* the big wide smile */
+    const sm = mesh(new THREE.TorusGeometry(.32, .025, 4, 12, Math.PI), flat(0x1f4d17), 0, .62, .66, f); sm.rotation.z = Math.PI; sm.scale.set(1, .45, 1);
+    /* spots on the back */
+    [[-.25, .66, -.2, .09], [.2, .7, -.35, .07], [.05, .74, -.05, .06], [-.1, .62, -.48, .08], [.33, .6, -.1, .06]].forEach(([x, y, z, r]) => mesh(ball(r, 0), dark, x, y, z, f).scale.set(1, .35, 1));
+    /* pirate bandana so you can tell the kids apart */
+    if (band) { const bm = flat(band); mesh(new THREE.CylinderGeometry(.36, .4, .12, 10, 1, true), bm, 0, .8, .26, f).material.side = THREE.DoubleSide; mesh(ball(.07, 0), bm, -.36, .8, .1, f); box(.06, .2, .05, band, -.4, .68, .02, f).rotation.z = .4; box(.06, .18, .05, band, -.34, .66, -.02, f).rotation.z = -.3; }
+    f.userData = { anchor: group(0, 1.4, 0, f), throat };
+    (W.frogsAll = W.frogsAll || []).push(f);
     return f;
   }
   function monkey() {
@@ -1045,6 +1072,7 @@ const WORLD = (() => {
     if (W.parrot.visible) { W.parrot.userData.head.rotation.y = Math.sin(t * 1.7) * .4; const f = W.parrot.userData.flap || 0; W.parrot.userData.wingL.rotation.z = Math.sin(t * 30) * f; W.parrot.userData.wingR.rotation.z = -Math.sin(t * 30) * f; }
     W.tentacles.forEach(tn => { tn.rotation.z = Math.sin(t * 1.1 + tn.userData.ph) * .2; tn.rotation.x = Math.cos(t * .9 + tn.userData.ph) * .12; });
     (W.flags || []).forEach((f, i) => { if (!f.parent || !f.parent.visible) return; const p = f.geometry.attributes.position, b = f.userData.base, w = f.userData.w; for (let v = 0; v < p.count; v++) { const x = b[v * 3]; p.array[v * 3 + 2] = Math.sin(x * 1.3 - t * 6 + i) * .28 * (x / w); p.array[v * 3 + 1] = b[v * 3 + 1] - (x / w) * .3 * (1 + Math.sin(t * 2 + i) * .3); } p.needsUpdate = true; f.geometry.computeVertexNormals(); });
+    (W.frogsAll || []).forEach((fr, i) => { if (!fr.visible) return; const k = Math.max(0, Math.sin(t * 3 + i * 2)); fr.userData.throat.scale.set(1 + k * .45, .6 + k * .4, .5 + k * .5); });
     (W.swing || []).forEach(l => { l.rotation.z = Math.sin(t * 1.6 + l.userData.ph) * .12; l.rotation.x = Math.cos(t * 1.3 + l.userData.ph) * .08; });
     W.beam.parent.rotation.y = t * .6;
     sunLight.position.set(camera.position.x - 30, 40, camera.position.z + 60);
@@ -1248,7 +1276,7 @@ const MB_BEATS = [
 const PAGES = {
   /* ================= THE HARBOUR ================= */
   intro1: { mood: "dusk", music: "shanty", enter: () => resetWorld(), beats: [
-    ["n", "Gullwhistle Harbour smells of fish, seaweed and trouble. {a} and {b} are the cabin kids on Captain Crabbe's grumpy old fishing boat, the Soggy Biscuit.", "harbourWide"],
+    ["n", "Gullwhistle Harbour smells of fish, seaweed and trouble. {a} and {b} are the cabin kids on Captain Crabbe's grumpy old fishing boat.", "harbourWide"],
     ["crabbe", "Right, you two barnacles! Every fish in that barrel before I get back... or there'll be NO MAC AND CHEESE!", "crabbeShot", () => setTimeout(() => tween(1.2, k => W.crabbe.position.y = 1.25 - k * 3), 2600)],
     ["b", "Easy peasy. How hard can it be?", "kidsClose"]
   ], choices: [{ label: "Start flinging fish!", em: "🐟", to: "gameFish" }] },
@@ -1355,7 +1383,7 @@ const PAGES = {
     ["n", "{a} is back to normal. Mostly. Still a bit slimy.", sh("light", -12, 5.5, 4, -7, 4, 0)]
   ], choices: [{ label: "Say sorry", em: "🙏", to: "lightChat" }, { label: "Ask to be turned into a frog too", em: "🐸", to: "endFrog" }] },
   lightChat: { mood: "witch", music: "witch", enter: () => openDoor(), beats: [
-    ["brine", "Well, well. Two little sea-rats with a cursed coin. I can smell it from here. Phwoar.", sh("light", -13, 6.8, 5, -3, 6, 0)],
+    ["brine", "Well, well. Two little sea-rats with a cursed coin. I can feel its nasty magic from here. Brrrr! It's giving me goosebumps.", sh("light", -13, 6.8, 5, -3, 6, 0)],
     ["brine", "I have Moonlight Salt. Throw it on a ghost and he turns solid. Solid enough to bonk on the nose.", sh("light", -12, 6.8, 3, -3, 6.2, 0)],
     ["a", "Yes please!", sh("light", -12, 5, 5, -8, 4.4, 1.3)],
     ["brine", "Nothing's free, dearie. Answer my riddle. I have a head and a tail, but no body. What am I?", sh("light", -13, 6.8, 5, -3, 6, 0)]
