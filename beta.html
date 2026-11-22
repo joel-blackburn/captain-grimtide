@@ -217,6 +217,14 @@ const MUSIC = (() => {
       { drip: true, every: 5 },
       { swell: true },
       { bell: true, every: 32 } ] },
+    /* the boss level: fast driving bass in D minor with the spooky flat 2nd, pounding drums, a menacing lead, a doom bell every bar */
+    boss: { bpm: 168, sub: 2, vol: .85, voices: [
+      { wave: "sawtooth", gain: .045, decay: .13, n: notes(`D2 D2 D3 D2 Eb2 D2 D3 D2 D2 D2 D3 D2 C2 C2 C3 C2 Bb1 Bb1 Bb2 Bb1 Bb1 Bb1 Bb2 Bb1 A1 A1 A2 A1 Bb1 A1 A2 A1`) },
+      { wave: "triangle", gain: .14, decay: .6, n: notes(`D2 . . . . . . . D2 . . . . . . . Bb1 . . . . . . . A1 . . . A1 . A1 .`) },
+      { wave: "square", gain: .04, decay: .32, n: notes(`D4 . . F4 . . E4 . Eb4 . . . D4 . . . A4 . . Bb4 . . A4 . G4 . F4 . E4 . C#4 .`) },
+      { wave: "square", gain: .025, decay: .2, n: notes(`. . . . . . . . . . . . . . . . D5 . Eb5 . D5 . . . . . . . . . . .`) },
+      { drum: true, pattern: "k.hsk.hsk.hsk.ssk.hsk.hsk.hskkss" },
+      { bell: true, every: 32 } ] },
     caveGame: { bpm: 112, sub: 2, vol: .85, voices: [
       { wave: "triangle", gain: .14, decay: .22, n: notes(`D2 . D2 . Eb2 . D2 . D2 . D2 . Eb2 . C2 . D2 . D2 . Eb2 . D2 . Bb1 . . . A1 . . .`) },
       { wave: "sine", gain: .05, decay: .9, n: notes(`. . . . A4 . . . . . . . G#4 . . . . . . . F4 . . . . . . . E4 . . . . . . . D5 . . . . . . . C#5 . . . . . . . Bb4 . . . . . . . A4 . . .`) },
@@ -1646,7 +1654,7 @@ const PAGES = {
   ], choices: [{ label: "Back to the map", em: "🗺️", to: "map" }] },
 
   /* ================= MIDNIGHT ================= */
-  midnight: { mood: "ghost", music: "spooky", enter: () => { resetShip(); crewFace(true); kidsInBoat(); boatAt(V(20, 0, 36), V(30, 0, 52)); W.ghostShip.visible = false; shipIn(5); }, beats: [
+  midnight: { mood: "ghost", music: "boss", enter: () => { resetShip(); crewFace(true); kidsInBoat(); boatAt(V(20, 0, 36), V(30, 0, 52)); W.ghostShip.visible = false; shipIn(5); }, beats: [
     ["n", "DONG. DONG. DONG. Midnight.", () => [V(6, 8, 22), V(28, 6, 60)], () => [0, 900, 1800].forEach(d => setTimeout(() => MUSIC.sfx("bell"), d))],
     ["n", "The fog splits open, and there it is: the Soggy Biscuit. Ragged green sails. Glowing portholes. A crew of skeletons grinning over the rails.", () => [V(4, 10, 20), V(30, 10, 52)]],
     ["n", "A plank slides down onto your little boat. Something stomps down it. STOMP. STOMP. STOMP.", () => [V(4, 6, 22), V(20, 10.5, 42)], () => {
@@ -1657,7 +1665,7 @@ const PAGES = {
       }); }],
     ["n", "Captain Grimtide is see-through, seven feet tall, and his beard is full of crabs. One eye glows. The other hides behind a patch. And he does NOT look happy.", () => { const p = plankAt(.72), f = deck(p.x, p.y + 6.1, p.z), d = innerWidth / innerHeight < 1 ? 8 : 5.6; return [f.clone().add(V(-1.6, -.4, -d)), f.clone().add(V(0, d * .2, 0))]; }]
   ], choices: [{ label: "Face him", em: "😤", to: "grimChat" }] },
-  grimChat: { mood: "ghost", music: "spooky", enter: () => fadeDo(() => { placeKids(W.bigShip, V(-6, 6.35, 2.2), V(-3.4, 6.35, 3), Math.PI / 2); setPlank(0); crewFace(false); W.grim.position.set(5, 6.35, 1.5); W.grim.rotation.set(0, -Math.PI / 2 + .3, 0); }, 50), beats: [
+  grimChat: { mood: "ghost", music: "boss", enter: () => fadeDo(() => { placeKids(W.bigShip, V(-6, 6.35, 2.2), V(-3.4, 6.35, 3), Math.PI / 2); setPlank(0); crewFace(false); W.grim.position.set(5, 6.35, 1.5); W.grim.rotation.set(0, -Math.PI / 2 + .3, 0); }, 50), beats: [
     ["n", "He grabs you both by the collars, stomps back up the plank, and plonks you down on the deck of his ship. The skeleton crew crowds round.", () => innerWidth / innerHeight < 1 ? [deck(-11, 9, 19), deck(1, 11.6, 1)] : [deck(-13, 8.8, 13), deck(1, 11, 1)]],
     ["grim", "Arrrrr. Somebody... has... MY coin.", () => [deck(-2, 11, 18), deck(4, 11, 1.5)]],
     ["grim", "Hand it over, little sea-rats, and come aboard. My crew needs new deck-scrubbers. For ever and EVER and EVER.", () => [deck(-2, 11, 18), deck(3, 10, 1.5)]],
@@ -1670,7 +1678,7 @@ const PAGES = {
     { label: "Hand over the chocolate coin", em: "🍫", to: "endChoc", need: "choc" },
     { label: "Run around the deck screaming", em: "😱", to: "endScrub" }
   ] },
-  saltFight: { mood: "ghost", music: "spooky", beats: [
+  saltFight: { mood: "ghost", music: "boss", beats: [
     ["n", "{a} flings the Moonlight Salt. It sparkles all over Grimtide like a tiny snowstorm. He sneezes. ACHOO!", () => [deck(-3, 11, 15), deck(4, 10, 1.5)], () => { const j = W.saltJar; WORLD.scene.attach(j); j.scale.setScalar(1); j.position.copy(kidHand()); arc(j, deck(4.8, 9.5, 1.6), 2, .7, () => { hideAt(j); W.light.add(j); hideAt(j); [8, 10, 12].forEach((y, i) => setTimeout(() => sparkleAt(deck(5, y, 1.5)), i * 150)); MUSIC.sfx("cheer"); }); }],
     ["n", "Then something amazing happens. A ring of magic light rises up around him, from his boots to his hat... and wherever it passes, the see-through ghost turns SOLID!", () => [deck(-6, 9.5, 13), deck(5, 9.6, 1.5)], () => grimTransform()],
     ["grim", "Uh oh. I can feel me toes again...", () => [deck(-3, 11, 13), deck(5, 11.5, 1.5)], () => { setGrimSolid(true); const a = W.grim.userData.armL; tween(.6, k => a.rotation.x = -k * 1.3); }],
@@ -1839,7 +1847,7 @@ const hearts = n => `<span class="chip">${[0, 1, 2].map(i => i < n ? "❤️" : 
 let GAME = null, GPAGE = null;
 function startGameIntro(pg) {
   S.mode = "gameintro"; GPAGE = pg; CAM.drift = .4;
-  MUSIC.play(pg.game === "torch" ? "caveGame" : "game"); $("hud").style.display = "none";
+  MUSIC.play(pg.game === "torch" ? "caveGame" : pg.game === "duel" ? "boss" : "game"); $("hud").style.display = "none";
   if (GAME) GAME.stop();
   GAME = GAMES3D[pg.game]();
   GAME.setup();
