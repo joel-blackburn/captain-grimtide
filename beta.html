@@ -60,9 +60,11 @@
   #bubble { position: absolute; left: 0; top: 0; width: max-content; max-width: min(420px, 82vw); background: #fff; border: 4px solid var(--navy); border-radius: 22px; padding: 10px 16px 12px;
     font-size: clamp(18px, 2.3vw, 22px); line-height: 1.4; font-weight: 800; box-shadow: 0 6px 0 var(--navy); display: none; transform: translate(-50%, -100%); }
   #bubble.show { display: block; }
+  .tapwarn { position: absolute; display: none; transform: translate(-50%, -100%); font-family: Bungee, sans-serif; font-size: clamp(16px, 3.4vw, 24px); color: #ffe14a; text-shadow: 0 2px 0 #0b0d1f, 0 0 10px #0b0d1f; pointer-events: none; animation: nudge .6s ease-in-out infinite; z-index: 6; }
+  .tapwarn.out { color: #ff7b6b; }
   #bubble .who { display: inline-block; font-family: Bungee, sans-serif; font-size: 12px; color: #fff; background: var(--navy); border-radius: 8px; padding: 2px 8px; margin-bottom: 4px; }
-  #bubble::after { content: ""; position: absolute; left: var(--tail, 50%); bottom: -18px; transform: translateX(-50%); border: 14px solid transparent; border-top: 18px solid var(--navy); }
-  #bubble::before { content: ""; position: absolute; left: var(--tail, 50%); bottom: -9px; transform: translateX(-50%); border: 10px solid transparent; border-top: 13px solid #fff; z-index: 1; }
+  #bubble::after { content: ""; position: absolute; left: var(--tail, 50%); bottom: -24px; width: 34px; height: 26px; transform: translateX(-30%); background: var(--navy); clip-path: polygon(0 0, 100% 0, 8% 100%); }
+  #bubble::before { content: ""; position: absolute; left: var(--tail, 50%); bottom: -13px; width: 22px; height: 18px; transform: translateX(calc(-30% + 5px)); background: #fff; clip-path: polygon(0 0, 100% 0, 10% 100%); z-index: 1; }
 
   /* choices & next */
   #choices { position: absolute; left: 50%; bottom: max(18px, env(safe-area-inset-bottom)); transform: translateX(-50%); width: min(620px, calc(100% - 24px)); display: none; flex-direction: column; gap: 10px; }
@@ -192,10 +194,19 @@ const MUSIC = (() => {
       { wave: "square", gain: .06, decay: .14, n: notes(`D5 F5 A5 F5 D5 F5 A5 F5 C5 E5 G5 E5 C5 E5 G5 E5 D5 F5 A5 F5 D5 F5 A5 D6 C6 A5 G5 E5 D5 - - -`) },
       { wave: "triangle", gain: .16, decay: .18, n: notes(`D3 . D3 . A2 . A2 . C3 . C3 . G2 . G2 . D3 . D3 . A2 . A2 . C3 . A2 . D3 . . .`) },
       { drum: true, pattern: "k.h.s.h.k.k.s.h.k.h.s.h.k.k.s.h.k.h.s.h.k.k.s.h.k.h.s.h.k.s.s.s" } ] },
-    cave: { bpm: 60, sub: 2, vol: 1, voices: [
-      { wave: "sine", gain: .14, decay: 2.2, n: notes(`D2 - - - - - - - F2 - - - - - - - C2 - - - - - - - D2 - - - - - - -`) },
-      { wave: "triangle", gain: .05, decay: .6, n: notes(`. . A4 . . . . . . F4 . . . . . . . . E4 . . . . G4 . . . . D4 . . .`) },
-      { drip: true, every: 7 } ] },
+    cave: { bpm: 52, sub: 2, vol: 1, voices: [
+      { wave: "sine", gain: .12, decay: 3, n: notes(`D2 - - - - - - - - - - - - - - - D2 - - - - - - - - - - - - - - - Bb1 - - - - - - - - - - - - - - - A1 - - - - - - - - - - - - - - -`) },
+      { wave: "sine", gain: .05, decay: 3, det: 1.06, n: notes(`D2 - - - - - - - - - - - - - - - D2 - - - - - - - - - - - - - - - Bb1 - - - - - - - - - - - - - - - A1 - - - - - - - - - - - - - - -`) },
+      { wave: "triangle", gain: .05, decay: 1.4, n: notes(`. . . . A4 . . . . . G#4 . . . . . . . . . F4 . . . E4 . . . . . . . . . . . D5 . . . . C#5 . . . . . . . . . Bb4 . . . . . A4 . . . . . . . .`) },
+      { wave: "sine", gain: .028, decay: 1, n: notes(`. . . . . . . . . . . . . . . . D6 . Eb6 . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . A5 . Bb5 . . . . . . . . . . . . .`) },
+      { drip: true, every: 5 },
+      { swell: true },
+      { bell: true, every: 32 } ] },
+    caveGame: { bpm: 112, sub: 2, vol: .85, voices: [
+      { wave: "triangle", gain: .14, decay: .22, n: notes(`D2 . D2 . Eb2 . D2 . D2 . D2 . Eb2 . C2 . D2 . D2 . Eb2 . D2 . Bb1 . . . A1 . . .`) },
+      { wave: "sine", gain: .05, decay: .9, n: notes(`. . . . A4 . . . . . . . G#4 . . . . . . . F4 . . . . . . . E4 . . . . . . . D5 . . . . . . . C#5 . . . . . . . Bb4 . . . . . . . A4 . . .`) },
+      { drum: true, pattern: "h.h.h.h.k...h.h.h.h.h.k.h.h.h." },
+      { drip: true, every: 9 } ] },
     sea: { bpm: 76, sub: 2, vol: 1, voices: [
       { wave: "sine", gain: .13, decay: 1.2, n: notes(`D2 - - - A2 - - - Bb1 - - - F2 - - - G2 - - - D2 - - - A1 - - - E2 - - -`) },
       { wave: "triangle", gain: .07, decay: .5, n: notes(`D4 F4 A4 . E4 . A4 . D4 F4 Bb4 . A4 . F4 . G4 Bb4 D5 . A4 . F4 . E4 . C#4 . A3 . . .`) },
@@ -263,7 +274,7 @@ const MUSIC = (() => {
             const n = v.n[step % v.n.length];
             if (typeof n === "number") {
               let hold = 1; while (v.n[(step + hold) % v.n.length] === "-" && hold < 8) hold++;
-              tone(mtof(n), nextT, Math.max(v.decay, stepDur * hold * .95), v.wave, v.gain * tr.vol, musicBus);
+              tone(mtof(n) * (v.det || 1), nextT, Math.max(v.decay, stepDur * hold * .95), v.wave, v.gain * tr.vol, musicBus);
             }
           } else if (v.drum) { const ch = v.pattern[step % v.pattern.length]; if (ch !== ".") drum(ch, nextT); }
           else if (v.drip && step % v.every === 0 && Math.random() < .7) tone(rand(1200, 1800), nextT, .12, "sine", .05, musicBus, 600);
@@ -666,6 +677,8 @@ const WORLD = (() => {
     mesh(new THREE.CircleGeometry(3, 10), new THREE.MeshStandardMaterial({ color: 0x1e3a44, emissive: 0x0f3a33, roughness: .2 }), 6, 1.05, 4, cave).rotation.x = -Math.PI / 2;
     W.caveLights = [[-9, 7, -10], [9, 7, -10], [0, 9, 6]].map(([x, y, z]) => { const l = new THREE.PointLight([0x3fe0b4, 0x4a8dff, 0x3fe0b4][W.caveLightsN = (W.caveLightsN || 0) + 1, (W.caveLightsN - 1) % 3], .7, 26); l.position.set(x, y, z); cave.add(l); return l; });
     W.torches = [[-11, 3, -7], [-5.5, 3.6, -11], [1, 4, -12], [7, 3.6, -10.5], [12, 3, -5], [-12.5, 2.6, 3], [13, 2.6, 4]].map(([x, y, z]) => { const t = torch(true); t.scale.setScalar(1.9); t.position.set(x, y, z); cave.add(t); t.userData.base = V3(x, y, z); return t; });
+    /* three extra torches that only come out for Torch Panic, closer to the boys */
+    W.gameTorches = [[-8, 1.4, 2.5], [8.5, 1.4, 1.5], [-6, 1.6, -4]].map(([x, y, z]) => { const t = torch(true); t.scale.setScalar(1.7); t.position.set(x, y, z); t.visible = false; cave.add(t); t.userData.base = V3(x, y, z); return t; });
     W.skels = [0, 1, 2].map(i => { const s = skeleton(i === 1); s.position.set(-1.6 + i * 1.6, 1, -2 - (i % 2) * .6); cave.add(s); return s; });
     W.bones = W.skels[1];
     W.toeBone = box(.5, .14, .14, 0xeee6d2, 0, -50, 0, cave);
@@ -1531,7 +1544,7 @@ const hearts = n => `<span class="chip">${[0, 1, 2].map(i => i < n ? "❤️" : 
 let GAME = null, GPAGE = null;
 function startGameIntro(pg) {
   S.mode = "gameintro"; GPAGE = pg; CAM.drift = .4;
-  MUSIC.play("game"); $("hud").style.display = "none";
+  MUSIC.play(pg.game === "torch" ? "caveGame" : "game"); $("hud").style.display = "none";
   if (GAME) GAME.stop();
   GAME = GAMES3D[pg.game]();
   GAME.setup();
@@ -1633,34 +1646,73 @@ const GAMES3D = {
     };
   },
 
-  /* ---------------- TORCH PANIC (cave) ---------------- */
+  /* ---------------- TORCH PANIC (cave) ----------------
+     The original rules: torches start dying one at a time, flames shrink as they burn out,
+     tap a dying or dead torch to relight it. More torches out = darker cave, shakier skeletons.
+     Seen from just behind the boys, looking into the cave. */
   torch() {
-    const DUR = 30, rate = S.hard ? .55 : .3; let t = 0, score = 0, spawn = 1, over = false;
-    const T = W.torches;
+    const DUR = 30, rate = S.hard ? .5 : .3; let t = 0, score = 0, spawn = 1.2, over = false, best = 0;
+    const T = W.torches.concat(W.gameTorches || []);
+    const warn = T.map(() => { const d = el("div", "tapwarn", "TAP!"); $("ui").appendChild(d); return d; });
+    const glow = T.map(tc => { const m = new THREE.Mesh(new THREE.SphereGeometry(.6, 10, 8), new THREE.MeshBasicMaterial({ color: 0x5ff0c4, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false })); m.position.set(0, 1.95, 0); tc.add(m); return m; });
     return {
-      setup() { WORLD.setMood("cave", .5); placeKids(W.cave, V(-3, .95, 9), V(-.8, .95, 9.6), Math.PI); T.forEach(tc => { tc.userData.fuel = 1; tc.userData.dying = false; tc.userData.flame.visible = true; tc.userData.flame.scale.setScalar(1); }); shot(sh("cave", 0, 9, 22, 0, 5.5, -6)(), 1.6); },
+      setup() {
+        WORLD.setMood("cave", .5); W.torchesGame = true;
+        /* torches stand on stone pillars in three tiers in front of the boys, spread to fit the screen */
+        const asp = innerWidth / innerHeight, sx = asp < 1 ? 1 : asp > 1.7 ? 2.2 : 1.9;
+        const LAY = [[-4.2, -5, 0], [-1.4, -5.6, 0], [1.4, -5.6, 0], [4.2, -5, 0], [-2.8, -8, 2.6], [0, -8.4, 2.6], [2.8, -8, 2.6], [-4.2, -10.5, 5.2], [0, -11, 5.4], [4.2, -10.5, 5.2]];
+        if (!W.torchPillars) W.torchPillars = LAY.map(() => { const m = new THREE.Mesh(new THREE.CylinderGeometry(.7, 1.1, 1, 6), WORLD.flat(0x173238)); W.cave.add(m); return m; });
+        const sy = asp < 1 ? 1.35 : 1;
+        T.forEach((tc, i) => { const [x, z, y0] = LAY[i], y = y0 * sy; tc.position.set(x * sx, y + .4, z); tc.rotation.set(0, 0, 0); const pl = W.torchPillars[i]; pl.visible = y > 0; pl.scale.y = y + .5; pl.position.set(x * sx, (y + .5) / 2, z); });
+        T.forEach(tc => { tc.visible = true; const u = tc.userData; u.fuel = 1; u.dying = false; u.flame.visible = true; u.flame.scale.setScalar(1); });
+        W.skels.forEach(sk => sk.userData.shake = true);
+        placeKids(W.cave, V(-1.5, .95, 7.6), V(1.5, .95, 7.9), Math.PI);
+        const a = innerWidth / innerHeight;
+        shot(a < 1 ? sh("cave", 0, 6, 16, 0, 5.6, -6)() : a > 1.7 ? sh("cave", 0, 4.4, 10.5, 0, 4.6, -6)() : sh("cave", 0, 4.6, 14, 0, 4.4, -6)(), 1.6);
+      },
       start() { hint("Tap the torches before they go out!"); setTimeout(() => hint(null), 2500); },
       hud: () => `<span class="chip">🔥 Relit: ${score}</span><span class="chip">⏱ ${Math.max(0, Math.ceil(DUR - t))}</span>`,
       down(x, y) {
-        let best = null, bd = 95;
-        T.forEach(tc => { const wp = new THREE.Vector3(); tc.userData.flame.getWorldPosition(wp); const p = toScreen(wp); const d = Math.hypot(p.x - x, p.y - y); if (d < bd && (tc.userData.dying || tc.userData.fuel <= 0)) { bd = d; best = { tc, wp }; } });
-        if (best) { const u = best.tc.userData; u.fuel = 1; u.dying = false; u.flame.visible = true; score++; MUSIC.sfx("whoosh"); popText("+1", best.wp); hudGame(); }
+        let bestT = null, bd = Math.max(70, Math.min(innerWidth, innerHeight) * .14);
+        T.forEach(tc => { const u = tc.userData; if (!(u.dying || u.fuel <= 0)) return; const wp = new THREE.Vector3(); u.flame.getWorldPosition(wp); const p = toScreen(wp); const d = Math.hypot(p.x - x, p.y - y); if (d < bd) { bd = d; bestT = { tc, wp }; } });
+        if (bestT) { const u = bestT.tc.userData; u.fuel = 1; u.dying = false; u.flame.visible = true; u.pop = 1; score++; MUSIC.sfx("whoosh"); popText("+1", bestT.wp); hudGame(); }
       },
       move() {}, up() {},
       tick(dt, tt) {
         if (over) return; t += dt; spawn -= dt;
-        if (spawn <= 0) { const lit = T.filter(tc => !tc.userData.dying && tc.userData.fuel >= 1); if (lit.length) lit[Math.floor(Math.random() * lit.length)].userData.dying = true; spawn = (S.hard ? 1 : 1.5) * (1 - t / DUR * .4); }
+        if (spawn <= 0) { const lit = T.filter(tc => !tc.userData.dying && tc.userData.fuel >= 1); if (lit.length) lit[Math.floor(Math.random() * lit.length)].userData.dying = true; spawn = (S.hard ? .85 : 1.35) * (1 - t / DUR * .45); }
         let litN = 0;
-        T.forEach(tc => { const u = tc.userData; if (u.dying) { u.fuel -= rate * dt; if (u.fuel <= 0) { u.fuel = 0; u.dying = false; MUSIC.sfx("fizz"); } } u.flame.visible = u.fuel > 0; u.flame.scale.setScalar(.25 + u.fuel * .75 + Math.sin(tt * 18 + tc.position.x) * .05); if (u.fuel > 0) litN++; });
-        const out = T.length - litN; $("dim").style.opacity = Math.min(.75, out * .12);
-        W.caveLights.forEach(l => l.intensity = .7 * (litN / T.length));
-        W.skels.forEach((sk, i) => sk.position.x = -1.6 + i * 1.6 + Math.sin(tt * 40 + i) * .03 * (1 + out));
+        T.forEach((tc, i) => {
+          const u = tc.userData;
+          if (u.dying) { u.fuel -= rate * dt; if (u.fuel <= 0) { u.fuel = 0; u.dying = false; MUSIC.sfx("fizz"); } }
+          u.pop = Math.max(0, (u.pop || 0) - dt * 3);
+          u.flame.visible = u.fuel > 0;
+          const fl = 1 + Math.sin(tt * 18 + i * 1.7) * .08 + Math.sin(tt * 31 + i) * .05;
+          u.flame.scale.set(.3 + u.fuel * .7 + u.pop * .5, (.3 + u.fuel * .7) * fl + u.pop * .6, .3 + u.fuel * .7 + u.pop * .5);
+          glow[i].material.opacity = u.fuel > 0 ? (.08 + u.fuel * .14) * fl : 0; glow[i].scale.setScalar(.6 + u.fuel * .6 + u.pop * .6);
+          if (u.fuel > 0) litN++;
+          const need = u.fuel <= 0 || (u.dying && u.fuel < .6), wp = new THREE.Vector3(); tc.getWorldPosition(wp); wp.y += 2.6 * tc.scale.y + .9;
+          const p = toScreen(wp), d = warn[i];
+          if (need && p.z < 1) { d.style.display = "block"; d.style.left = p.x + "px"; d.style.top = p.y + "px"; d.classList.toggle("out", u.fuel <= 0); } else d.style.display = "none";
+        });
+        const out = T.length - litN; best = Math.max(best, out);
+        $("dim").style.opacity = Math.min(.55, out * .07);
+        W.caveLights.forEach(l => l.intensity = .7 * Math.max(.15, litN / T.length));
+        W.skels.forEach((sk, i) => { sk.position.x = -1.6 + i * 1.6 + Math.sin(tt * 40 + i) * .03 * (1 + out); sk.rotation.z = Math.sin(tt * 37 + i * 2) * .02 * (1 + out); });
         if (Math.floor(t * 4) !== Math.floor((t - dt) * 4)) hudGame();
         if (t >= DUR) { over = true; endGame({ pieces: Math.min(15, Math.round(score / 2)), msg: out === 0 ? `${score} torches relit and not one went out. The skeletons stopped shaking!` : `${score} torches relit! The skeletons are still a bit wobbly.` }); }
       },
-      stop() { $("dim").style.opacity = 0; T.forEach(tc => { tc.userData.fuel = 1; tc.userData.dying = false; tc.userData.flame.visible = true; tc.userData.flame.scale.setScalar(1); }); W.caveLights.forEach(l => l.intensity = .7); }
+      stop() {
+        $("dim").style.opacity = 0; warn.forEach(d => d.remove()); glow.forEach(l => l.parent && l.parent.remove(l)); W.torchesGame = false;
+        T.forEach(tc => { const u = tc.userData; u.fuel = 1; u.dying = false; u.flame.visible = true; u.flame.scale.setScalar(1); });
+        (W.gameTorches || []).forEach(tc => tc.visible = false); (W.torchPillars || []).forEach(p => p.visible = false);
+        T.forEach(tc => { if (tc.userData.base) tc.position.copy(tc.userData.base); });
+        W.skels.forEach((sk, i) => { sk.position.x = -1.6 + i * 1.6; sk.rotation.z = 0; });
+        W.caveLights.forEach(l => l.intensity = .7);
+      }
     };
   },
+
 
   /* ---------------- REEF RUN (open sea lane) ---------------- */
   reef() {
