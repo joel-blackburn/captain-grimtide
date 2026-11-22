@@ -918,9 +918,10 @@ const WORLD = (() => {
     box(2, 1.4, 2, C.white, 0, 1.9, -2, W.crabBoat);
     mesh(new THREE.CylinderGeometry(.12, .12, 7, 6), flat(0x4a2f1a), 0, 4.6, 1, W.crabBoat);
     const sail = new THREE.Shape(); sail.moveTo(0, 0); sail.lineTo(0, 4.6); sail.lineTo(2.6, .2); sail.lineTo(0, 0);
-    const sm = mesh(new THREE.ShapeGeometry(sail), flat(C.white, { side: THREE.DoubleSide }), 0, 2.2, 1.1, W.crabBoat); sm.rotation.y = -Math.PI / 2;
+    sail.scale = 1; const sm = mesh(new THREE.ShapeGeometry(sail), flat(C.white, { side: THREE.DoubleSide }), 0, 2.9, .85, W.crabBoat); sm.rotation.y = Math.PI / 2; sm.scale.set(1, .9, 1);
     box(.05, .6, 1, C.pink, 0, 7.8, 1.5, W.crabBoat);
-    W.crabbe = crabbe(); W.crabbe.position.set(0, 1.25, 1.5); W.crabbe.rotation.y = -Math.PI / 2 + .6; W.crabBoat.add(W.crabbe);
+    [-1, 1].forEach(sd => { const nb = signBoard("THE SOGGY BISCUIT", 3.4, .62, "#fff3d6", "#1b1f3b"); nb.position.set(sd * 1.56, .55, .3); nb.rotation.y = sd * Math.PI / 2; W.crabBoat.add(nb); });
+    W.crabbe = crabbe(); W.crabbe.position.set(0, 1.25, 2.7); W.crabbe.rotation.y = -Math.PI / 2 + .6; W.crabBoat.add(W.crabbe);
     /* rowboat */
     W.rowboat = rowboat(); W.rowboat.position.set(-4.6, 0, 6);
     /* parrot post */
@@ -1098,7 +1099,7 @@ const CAM = { p0: V(0, 8, 20), l0: V(0, 2, 0), p1: V(0, 8, 20), l1: V(0, 2, 0), 
 const SHOTS = {
   harbourWide: [V(7, 5.5, 19), V(0, 1.8, 2)],
   kidsClose:   [V(2.2, 3.4, 12.5), V(0, 2.4, 6.2)],
-  crabbeShot:  [V(2.6, 4.4, 13.5), V(8.3, 4.9, 4.2)],
+  crabbeShot:  [V(2.6, 4.4, 14.6), V(8.3, 4.9, 5.4)],
   bigFish:     [V(4.6, 3.2, 10), V(2.4, 1.8, 5.8)],
   coinClose:   [V(5.4, 3.5, 9.6), V(2.5, 2.9, 5.7)],
   seaView:     [V(-1.4, 5, -6.8), V(30, 9, 92)],
@@ -1201,7 +1202,7 @@ const deck = (x, y, z) => O("ship", x, y, z);
 const PAGES = {
   /* ================= THE HARBOUR ================= */
   intro1: { mood: "dusk", music: "shanty", enter: () => resetWorld(), beats: [
-    ["n", "Gullwhistle Harbour smells of fish, tar and trouble. {a} and {b} are the cabin kids on Captain Crabbe's grumpy old fishing boat.", "harbourWide"],
+    ["n", "Gullwhistle Harbour smells of fish, tar and trouble. {a} and {b} are the cabin kids on Captain Crabbe's grumpy old fishing boat, the Soggy Biscuit.", "harbourWide"],
     ["crabbe", "Right, you two barnacles! Every fish in that barrel before I get back... or there'll be NO MAC AND CHEESE!", "crabbeShot", () => setTimeout(() => tween(1.2, k => W.crabbe.position.y = 1.25 - k * 3), 2600)],
     ["b", "Easy peasy. How hard can it be?", "kidsClose"]
   ], choices: [{ label: "Start flinging fish!", em: "🐟", to: "gameFish" }] },
