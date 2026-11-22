@@ -525,22 +525,38 @@ const WORLD = (() => {
     s.userData = { armL, armR, head, anchor: group(0, 3.1, 0, s) };
     return s;
   }
+  /* Old Mother Brine: hunched, ragged robe, warty green face, long hooked nose, hairy chin mole,
+     glowing eyes, snaggle-toothed grin, wild grey hair, crooked hat and a glowing staff */
   function witch() {
-    const w = group();
-    mesh(new THREE.ConeGeometry(1.1, 2.6, 6), flat(0x4b2a6b), 0, 1.3, 0, w);
-    const head = group(0, 2.9, 0, w);
-    box(.85, .85, .8, 0x9fbf8f, 0, 0, 0, head);
-    box(.2, .2, .5, 0x8aab7a, 0, -.05, .55, head);
-    box(.1, .1, .05, 0x5a7a4a, .2, -.2, .42, head);
-    [-.2, .2].forEach(x => box(.12, .12, .05, glowMat(0xffe14a), x, .12, .41, head));
-    box(1, .5, .3, 0xc9c9c9, 0, -.15, -.35, head);
-    mesh(new THREE.CylinderGeometry(1, 1, .1, 10), flat(0x1d1230), 0, .45, 0, head);
-    const hat = mesh(new THREE.ConeGeometry(.55, 1.6, 6), flat(0x1d1230), 0, 1.25, 0, head); hat.rotation.z = .25;
-    box(.62, .14, .62, glowMat(0x7ef0c4), 0, .55, 0, head);
-    const armL = group(-.7, 2.1, 0, w), armR = group(.7, 2.1, 0, w);
-    box(.25, .9, .25, 0x4b2a6b, 0, -.4, 0, armL); box(.25, .9, .25, 0x4b2a6b, 0, -.4, 0, armR);
-    box(.22, .22, .22, 0x9fbf8f, 0, -.9, 0, armL); box(.22, .22, .22, 0x9fbf8f, 0, -.9, 0, armR);
-    w.userData = { head, armL, armR, anchor: group(0, 4.9, 0, w) };
+    const w = group(), robe = flat(0x3a1f55), robeDk = flat(0x24123a), skin = flat(0x8fb06a), skinDk = flat(0x6f8f52), hairM = flat(0xc7c9cf), nail = flat(0x2a2a2a);
+    mesh(new THREE.ConeGeometry(1.15, 2.7, 7), robe, 0, 1.35, 0, w);
+    for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2, L = .3 + (i % 3) * .18; const t = box(.42, L, .08, robeDk, Math.sin(a) * 1.08, L / 2 - .05, Math.cos(a) * 1.08, w); t.rotation.y = a; }
+    box(1.5, .5, 1.1, robeDk, 0, 2.55, -.1, w).rotation.x = .2;
+    [-.55, -.2, .2, .55].forEach((x, i) => { const sp = mesh(new THREE.ConeGeometry(.16, .55, 4), robeDk, x, 2.95, -.35, w); sp.rotation.x = -.3; sp.rotation.z = x * .6; });
+    const head = group(0, 3.05, .25, w); head.rotation.x = .18;
+    box(.8, .95, .78, skin, 0, 0, 0, head);
+    const chin = mesh(new THREE.ConeGeometry(.22, .55, 5), skin, 0, -.62, .18, head); chin.rotation.x = Math.PI + .5;
+    const nose = mesh(new THREE.ConeGeometry(.14, .9, 5), skin, 0, .02, .75, head); nose.rotation.x = Math.PI / 2 + .45;
+    mesh(new THREE.IcosahedronGeometry(.07, 0), skinDk, .07, .02, .78, head);
+    mesh(new THREE.IcosahedronGeometry(.06, 0), skinDk, -.25, .3, .4, head); mesh(new THREE.IcosahedronGeometry(.05, 0), skinDk, .3, -.22, .4, head);
+    mesh(new THREE.IcosahedronGeometry(.075, 0), flat(0x3a2216), .1, -.82, .38, head); box(.015, .14, .015, 0x111111, .12, -.9, .44, head).rotation.z = .4;
+    [-1, 1].forEach(sd => {
+      box(.24, .1, .05, glowMat(0xffe14a), sd * .2, .17, .4, head); box(.06, .09, .05, glowMat(0xd01818), sd * .2, .17, .42, head);
+      box(.3, .08, .07, 0x2a2a2a, sd * .21, .3, .41, head).rotation.z = sd * -.45;
+    });
+    box(.44, .08, .05, 0x1a0a0a, 0, -.3, .4, head).rotation.z = .12; box(.07, .1, .05, 0xf4f0d6, -.1, -.26, .42, head); box(.07, .12, .05, 0xf4f0d6, .12, -.33, .42, head);
+    for (let i = 0; i < 11; i++) { const a = -1.2 + i * .24, L = .8 + (i % 3) * .35; const h = box(.09, L, .09, hairM, Math.sin(a) * .5, .1 - L / 2, Math.cos(a) * .3 - .25, head); h.rotation.z = Math.sin(a) * .3 + (i % 2 ? .15 : -.15); }
+    box(.95, .3, .2, hairM, 0, .4, -.35, head);
+    mesh(new THREE.CylinderGeometry(1.15, 1.15, .1, 12), robeDk, 0, .5, 0, head);
+    const hatA = mesh(new THREE.ConeGeometry(.55, 1.1, 6), robeDk, 0, 1.05, 0, head);
+    const hatB = mesh(new THREE.ConeGeometry(.3, 1, 6), robeDk, .32, 1.95, -.1, head); hatB.rotation.z = -.55;
+    box(.65, .14, .65, robe, 0, .62, 0, head); box(.2, .18, .05, glowMat(0x7ef0c4), 0, .62, .33, head);
+    box(.18, .18, .03, flat(0x6b3f7a), -.22, 1.05, .3, head);
+    const armL = group(-.72, 2.35, .1, w), armR = group(.72, 2.35, .1, w);
+    [armL, armR].forEach((a, i) => { box(.3, .95, .3, robe, 0, -.4, 0, a); box(.42, .3, .42, robeDk, 0, -.85, 0, a); box(.2, .18, .2, skin, 0, -1.05, 0, a); [-.07, 0, .07].forEach((x, k) => { const f = box(.04, .28, .04, skin, x, -1.25, .05, a); f.rotation.x = .4; box(.045, .08, .045, nail, x, -1.42, .13, a); }); });
+    const staff = group(0, -1.05, .12, armR); box(.12, 3.4, .12, 0x4a2f1a, 0, -.2, 0, staff); [-.2, .2].forEach(x => box(.08, .5, .08, 0x4a2f1a, x, 1.6, 0, staff).rotation.z = x * 2);
+    mesh(new THREE.IcosahedronGeometry(.22, 0), glowMat(0x7ef0c4), 0, 1.75, 0, staff);
+    w.userData = { head, armL, armR, anchor: group(0, 5.6, 0, w) };
     return w;
   }
   /* a proper cartoon frog: squat body, big bulging eyes, wide smile, folded back legs, splayed toes, spots, throat sac */
@@ -626,10 +642,10 @@ const WORLD = (() => {
      it sits so the Moonlight Salt can turn him solid from the boots up. */
   function grimtide() {
     const g = group(), mats = [];
-    const gm = (ghost, solid, y, extra = {}) => { const m = new THREE.MeshStandardMaterial(Object.assign({ color: ghost, flatShading: true, transparent: true, opacity: .62, emissive: 0x1f7a5a, emissiveIntensity: .55, roughness: .7 }, extra)); mats.push({ m, g: new THREE.Color(ghost), s: new THREE.Color(solid), y }); return m; };
-    const coat = gm(0xbff5e0, 0x23306b, 3.6), coatDk = gm(0x8fd8c0, 0x161f49, 2.6), gold = gm(0xe6fff4, 0xe0b23a, 4, { metalness: .5 }), shirt = gm(0xe8fff6, 0xf1ead8, 4.4),
-      sash = gm(0xa8ecd4, 0xb3262e, 3.4), skin = gm(0xd9fff0, 0xa9c2b2, 5.9), beard = gm(0x9fd8c4, 0x2d3340, 4.9), hat = gm(0x7fb3a2, 0x15151c, 7), bone = gm(0xf4fffa, 0xf1ead8, 7),
-      nose = gm(0xffc9d6, 0xd94a4a, 5.9), boot = gm(0x8fd8c0, 0x1a1410, .5), steel = gm(0xe8fff6, 0xc9ced6, 4, { metalness: .7, roughness: .3 }), plume = gm(0xd8fff0, 0xc8263a, 7.6);
+    const gm = (ghost, solid, y, extra = {}) => { const m = new THREE.MeshStandardMaterial(Object.assign({ color: ghost, flatShading: true, transparent: true, opacity: .76, emissive: 0x1f7a5a, emissiveIntensity: .35, roughness: .7 }, extra)); mats.push({ m, g: new THREE.Color(ghost), s: new THREE.Color(solid), y }); return m; };
+    const coat = gm(0x5fb8a0, 0x23306b, 3.6), coatDk = gm(0x3f8f7a, 0x161f49, 2.6), gold = gm(0xc8f5e0, 0xe0b23a, 4, { metalness: .5 }), shirt = gm(0xbfeedd, 0xf1ead8, 4.4),
+      sash = gm(0x7fd0b4, 0xb3262e, 3.4), skin = gm(0xb8ecd8, 0xa9c2b2, 5.9), beard = gm(0x2f6f60, 0x2d3340, 4.9), hat = gm(0x1f4a40, 0x15151c, 7), bone = gm(0xe8fff4, 0xf1ead8, 7),
+      nose = gm(0xff9fb4, 0xd94a4a, 5.9), boot = gm(0x3f8f7a, 0x1a1410, .5), steel = gm(0xe8fff6, 0xc9ced6, 4, { metalness: .7, roughness: .3 }), plume = gm(0xd8fff0, 0xc8263a, 7.6);
     /* ghostly tail, with tattered coat tails over it */
     mesh(new THREE.ConeGeometry(1.35, 2.7, 7), coatDk, 0, 1.35, 0, g).rotation.x = Math.PI;
     for (let i = 0; i < 9; i++) { const a = i / 9 * Math.PI * 2, L = 1.2 + (i % 3) * .35; const t = box(.55, L, .12, coat, Math.sin(a) * 1.2, 2.6 - L / 2, Math.cos(a) * 1.2, g); t.rotation.y = a; t.rotation.x = .12; }
@@ -1414,6 +1430,12 @@ function coinReturn() {
     tween(1, k => { glow.scale.setScalar(6 * (1 - k) + .01); }, () => WORLD.scene.remove(glow));
   });
 }
+function grimFace() { return W.grim.userData.head.getWorldPosition(V()); }
+function grimShot(dist = 11) { return () => {
+  const g = W.grim, f = grimFace(), fwd = V(0, 0, 1).applyQuaternion(g.getWorldQuaternion(new THREE.Quaternion())); fwd.y = 0; fwd.normalize();
+  const side = V(-fwd.z, 0, fwd.x), dir = fwd.clone().multiplyScalar(.85).add(side.multiplyScalar(-.6)).normalize();
+  const d = dist * (innerWidth / innerHeight < 1 ? 1.5 : 1);
+  return [f.clone().add(dir.multiplyScalar(d)).add(V(0, -.8, 0)), f.clone().add(V(0, d * .13, 0))]; }; }
 function resetShip() {
   const sh = W.bigShip; sh.rotation.set(0, 0, 0); W.grim.visible = true; W.grim.position.set(5, 6.35, 1.5); W.grim.rotation.set(0, -Math.PI / 2 + .3, 0); setGrimSolid(false);
   W.grim.userData.armL.rotation.set(0, 0, 0); W.grim.userData.armR.rotation.set(0, 0, 0);
@@ -1423,7 +1445,7 @@ function resetShip() {
 }
 /* blend Grimtide between ghost (0) and solid (1); with ringY, parts below the ring turn solid first */
 function setGrimK(k, ringY, who = W.grim) {
-  who.userData.mats.forEach(e => { const kk = ringY == null ? k : Math.min(1, Math.max(0, (ringY - e.y) / 1.2)); e.m.color.copy(e.g).lerp(e.s, kk); e.m.opacity = .62 + .38 * kk; e.m.emissiveIntensity = .55 * (1 - kk); const tr = kk < .99; if (e.m.transparent !== tr) { e.m.transparent = tr; e.m.needsUpdate = true; } });
+  who.userData.mats.forEach(e => { const kk = ringY == null ? k : Math.min(1, Math.max(0, (ringY - e.y) / 1.2)); e.m.color.copy(e.g).lerp(e.s, kk); e.m.opacity = .76 + .24 * kk; e.m.emissiveIntensity = .35 * (1 - kk); const tr = kk < .99; if (e.m.transparent !== tr) { e.m.transparent = tr; e.m.needsUpdate = true; } });
   const solid = ringY == null ? k >= 1 : ringY > 9; who.userData.wisps.forEach(w => w.visible = !solid);
 }
 function setGrimSolid(on) { setGrimK(on ? 1 : 0); }
@@ -1576,25 +1598,25 @@ const PAGES = {
     ["n", "{a} is back to normal. Mostly. Still a bit slimy.", sh("light", -12, 5.5, 4, -7, 4, 0)]
   ], choices: [{ label: "Say sorry", em: "🙏", to: "lightChat" }, { label: "Ask to be turned into a frog too", em: "🐸", to: "endFrog" }] },
   lightChat: { mood: "witch", music: "witch", enter: () => openDoor(), beats: [
-    ["brine", "Well, well. Two little sea-rats with a cursed coin. I can feel its nasty magic from here. Brrrr! It's giving me goosebumps.", sh("light", -13, 6.8, 5, -3, 6, 0)],
+    ["brine", "Well, well. Two little sea-rats with a cursed coin. I can feel its nasty magic from here. Brrrr! It's giving me goosebumps.", sh("light", -9, 6.3, 3.4, -2.7, 6.7, 0)],
     ["brine", "I have Moonlight Salt. Throw it on a ghost and he turns solid. Solid enough to bonk on the nose.", sh("light", -12, 6.8, 3, -3, 6.2, 0)],
     ["a", "Yes please!", sh("light", -12, 5, 5, -8, 4.4, 1.3)],
-    ["brine", "Nothing's free, dearie. Answer my riddle. I have a head and a tail, but no body. What am I?", sh("light", -13, 6.8, 5, -3, 6, 0)]
+    ["brine", "Nothing's free, dearie. Answer my riddle. I have a head and a tail, but no body. What am I?", sh("light", -9, 6.3, 3.4, -2.7, 6.7, 0)]
   ], choices: [{ label: "A coin!", em: "🪙", to: "gameBrew" }, { label: "A snake!", em: "🐍", to: "lightWrong" }] },
   gameBrew: { game: "brew", next: "lightRight", give: "salt", title: "Brew the Moonlight Salt", how: "Correct! Now help Old Mother Brine brew it. Watch which jars glow, then tap them in the same order." },
   lightRight: { mood: "witch", music: "witch", enter: () => { W.cauldron.visible = false; W.jars.forEach(j => j.visible = false); placeKids(W.light, V(-8, 3.55, 1.3), V(-8, 3.55, -1.3), Math.PI / 2); openDoor(); }, beats: [
-    ["brine", "Hmph. Clever little barnacles.", sh("light", -13, 6.8, 5, -3, 6, 0)],
+    ["brine", "Hmph. Clever little barnacles.", sh("light", -9, 6.3, 3.4, -2.7, 6.7, 0)],
     ["n", "She pulls a little jar out of her cloak. Inside, the salt glitters and glows like a jar full of moonlight.", sh("light", -12, 6, 4, -4.5, 5.2, 0), () => { const j = W.saltJar; j.position.set(-3.6, 5.2, .4); j.scale.setScalar(.01); tween(.6, k => j.scale.setScalar(.01 + k)); MUSIC.sfx("cheer"); sparkleAt(O("light", -3.6, 5.4, .4)); }],
     ["brine", "Moonlight Salt. One sprinkle on a ghost and POOF! He turns solid as a rock. Solid enough to bonk on the nose!", sh("light", -15, 7, 7, -5, 5, 0), () => giveFly(W.saltJar, W.kidA, 1)],
-    ["brine", "Throw it, don't eat it. And DON'T sneeze on it. Now shoo!", sh("light", -13, 6.8, 5, -3, 6, 0), () => popInBag(W.saltJar, "salt", W.kidA, 900)]
+    ["brine", "Throw it, don't eat it. And DON'T sneeze on it. Now shoo!", sh("light", -9, 6.3, 3.4, -2.7, 6.7, 0), () => popInBag(W.saltJar, "salt", W.kidA, 900)]
   ], choices: [{ label: "Back to the map", em: "🗺️", to: "map" }] },
   lightWrong: { mood: "witch", music: "witch", beats: [
-    ["brine", "WRONG! A snake has a head and a tail AND a body. It's ALL body, you silly sprats!", sh("light", -13, 6.8, 5, -3, 6, 0)],
+    ["brine", "WRONG! A snake has a head and a tail AND a body. It's ALL body, you silly sprats!", sh("light", -9, 6.3, 3.4, -2.7, 6.7, 0)],
     ["n", "SLAM! The door shuts in your faces.", sh("light", -12, 6, 4, -3, 5.5, 0), () => { W.witch.visible = false; tween(.3, k => W.doorPivot.rotation.y = 1.6 * (1 - k)); MUSIC.sfx("bonk"); }],
     ["b", "Oops. That was a whole hour wasted.", sh("light", -12, 5, 5, -8, 4.4, -1.3)]
   ], choices: [{ label: "Back to the map", em: "🗺️", to: "map" }] },
   endFrog: { ending: { id: "frog", title: "Two Frogs and a Ghost", em: "🐸" }, mood: "witch", music: "witch", beats: [
-    ["brine", "You WANT to be a frog? Suit yourselves.", sh("light", -13, 6.8, 5, -3, 6, 0), () => openDoor()],
+    ["brine", "You WANT to be a frog? Suit yourselves.", sh("light", -9, 6.3, 3.4, -2.7, 6.7, 0), () => openDoor()],
     ["n", "ZAP! ZAP! Now there are two small green frogs on the doorstep. And frogs don't have pockets.", sh("light", -11, 5, 4, -8, 4, 0), () => { zap(); [[W.frogA, W.kidA], [W.frogB, W.kidB]].forEach(([f, k]) => { f.position.copy(k.position); f.rotation.y = Math.PI / 2; f.visible = true; k.visible = false; }); S.frog = true; }],
     ["n", "The cursed coin drops, clinks down the cliff, and lands right in a seagull's nest.", sh("light", -16, 8, 10, -8, 3, 4), () => { const g = W.gulls[0]; g.position.copy(O("light", -9, 3, 6)); g.userData.circle = null; W.coin.position.copy(O("light", -8, 4.2, 0)); W.coinShine = 1; arc(W.coin, O("light", -9, 3.4, 6), 3, 1, () => MUSIC.sfx("coin")); }],
     ["n", "At midnight the Soggy Biscuit arrives. Grimtide searches everywhere for the cursed kids. All he finds are two frogs, who say ribbit in a very innocent way.", sh("light", -22, 10, 12, -8, 4, 0), () => { if (!W.grimSmall) { W.grimSmall = WORLD.make.grimtide(); WORLD.scene.add(W.grimSmall); } const gs = W.grimSmall; gs.visible = true; gs.scale.setScalar(.7); gs.position.copy(O("light", -16, 2.5, -4)); gs.rotation.y = Math.PI / 2; tween(3, k => gs.position.copy(O("light", -16 + k * 4, 2.5, -4 + k * 2))); WORLD.setMood("ghost", 2); }],
@@ -1627,16 +1649,16 @@ const PAGES = {
   midnight: { mood: "ghost", music: "spooky", enter: () => { resetShip(); crewFace(true); kidsInBoat(); boatAt(V(20, 0, 36), V(30, 0, 52)); W.ghostShip.visible = false; shipIn(5); }, beats: [
     ["n", "DONG. DONG. DONG. Midnight.", () => [V(6, 8, 22), V(28, 6, 60)], () => [0, 900, 1800].forEach(d => setTimeout(() => MUSIC.sfx("bell"), d))],
     ["n", "The fog splits open, and there it is: the Soggy Biscuit. Ragged green sails. Glowing portholes. A crew of skeletons grinning over the rails.", () => [V(4, 10, 20), V(30, 10, 52)]],
-    ["n", "A plank slides down onto your little boat. Something stomps down it. STOMP. STOMP. STOMP.", () => [V(9, 6, 28), V(20.5, 4.5, 43)], () => {
+    ["n", "A plank slides down onto your little boat. Something stomps down it. STOMP. STOMP. STOMP.", () => [V(4, 6, 22), V(20, 10.5, 42)], () => {
       const g = W.grim; g.position.set(-9.5, 6.35, -4.2); g.rotation.set(0, Math.PI, 0); MUSIC.sfx("swish");
       tween(.9, k => setPlank(k), () => {
         const a = V(-9.5, 6.35, -4.2), steps = [[a, plankAt(0)], [plankAt(0), plankAt(.25)], [plankAt(.25), plankAt(.5)], [plankAt(.5), plankAt(.72)]];
         let i = 0; const next = () => { if (i >= steps.length) return; const [f, t] = steps[i++]; tween(.5, (k, r) => { g.position.lerpVectors(f, t, k); g.position.y += Math.sin(r * Math.PI) * .45 + .08; }, () => { if (i > 1) MUSIC.sfx("bonk"); next(); }); }; next();
       }); }],
-    ["n", "Captain Grimtide is see-through, seven feet tall, and his beard is full of crabs.", () => { const p = plankAt(.72); return [deck(p.x - 4.5, p.y + 3, p.z - 13), deck(p.x, p.y + 2.6, p.z)]; }]
+    ["n", "Captain Grimtide is see-through, seven feet tall, and his beard is full of crabs. One eye glows. The other hides behind a patch. And he does NOT look happy.", () => { const p = plankAt(.72), f = deck(p.x, p.y + 6.1, p.z), d = innerWidth / innerHeight < 1 ? 8 : 5.6; return [f.clone().add(V(-1.6, -.4, -d)), f.clone().add(V(0, d * .2, 0))]; }]
   ], choices: [{ label: "Face him", em: "😤", to: "grimChat" }] },
   grimChat: { mood: "ghost", music: "spooky", enter: () => fadeDo(() => { placeKids(W.bigShip, V(-6, 6.35, 2.2), V(-3.4, 6.35, 3), Math.PI / 2); setPlank(0); crewFace(false); W.grim.position.set(5, 6.35, 1.5); W.grim.rotation.set(0, -Math.PI / 2 + .3, 0); }, 50), beats: [
-    ["n", "He grabs you both by the collars, stomps back up the plank, and plonks you down on the deck of his ship. The skeleton crew crowds round.", () => [deck(-12, 11, 16), deck(-1, 7.5, 1)]],
+    ["n", "He grabs you both by the collars, stomps back up the plank, and plonks you down on the deck of his ship. The skeleton crew crowds round.", () => innerWidth / innerHeight < 1 ? [deck(-11, 9, 19), deck(1, 11.6, 1)] : [deck(-13, 8.8, 13), deck(1, 11, 1)]],
     ["grim", "Arrrrr. Somebody... has... MY coin.", () => [deck(-2, 11, 18), deck(4, 11, 1.5)]],
     ["grim", "Hand it over, little sea-rats, and come aboard. My crew needs new deck-scrubbers. For ever and EVER and EVER.", () => [deck(-2, 11, 18), deck(3, 10, 1.5)]],
     ["a", "We're not scrubbing your smelly decks!", () => [deck(-10, 9, 14), deck(-4.5, 8, 2.4)]],
@@ -1739,8 +1761,9 @@ function nextBeat() {
   if (S.beat >= pg.beats.length - 1) return pg.ending ? showEnding(pg) : showChoices();
   S.beat++;
   const [who, text, sh, act] = pg.beats[S.beat];
-  if (sh) shot(resolveShot(sh));
-  if (act) act();
+  /* whenever Grimtide speaks, frame his face low-middle with room above for his bubble */
+  if (who === "grim" && W.grim.visible) { if (act) act(); shot(grimShot(9)()); }
+  else { if (sh) shot(resolveShot(sh)); if (act) act(); }
   const t = fill(text);
   $("caption").classList.remove("show"); $("bubble").classList.remove("show"); $("bubble")._who = null;
   void $("caption").offsetWidth;
