@@ -567,6 +567,26 @@ const WORLD = (() => {
     (W.frogsAll = W.frogsAll || []).push(f);
     return f;
   }
+  /* the lolly-seller: round and cheerful, big curly hair with a lollipop stuck in her bun, stripy apron */
+  function lollyLady() {
+    const L = group(), dress = flat(0xff6fae), hair = flat(0xe8562a);
+    box(1.3, 1.5, .8, dress, 0, 1.15, 0, L); box(1.36, .3, .84, flat(0xd9478c), 0, .5, 0, L);
+    [0, 1, 2, 3].forEach(i => box(.95, .16, .06, i % 2 ? 0xffffff : 0xff4f8b, 0, 1.55 - i * .2, .43, L));
+    box(1, .12, .07, 0xffffff, 0, 1.75, .42, L);
+    const armL = group(-.78, 1.75, 0, L), armR = group(.78, 1.75, 0, L);
+    [armL, armR].forEach(a => { box(.3, .55, .3, dress, 0, -.15, 0, a); box(.24, .5, .24, C.skin, 0, -.62, 0, a); });
+    const head = group(0, 2.45, 0, L);
+    box(.84, .84, .8, C.skin, 0, 0, 0, head);
+    [[-.48, .1, -.05, .32], [.48, .1, -.05, .32], [-.4, .42, -.1, .3], [.4, .42, -.1, .3], [0, .5, -.15, .36], [-.2, .2, -.42, .34], [.2, .2, -.42, .34]].forEach(([x, y, z, r]) => mesh(new THREE.IcosahedronGeometry(r, 0), hair, x, y, z, head));
+    mesh(new THREE.IcosahedronGeometry(.3, 0), hair, 0, .82, -.15, head);
+    box(.05, .5, .05, 0xffffff, .12, 1.1, -.15, head); const lp = mesh(new THREE.CylinderGeometry(.22, .22, .08, 12), flat(0x3fd0ff), .12, 1.4, -.15, head); lp.rotation.x = Math.PI / 2;
+    mesh(new THREE.TorusGeometry(.12, .035, 4, 10), flat(0xffffff), .12, 1.4, -.1, head);
+    [-.2, .2].forEach(x => { box(.12, .14, .05, glowMat(C.navy), x, .06, .41, head); mesh(new THREE.IcosahedronGeometry(.07, 0), flat(0xff9fb0), x * 1.6, -.12, .4, head).scale.set(1, .6, .4); });
+    const smile = mesh(new THREE.TorusGeometry(.16, .03, 4, 10, Math.PI), flat(0x8a2a2a), 0, -.15, .42, head); smile.rotation.z = Math.PI;
+    [-.44, .44].forEach(x => mesh(new THREE.IcosahedronGeometry(.07, 0), glowMat(0xffd23f), x, -.2, 0, head));
+    L.userData = { armL, armR, head, anchor: group(0, 3.6, 0, L) };
+    return L;
+  }
   function monkey() {
     const m = group();
     box(.6, .7, .45, 0x8b5a2b, 0, .65, 0, m);
@@ -794,10 +814,10 @@ const WORLD = (() => {
     /* strings of lanterns across the lane, tied to the walls */
     const lc = [0xff4f8b, 0xffd23f, 0x06d6a0, 0xff8a3d, 0x9b5de5];
     [-6, 0.6, 7.2, 13.4].forEach((z, row) => {
-      const yTop = 7.4 - (row % 2) * .5, sag = 1.1, N = 8;
+      const yTop = 8.9 - (row % 2) * .3, sag = .7, N = 8;
       box(.2, .2, .4, 0x222222, -4.95, yTop, z, al); box(.2, .2, .4, 0x222222, 4.95, yTop, z, al);
       for (let i = 0; i < N; i++) { const x0 = -4.9 + i * 9.8 / N, x1 = x0 + 9.8 / N, y0 = yTop - sag * (1 - Math.pow(x0 / 4.9, 2)), y1 = yTop - sag * (1 - Math.pow(x1 / 4.9, 2)); rod(V3(x0, y0, z), V3(x1, y1, z), .05, flat(0x222222), al); }
-      [-3, -1, 1, 3].forEach((x, k) => { const l = hangLantern(lc[(row + k) % 5], .35 + (k % 2) * .25); l.position.set(x, yTop - sag * (1 - Math.pow(x / 4.9, 2)), z); al.add(l); });
+      [-3, -1, 1, 3].forEach((x, k) => { const l = hangLantern(lc[(row + k) % 5], .25 + (k % 2) * .15); l.position.set(x, yTop - sag * (1 - Math.pow(x / 4.9, 2)), z); al.add(l); });
     });
     /* a washing line between two upstairs windows */
     { const z = 10.2; rod(V3(-4.95, 8.6, z), V3(4.95, 8.6, z), .04, flat(0xeeeeee), al); [[-3, C.red], [-1.4, C.white], [.6, C.blue], [2.4, 0xffd23f]].forEach(([x, c]) => box(1, 1.1, .08, c, x, 8, z, al)); }
@@ -808,6 +828,7 @@ const WORLD = (() => {
     /* the monkey, sitting on the edge of a roof */
     W.monkeyPerch = V3(-5.2, 7.25, -1.5);
     W.monkey = monkey(); W.monkey.position.copy(W.monkeyPerch); W.monkey.rotation.y = .9; al.add(W.monkey);
+    W.lolly = lollyLady(); W.lolly.scale.setScalar(1.35); W.lolly.position.set(-1.2, 0, -4.5); al.add(W.lolly);
     W.chocPile = group(0, -50, 0, al); for (let i = 0; i < 10; i++) { const cc = chocCoin(); cc.position.set((i % 5) * .5 - 1, .06, Math.floor(i / 5) * .6); cc.rotation.set(0, i, 0); W.chocPile.add(cc); }
     W.catchHat = group(0, -50, 0, al);
     box(2.2, .3, 1.4, 0x141414, 0, 0, 0, W.catchHat); box(1.4, .6, 1, 0x141414, 0, .4, 0, W.catchHat); box(.3, .3, .05, glowMat(C.white), 0, .45, .52, W.catchHat);
@@ -868,6 +889,8 @@ const WORLD = (() => {
     const shl2 = new THREE.PointLight(0x7ef0c4, 1.6, 50); shl2.position.set(-14, 16, 0); sh.add(shl2);
     W.crew = [-11, -5, 5, 11].map((x, i) => { const s = skeleton(i % 2 === 0); s.position.set(x, 6.3, -4.4); s.scale.setScalar(1.2); sh.add(s); return s; });
     const shl = new THREE.PointLight(0x7ef0c4, 2.2, 60); shl.position.set(0, 14, 6); sh.add(shl);
+    W.plank = group(0, 0, 0, sh); W.plankBoard = box(1.5, .18, 1, 0x5a4030, 0, 0, .5, W.plank); W.plank.visible = false;
+    for (let i = 0; i < 9; i++) box(1.55, .06, .12, 0x3a2a1e, 0, .1, .1 + i * .11, W.plankBoard);
     W.grim = grimtide(); W.grim.position.set(5, 6.35, 1.5); W.grim.rotation.y = -Math.PI / 2 + .3; sh.add(W.grim);
     W.notes = [0, 1, 2, 3, 4].map(i => { const n = box(.4, .4, .1, glowMat(C.yellow), 0, -50, 0); return n; });
   }
@@ -1109,7 +1132,8 @@ const CHARS = {
   bones:    { name: "Bones McGee", pitch: .7, rate: 1.1, col: "#6b6f92" },
   ink:      { name: "Inkbeard", pitch: .1, rate: .75, col: "#9b5de5" },
   brine:    { name: "Old Mother Brine", pitch: 1.3, rate: .8, col: "#4b2a6b" },
-  grim:     { name: "Captain Grimtide", pitch: .2, rate: .72, col: "#0f6e56" }
+  grim:     { name: "Captain Grimtide", pitch: .2, rate: .72, col: "#0f6e56" },
+  lolly:    { name: "The Lolly-Seller", pitch: 1.4, rate: 1.05, col: "#d9478c" }
 };
 
 /* ---------- pirate names ---------- */
@@ -1245,10 +1269,16 @@ function resetWorld() {
   if (W.grimSmall) W.grimSmall.visible = false;
 }
 function resetMonkey() { const m = W.monkey; m.position.copy(W.monkeyPerch); m.rotation.set(0, .9, 0); m.visible = true; m.userData.head.rotation.y = 0; }
+/* plank from the ship's rail down to the rowboat (ship-local coords) */
+const PLANK_T = V(-9.5, 7.9, -5.9), PLANK_B = V(-10.4, .8, -14.4);
+function plankAt(k) { return PLANK_T.clone().lerp(PLANK_B, k); }
+function setPlank(k) { const d = PLANK_B.clone().sub(PLANK_T), L = d.length(); W.plank.visible = k > 0; W.plank.position.copy(PLANK_T); W.plank.quaternion.setFromUnitVectors(V(0, 0, 1), d.normalize()); W.plankBoard.scale.z = Math.max(.01, k * L); W.plankBoard.position.z = k * L / 2; }
+function crewFace(outward) { W.crew.forEach(c => { c.rotation.y = outward ? Math.PI : 0; c.position.z = outward ? -5 : -4.4; c.userData.armL.rotation.x = outward ? -1.1 : 0; c.userData.armR.rotation.x = outward ? -1.1 : 0; }); }
 function resetShip() {
   const sh = W.bigShip; sh.rotation.set(0, 0, 0); W.grim.visible = true; W.grim.position.set(5, 6.35, 1.5); W.grim.rotation.set(0, -Math.PI / 2 + .3, 0); setGrimSolid(false);
   W.grim.userData.armL.rotation.set(0, 0, 0); W.grim.userData.armR.rotation.set(0, 0, 0);
   W.crew.forEach(c => { c.position.y = 6.3; c.userData.armL.rotation.set(0, 0, 0); c.userData.armR.rotation.set(0, 0, 0); });
+  if (W.plank) setPlank(0);
   W.bigTentacle.scale.setScalar(1); if (W.bigTentacle.position.y > -10 && Math.abs(W.bigTentacle.position.z - 44) < 2) W.bigTentacle.position.y = -30;
 }
 function setGrimSolid(on) { const [m, d] = W.grim.userData.mats; m.opacity = on ? 1 : .8; m.transparent = !on; m.color.setHex(on ? 0x6fa894 : 0xbff5e0); d.color.setHex(on ? 0x4f7f70 : 0x7fb3a2); m.needsUpdate = true; }
@@ -1411,7 +1441,7 @@ const PAGES = {
   alley1: { mood: "night", music: "market", take: "coin", enter: () => { kidsInBoat(); boatAt(SEA.harbour, V(0, 0, -10)); resetMonkey(); }, beats: [
     ["n", "Back in Gullwhistle, you tie up the rowboat and tiptoe into the town. Down a narrow lane, between the wonky old houses, lanterns are glowing...", () => [V(10, 9, 14), V(0, 5, -16)]],
     ["n", "This is Smugglers' Alley. It's packed with stalls, and shady pirates selling shady things.", sh("alley", 2.5, 4.4, 21, 0, 3.6, -2), () => fadeDo(() => placeKids(W.alley, V(-1.4, 0, 5.4), V(1.2, 0, 5.8), Math.PI))],
-    ["n", "\"Lucky eyeballs! Pickled rats! Gold chocolate coins!\" shouts a lolly-seller.", sh("alley", 1, 4.5, 11, -1, 2.6, -2)],
+    ["lolly", "Lucky eyeballs! Pickled rats! Gold chocolate coins! Get 'em while they're sticky!", sh("alley", 1, 4.5, 11, -1, 2.8, -2), () => { const L = W.lolly; tween(1.2, (k, r) => { L.userData.armR.rotation.z = Math.sin(r * Math.PI * 4) * .6 + .9; L.userData.armR.rotation.x = -.5; }, () => { L.userData.armR.rotation.set(0, 0, 0); }); }],
     ["n", "Up on a rooftop, something is watching you. Something small and hairy... in a waistcoat.", sh("alley", 3, 8.6, 5.5, -5, 7.6, -1.5), () => { W.monkey.userData.head.rotation.y = -.6; }],
     ["n", "The monkey drops off the roof, snatches the cursed coin out of {b}'s pocket, and scrambles straight back up the wall!", sh("alley", 3, 6, 16, 0, 5, 2), () => { const m = W.monkey, P = W.monkeyPerch; tween(.6, (k, r) => m.position.set(P.x + (1.2 - P.x) * k, P.y + (.6 - P.y) * k + Math.sin(r * Math.PI) * 1.5, P.z + (5.6 - P.z) * k), () => { MUSIC.sfx("coin"); tween(1.3, (k, r) => { m.position.set(1.2 + k * 3.6, .6 + k * 8.2, 5.6 - k * 2); m.rotation.y = -Math.PI / 2; }, () => tween(.8, k => m.position.set(4.8 + k * 4, 8.8 + k * 1.6, 3.6 - k * 6))); }); }]
   ], choices: [{ label: "Chase it over the rooftops", em: "🏃", to: "gameRoof" }, { label: "Buy a banana and wait", em: "🍌", to: "gameCatch" }] },
@@ -1428,13 +1458,19 @@ const PAGES = {
   ], choices: [{ label: "Back to the map", em: "🗺️", to: "map" }] },
 
   /* ================= MIDNIGHT ================= */
-  midnight: { mood: "ghost", music: "spooky", enter: () => { resetShip(); kidsInBoat(); boatAt(V(20, 0, 36), V(30, 0, 52)); W.ghostShip.visible = false; shipIn(5); }, beats: [
+  midnight: { mood: "ghost", music: "spooky", enter: () => { resetShip(); crewFace(true); kidsInBoat(); boatAt(V(20, 0, 36), V(30, 0, 52)); W.ghostShip.visible = false; shipIn(5); }, beats: [
     ["n", "DONG. DONG. DONG. Midnight.", () => [V(6, 8, 22), V(28, 6, 60)], () => [0, 900, 1800].forEach(d => setTimeout(() => MUSIC.sfx("bell"), d))],
     ["n", "The fog splits open, and there it is: the Soggy Biscuit. Ragged green sails. Glowing portholes. A crew of skeletons grinning over the rails.", () => [V(4, 10, 20), V(30, 10, 52)]],
-    ["n", "A plank slides down onto your little boat. Something stomps down it. STOMP. STOMP. STOMP.", () => [V(12, 7, 26), V(26, 7, 46)], () => [0, 500, 1000].forEach(d => setTimeout(() => MUSIC.sfx("bonk"), d))],
-    ["n", "Captain Grimtide is see-through, seven feet tall, and his beard is full of crabs.", () => [deck(-6, 10, 14), deck(4, 11, 1.5)]]
+    ["n", "A plank slides down onto your little boat. Something stomps down it. STOMP. STOMP. STOMP.", () => [V(9, 6, 28), V(20.5, 4.5, 43)], () => {
+      const g = W.grim; g.position.set(-9.5, 6.35, -4.2); g.rotation.set(0, Math.PI, 0); MUSIC.sfx("swish");
+      tween(.9, k => setPlank(k), () => {
+        const a = V(-9.5, 6.35, -4.2), steps = [[a, plankAt(0)], [plankAt(0), plankAt(.25)], [plankAt(.25), plankAt(.5)], [plankAt(.5), plankAt(.72)]];
+        let i = 0; const next = () => { if (i >= steps.length) return; const [f, t] = steps[i++]; tween(.5, (k, r) => { g.position.lerpVectors(f, t, k); g.position.y += Math.sin(r * Math.PI) * .45 + .08; }, () => { if (i > 1) MUSIC.sfx("bonk"); next(); }); }; next();
+      }); }],
+    ["n", "Captain Grimtide is see-through, seven feet tall, and his beard is full of crabs.", () => { const p = plankAt(.72); return [deck(p.x - 4.5, p.y + 3, p.z - 13), deck(p.x, p.y + 2.6, p.z)]; }]
   ], choices: [{ label: "Face him", em: "😤", to: "grimChat" }] },
-  grimChat: { mood: "ghost", music: "spooky", enter: () => fadeDo(() => { placeKids(W.bigShip, V(-6, 6.35, 2.2), V(-3.4, 6.35, 3), Math.PI / 2); }, 50), beats: [
+  grimChat: { mood: "ghost", music: "spooky", enter: () => fadeDo(() => { placeKids(W.bigShip, V(-6, 6.35, 2.2), V(-3.4, 6.35, 3), Math.PI / 2); setPlank(0); crewFace(false); W.grim.position.set(5, 6.35, 1.5); W.grim.rotation.set(0, -Math.PI / 2 + .3, 0); }, 50), beats: [
+    ["n", "He grabs you both by the collars, stomps back up the plank, and plonks you down on the deck of his ship. The skeleton crew crowds round.", () => [deck(-12, 11, 16), deck(-1, 7.5, 1)]],
     ["grim", "Arrrrr. Somebody... has... MY coin.", () => [deck(-2, 11, 18), deck(4, 11, 1.5)]],
     ["grim", "Hand it over, little sea-rats, and come aboard. My crew needs new deck-scrubbers. For ever and EVER and EVER.", () => [deck(-2, 11, 18), deck(3, 10, 1.5)]],
     ["a", "We're not scrubbing your smelly decks!", () => [deck(-10, 9, 14), deck(-4.5, 8, 2.4)]],
@@ -1500,7 +1536,7 @@ function flyParrotIn() {
   const from = W.parrot.position.clone(), to = V(-3.4, 4, 9.4);
   tween(1.6, k => { W.parrot.position.lerpVectors(from, to, k); W.parrot.position.y += Math.sin(k * Math.PI) * 2; W.parrot.rotation.y = .6 * (1 - k); }, () => { W.parrot.userData.flap = 0; W.parrot.userData.wingL.rotation.z = 0; W.parrot.userData.wingR.rotation.z = 0; });
 }
-const ANCHOR = { a: () => S.frog ? W.frogA : W.kidA, b: () => W.frogB.visible ? W.frogB : W.kidB, crabbe: () => W.crabbe, feathers: () => W.parrot, bones: () => W.bones, ink: () => W.inkbeard, brine: () => W.witch, grim: () => W.grim };
+const ANCHOR = { lolly: () => W.lolly, a: () => S.frog ? W.frogA : W.kidA, b: () => W.frogB.visible ? W.frogB : W.kidB, crabbe: () => W.crabbe, feathers: () => W.parrot, bones: () => W.bones, ink: () => W.inkbeard, brine: () => W.witch, grim: () => W.grim };
 
 /* =====================================================================
    BEAT PLAYER — captions, bubbles, choices
