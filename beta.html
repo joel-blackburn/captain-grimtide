@@ -31,6 +31,12 @@
   #hud { display: none; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
   .chip { font-weight: 900; font-size: 15px; background: #fff; border: 3px solid var(--navy); border-radius: 999px; padding: 4px 12px; box-shadow: 0 3px 0 var(--navy); display: flex; align-items: center; gap: 6px; }
   #hud .chip { position: relative; }
+  /* the purse: pieces of eight are real money now, so the counter looks like treasure */
+  #hud #hudP8 { background: linear-gradient(180deg, #3a2a6a, #1b1f3b); color: #ffe066; font-family: Bungee, sans-serif; font-weight: 400; font-size: 18px; padding: 2px 12px 2px 4px; gap: 7px; text-shadow: 0 2px 0 #000; }
+  #hud #hudP8 .p8 { width: 30px; height: 30px; font-size: 15px; font-family: Bungee, sans-serif; font-weight: 400; color: #4a4f73; text-shadow: 0 1px 0 #fff; background: radial-gradient(circle at 34% 28%, #ffffff 0%, #eef1f6 28%, #b8c0cc 70%, #8a93a3 100%); border: 2px solid #ffe066; box-shadow: inset 0 0 0 3px rgba(255, 255, 255, .4), inset 0 -3px 0 rgba(0, 0, 0, .18), 0 0 8px rgba(255, 224, 102, .55); }
+  #hud #hudP8.pay { animation: payflash .6s ease; }
+  #hud #hudP8.gain { animation: gainpop .7s ease; }
+  @keyframes gainpop { 0% { transform: scale(1); } 35% { transform: scale(1.3) rotate(-4deg); box-shadow: 0 0 18px #ffe066, 0 3px 0 var(--navy); } 100% { transform: scale(1); } }
   #hud .chip.spot { background: #fff; animation: spotpulse 1s ease-in-out infinite; z-index: 5; box-shadow: 0 0 0 4px #fff, 0 0 0 8px var(--pink), 0 4px 0 var(--navy); }
   #hud .chip.spot::after { content: "⬆"; position: absolute; left: 50%; top: calc(100% + 8px); transform: translateX(-50%); font-size: 30px; line-height: 1; color: var(--yellow); text-shadow: 0 2px 0 var(--navy), 0 0 6px var(--navy); animation: spotbob .7s ease-in-out infinite; pointer-events: none; }
   @keyframes spotpulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.12); } }
@@ -133,7 +139,7 @@
 
   /* game HUD */
   #hudP8.pay { animation: payflash .6s ease; }
-  @keyframes payflash { 0% { transform: scale(1); } 30% { transform: scale(1.25); background: #ffd6d6; } 100% { transform: scale(1); } }
+  @keyframes payflash { 0% { transform: scale(1); } 30% { transform: scale(.82); filter: brightness(1.6) hue-rotate(-40deg); } 100% { transform: scale(1); } }
   #ghud { position: absolute; top: calc(max(10px, env(safe-area-inset-top)) + 58px); left: 50%; transform: translateX(-50%); display: none; gap: 8px; }
   #ghud.show { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; width: max-content; max-width: calc(100vw - 24px); }
   #ghud .chip { white-space: nowrap; justify-content: center; text-align: center; border-radius: 999px; padding: 6px 14px; }
@@ -529,6 +535,8 @@ const WORLD = (() => {
     box(.38, .5, .38, C.navy, 0, -.25, 0, armR); box(.42, .14, .42, C.white, 0, -.52, 0, armR);
     box(.34, .66, .3, C.skin, 0, -.92, 0, armR); box(.32, .26, .32, C.skin, 0, -1.36, 0, armR);
     const tat = mesh(new THREE.PlaneGeometry(.32, .6), tattooMat(), 0, -.92, .152, armR); tat.renderOrder = 2;
+    /* the sleeve: down (hiding the tattoo) until the big reveal, when it rolls up */
+    const sleeve = group(0, -.5, 0, armR); box(.4, .76, .4, C.navy, 0, -.38, 0, sleeve); box(.43, .1, .43, C.white, 0, -.74, 0, sleeve);
     const head = group(0, 2.9, 0, c);
     box(1.05, 1, 1, C.skin, 0, 0, 0, head);
     box(1.1, .75, .55, C.white, 0, -.35, .3, head);
@@ -537,7 +545,7 @@ const WORLD = (() => {
     [-.22, .22].forEach(x => box(.12, .14, .05, glowMat(C.navy), x, .2, .52, head));
     [-.22, .22].forEach(x => { const b = box(.3, .08, .05, glowMat(C.white), x, .36, .52, head); b.rotation.z = x < 0 ? -.3 : .3; });
     const anchor = group(0, 4.2, 0, c);
-    c.userData = { head, anchor, armL, armR, tattoo: tat };
+    c.userData = { head, anchor, armL, armR, tattoo: tat, sleeve };
     return c;
   }
   function parrot() {
@@ -1035,7 +1043,16 @@ const WORLD = (() => {
     const LO = V3(80, 0, 30); W.origins.light = LO;
     const door = group(-2.3, 3.55, 0, W.light); W.doorPivot = group(0, 0, -.7, door);
     box(.16, 2.2, 1.4, C.woodDark, 0, 1.1, .7, W.doorPivot);
-    box(.1, .7, 1.1, flat(0xf6ead0), -.14, 2.7, 0, door);
+    { /* the sign over the door: KNOCK THREE TIMES. NO SALESMEN. NO GHOSTS. NO MONKEYS. */
+      const cv = document.createElement("canvas"); cv.width = 320; cv.height = 268; const x = cv.getContext("2d");
+      x.fillStyle = "#e9dcb8"; x.fillRect(0, 0, 320, 268); x.strokeStyle = "#5a3a1e"; x.lineWidth = 12; x.strokeRect(6, 6, 308, 256);
+      x.fillStyle = "rgba(90,58,30,.15)"; for (let i = 0; i < 9; i++) x.fillRect(14, 24 + i * 27, 292, 2);
+      x.textAlign = "center"; x.textBaseline = "middle"; x.fillStyle = "#3a2010"; x.font = "900 40px Georgia, serif"; x.fillText("KNOCK", 160, 48); x.font = "900 34px Georgia, serif"; x.fillText("THREE TIMES", 160, 88);
+      x.fillStyle = "#a3241c"; x.font = "900 27px Georgia, serif"; ["NO SALESMEN.", "NO GHOSTS.", "NO MONKEYS."].forEach((t, i) => x.fillText(t, 160, 140 + i * 36));
+      const sm = new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(cv), roughness: .9 });
+      box(.08, 1.42, 1.66, 0x3a2410, -.06, 2.95, 0, door);
+      const sp = new THREE.Mesh(new THREE.PlaneGeometry(1.56, 1.3), sm); sp.rotation.y = -Math.PI / 2; sp.position.set(-.11, 2.95, 0); door.add(sp);
+      [-.62, .62].forEach(z => mesh(new THREE.SphereGeometry(.05, 5, 4), flat(0x888888), -.12, 3.5, z, door)); }
     W.witch = witch(); W.witch.position.set(-2.6, 3.55, 0); W.witch.rotation.y = -Math.PI / 2; W.witch.visible = false; W.light.add(W.witch);
     W.cauldron = group(-6.4, 3.55, 0, W.light); W.cauldron.visible = false;
     mesh(new THREE.CylinderGeometry(1.3, .9, 1.4, 10), flat(0x2b2b2b), 0, .9, 0, W.cauldron);
@@ -1142,13 +1159,13 @@ const WORLD = (() => {
     box(10.4, .22, 40, 0x5a5f78, 0, -.1, 4, al);
     for (let i = 0; i < 70; i++) { const x = -4.6 + (i * 7 % 10) * 1.02, z = -14 + Math.floor(i / 10) * 5.4 + (i % 3) * 1.4; box(.9, .08, .7, [0x6e7390, 0x4c5068, 0x7c809c][i % 3], x, .03, z, al); }
     W.alleyRoofs = [];
-    const houseCols = [0x9b5de5, 0xff8a3d, 0x06d6a0, 0xff4f8b, 0x3a86ff, 0xffd23f, 0xef476f, 0x7fb069];
+    const houseCols = [0xb89a7a, 0x8a9ab0, 0xb07a62, 0xd2c09a, 0x7f8f6e, 0x9a829e, 0xa88a68, 0x7a8ea0];
     function alleyHouse(side, z, len, top, col, i) {
       const g = group(side * 8.2, 0, z, al), d = 6.4;
       box(d, top, len - .2, col, 0, top / 2, 0, g);
       box(d + .3, .5, len, 0x2a2140, 0, top - .1, 0, g);
       const r = 3.95, rg = new THREE.CylinderGeometry(r, r, len + .4, 3); rg.rotateX(-Math.PI / 2); rg.scale(1, .62, 1);
-      mesh(rg, flat([0x8a3324, 0x3a3a5a, 0x5a2a6a, 0x2a4a5a][i % 4]), 0, top + .3 * r * .62 * 1.6, 0, g);
+      mesh(rg, flat([0x6a3a2a, 0x3a3a48, 0x4a3030, 0x34404a][i % 4]), 0, top + .3 * r * .62 * 1.6, 0, g);
       if (i % 2 === 0) box(1, 2.4, 1, 0x6b4a3a, -side * .5, top + 2.4, len * .25, g);
       const face = -side * (d / 2 + .05);
       box(.12, 2.3, 1.3, C.woodDark, face, 1.15, -len * .2, g); box(.14, .2, 1.5, 0x3a2414, face, 2.35, -len * .2, g);
@@ -1165,11 +1182,11 @@ const WORLD = (() => {
     /* the lolly-seller's stall, against the left-hand wall */
     const stall = group(0, 0, 0, al);
     box(6, 2, 2.4, C.wood, 0, 1, 0, stall);
-    for (let i = 0; i < 6; i++) box(1.05, .4, 3, i % 2 ? C.white : C.red, -2.6 + i * 1.05, 4.2, .3, stall).rotation.x = .25;
-    [-2.8, 2.8].forEach(x => box(.2, 4, .2, C.woodDark, x, 2, 1.4, stall)); [-2.8, 2.8].forEach(x => box(.2, 4.2, .2, C.woodDark, x, 2.1, -1, stall));
+    W.awning = group(0, 5.6, .3, stall); for (let i = 0; i < 6; i++) box(1.05, .3, 3, i % 2 ? C.white : C.red, -2.6 + i * 1.05, 0, 0, W.awning).rotation.x = .25;
+    [-2.8, 2.8].forEach(x => box(.2, 5.4, .2, C.woodDark, x, 2.7, 1.4, stall)); [-2.8, 2.8].forEach(x => box(.2, 5.6, .2, C.woodDark, x, 2.8, -1, stall));
     [[-2, 0xff9ec4], [-1, 0x9ef0ff], [0, 0xffe066]].forEach(([x, c]) => mesh(new THREE.CylinderGeometry(.35, .35, .9, 8), flat(c), x, 2.45, 0, stall));
     for (let i = 0; i < 7; i++) { const cc = chocCoin(); cc.position.set(1 + (i % 4) * .45, 2.1 + Math.floor(i / 4) * .12, -.2 + (i % 2) * .3); cc.rotation.set(Math.PI / 2, 0, 0); stall.add(cc); }
-    { const sg = signBoard("LOLLIES", 3.2, .8, "#ff4f8b", "#fff"); sg.position.set(0, 4.95, 1.25); stall.add(sg); }
+    { const sg = signBoard("LOLLIES", 3.2, .8, "#ff4f8b", "#fff"); sg.position.set(0, 6.35, 1.25); stall.add(sg); }
     stall.position.set(-1.2, 0, -2.4);
     /* crates, barrels and a few shady extras along the walls */
     [[-4.2, 3.4], [3.9, -4], [4.1, 8.4], [-4.1, 10], [4, 15]].forEach(([x, z], i) => { if (i % 2) { mesh(new THREE.CylinderGeometry(.6, .5, 1.3, 8), flat(0xc97a35), x, .65, z, al); } else { box(1.1, 1.1, 1.1, 0xa0571a, x, .55, z, al); box(.8, .8, .8, 0xc97a35, x + .1, 1.5, z + .1, al); } });
@@ -1192,7 +1209,8 @@ const WORLD = (() => {
     /* the monkey, sitting on the edge of a roof */
     W.monkeyPerch = V3(-5.2, 7.25, -1.5);
     W.monkey = monkey(); W.monkey.position.copy(W.monkeyPerch); W.monkey.rotation.y = .9; al.add(W.monkey);
-    W.lolly = lollyLady(); W.lolly.scale.setScalar(1.35); W.lolly.position.set(-1.2, 0, -4.5); al.add(W.lolly);
+    W.lolly = lollyLady(); W.lolly.scale.setScalar(1.35); W.lolly.position.set(-1.2, 0, -4.2); al.add(W.lolly);
+    W.chocScatter = group(0, 0, 0, al);
     W.chocPile = group(0, -50, 0, al); for (let i = 0; i < 10; i++) { const cc = chocCoin(); cc.position.set((i % 5) * .5 - 1, .06, Math.floor(i / 5) * .6); cc.rotation.set(0, i, 0); W.chocPile.add(cc); }
     W.catchHat = group(0, -50, 0, al);
     box(2.2, .3, 1.4, 0x141414, 0, 0, 0, W.catchHat); box(1.4, .6, 1, 0x141414, 0, .4, 0, W.catchHat); box(.3, .3, .05, glowMat(C.white), 0, .45, .52, W.catchHat);
@@ -1400,7 +1418,18 @@ const WORLD = (() => {
     box(1.5, .08, .9, 0xc89b6a, 2.75, 1.19, 5.65, hb);
     W.bigFish = makeFish(0xdfe4ea); W.bigFish.scale.setScalar(1.15); W.bigFish.position.set(2.6, 1.45, 5.6); W.bigFish.rotation.y = .5; hb.add(W.bigFish);
     /* the coin */
-    W.coin = mesh(new THREE.CylinderGeometry(.34, .34, .08, 14), flat(C.gold, { metalness: .85, roughness: .25, emissive: 0x5a3c00 }), 0, -10, 0, hb);
+    { /* the cursed coin: a skull on one face, GRIMTIDE on the other, still shiny gold */
+      const face = (draw) => { const cv = document.createElement("canvas"); cv.width = cv.height = 256; const x = cv.getContext("2d");
+        const g = x.createRadialGradient(100, 90, 10, 128, 128, 128); g.addColorStop(0, "#ffffff"); g.addColorStop(.7, "#f2e2b0"); g.addColorStop(1, "#c9a860"); x.fillStyle = g; x.fillRect(0, 0, 256, 256);
+        x.strokeStyle = "#8a6a2a"; x.lineWidth = 10; x.beginPath(); x.arc(128, 128, 112, 0, 7); x.stroke(); x.lineWidth = 3; x.beginPath(); x.arc(128, 128, 96, 0, 7); x.stroke();
+        for (let i = 0; i < 40; i++) { const a = i / 40 * Math.PI * 2; x.fillStyle = "#a8884a"; x.fillRect(128 + Math.cos(a) * 104 - 2, 128 + Math.sin(a) * 104 - 2, 4, 4); }
+        x.fillStyle = "#6a4a14"; x.strokeStyle = "#6a4a14"; draw(x); const t = new THREE.CanvasTexture(cv); t.anisotropy = 4; t.center.set(.5, .5); t.rotation = Math.PI / 2; return t; };
+      const skull = face(x => { x.beginPath(); x.arc(128, 112, 46, 0, 7); x.fill(); x.fillRect(100, 138, 56, 30); x.fillStyle = "#f2e2b0"; [[110, 108], [146, 108]].forEach(([cx, cy]) => { x.beginPath(); x.arc(cx, cy, 13, 0, 7); x.fill(); }); x.beginPath(); x.moveTo(128, 122); x.lineTo(120, 138); x.lineTo(136, 138); x.fill(); [110, 122, 134, 146].forEach(cx => x.fillRect(cx - 2, 152, 5, 16));
+        x.fillStyle = "#6a4a14"; x.lineWidth = 14; x.lineCap = "round"; x.beginPath(); x.moveTo(70, 176); x.lineTo(186, 206); x.moveTo(186, 176); x.lineTo(70, 206); x.stroke(); });
+      const name = face(x => { x.font = "900 40px Georgia, serif"; x.textAlign = "center"; x.textBaseline = "middle"; x.fillText("GRIMTIDE", 128, 128); x.font = "900 22px Georgia, serif"; x.fillText("☠", 128, 82); x.fillText("☠", 128, 176); });
+      const gm = m => new THREE.MeshStandardMaterial({ color: C.gold, map: m, metalness: .85, roughness: .25, emissive: 0x5a3c00, flatShading: false });
+      W.coin = mesh(new THREE.CylinderGeometry(.34, .34, .08, 24), [flat(C.gold, { metalness: .85, roughness: .25, emissive: 0x5a3c00 }), gm(skull), gm(name)], 0, -10, 0, hb);
+    }
     W.coinAura = new THREE.Sprite(greenAura()); W.coinAura.scale.set(1.6, 1.6, 1); W.coin.add(W.coinAura);
     W.shell = conch(); W.shell.position.set(0, -50, 0); scene.add(W.shell);
     W.chocGift = chocCoin(); W.chocGift.position.set(0, -50, 0); scene.add(W.chocGift);
@@ -1828,6 +1857,11 @@ function crabbeToDock() {
   c.userData.armR.rotation.set(0, 0, 0); c.userData.armL.rotation.set(0, 0, 0);
   const p = W.macPot; p.position.set(2.2, 1.15, 2.4); p.rotation.set(0, 0, 0); p.userData.lid.position.set(0, .82, 0); p.userData.lid.rotation.set(0, 0, 0); p.userData.on = .35;
 }
+/* turn Captain Crabbe (standing on his own boat) to face the kids' rowboat */
+function crabbeFaceKids() { const c = W.crabbe, cw = c.getWorldPosition(V()), rb = W.rowboat.position, want = Math.atan2(rb.x - cw.x, rb.z - cw.z), y0 = c.rotation.y; let d = want - W.crabBoat.rotation.y - y0; d = Math.atan2(Math.sin(d), Math.cos(d)); tween(.5, k => c.rotation.y = y0 + d * k); }
+/* looking past the kids at Captain Crabbe on his boat, so we see his face */
+function crabFaceShot() { return () => { const c = W.crabbe.getWorldPosition(V()).add(V(0, 3, 0)), k = W.rowboat.position.clone(), d = k.clone().sub(c).setY(0).normalize(), side = V(-d.z, 0, d.x);
+  const far = innerWidth / innerHeight < 1 ? 1.5 : 1; return [c.clone().addScaledVector(d, 9 * far).addScaledVector(side, 3).add(V(0, 2.5 * far, 0)), c.clone().add(V(0, -.6, 0))]; }; }
 function crabbeHome() { const c = W.crabbe; W.crabBoat.add(c); c.position.set(0, 1.25, 2.7); c.rotation.set(0, -Math.PI / 2 + .6, 0); c.userData.armR.rotation.set(0, 0, 0); hideAt(W.macPot); W.macPot.userData.on = 0; }
 function dawnStage() {
   WORLD.setMood("dawn", .2); W.lamps.forEach(l => l.target = 0); W.coin.position.y = -10; W.coinShine = 0; W.coin.scale.setScalar(1);
@@ -1982,10 +2016,10 @@ const PAGES = {
   ], choices: [{ label: "Back to the map", em: "🗺️", to: "map", cost: 1 }] },
 
   /* ================= KRAKEN REEF ================= */
-  reefIntro: { mood: "night", music: "sea", enter: () => { kidsInBoat(); boatAt(V(62, 0, -66), V(88, 0, -95)); W.inkbeard.position.set(64, -30, -90); W.inkbeard.rotation.y = .5; }, beats: [
+  reefIntro: { mood: "night", music: "sea", enter: () => { kidsInBoat(); boatAt(V(62, 0, -66), V(88, 0, -95)); W.inkbeard.position.set(64, -30, -90); }, beats: [
     ["n", "Kraken Reef. Broken ships poke out of the rocks like teeth, and a sign on an old post says: TURN BACK! KRAKEN!", () => [V(55, 8, -56), V(57, 4, -80)]],
-    ["n", "Something HUGE blinks at you from under the water... and then sinks out of sight. Bloop.", () => [V(56, 5, -64), V(64, 3, -88)], () => { const ib = W.inkbeard; ib.position.y = -14; tween(1.4, k => ib.position.y = -14 + k * 9.6, () => tween(1.6, () => {}, () => { if (S.page === "reefIntro") tween(1.2, k => ib.position.y = -4.4 - k * 16, () => ib.position.y = -30); })); MUSIC.sfx("plop"); bubbles(V(64, 0, -86), 6); }],
-    ["b", "Hold on tight, {a}. We row fast and we don't stop.", () => [V(57, 4, -60), V(62, 1.6, -66)], () => { const ib = W.inkbeard; if (ib.position.y > -20) { const y0 = ib.position.y; tween(.8, k => ib.position.y = y0 - k * 20, () => ib.position.y = -30); } }],
+    ["n", "Bloop. Bloop. BLOOP. Big bubbles rise all around the boat... as if something HUGE is breathing down below.", () => [V(56, 5, -64), V(64, 1, -84)], () => { MUSIC.sfx("plop"); bubbles(V(64, 0, -82), 8); setTimeout(() => bubbles(V(68, 0, -74), 6), 900); }],
+    ["b", "Hold on tight, {a}. We row fast and we don't stop.", () => [V(57, 4, -60), V(62, 1.6, -66)]],
     ["a", "Look! Pieces of eight, all shiny between the rocks!", () => [V(57, 5, -58), V(80, 1, -90)]]
   ], choices: [{ label: "Row into the reef!", em: "🚣", to: "gameReef" }] },
   gameReef: { game: "reef", next: "reef1", title: "Reef Run", how: "Kraken Reef is full of rocks and wriggly tentacles! Drag left and right to steer and grab the pieces of eight. Ripples mean a tentacle is about to pop up!" },
@@ -2029,7 +2063,7 @@ const PAGES = {
     ["crabbe", "THERE you are, you barnacles! Out all night, were you?", crabShot()],
     ["b", () => dawnBrag(), "kidsClose"],
     ["a", () => DAWN_BRAG[S.endingPage] || DAWN_BRAG.endScrub, "kidsClose"],
-    ["n", "Captain Crabbe goes very quiet. Slowly, he rolls up his sleeve. On his arm is a faded old tattoo: a skull, a ship, and two words. SOGGY BISCUIT.", tattooShot(), () => { const a = W.crabbe.userData.armR; tween(1, k => { a.rotation.x = TAT_POSE.x * k; a.rotation.z = TAT_POSE.z * k; }); MUSIC.sfx("bell"); }],
+    ["n", "Captain Crabbe goes very quiet. Slowly, he rolls up his sleeve. On his arm is a faded old tattoo: a skull, a ship, and two words. SOGGY BISCUIT.", tattooShot(), () => { const a = W.crabbe.userData.armR, sl = W.crabbe.userData.sleeve; tween(1, k => { a.rotation.x = TAT_POSE.x * k; a.rotation.z = TAT_POSE.z * k; }, () => tween(1, k => { sl.scale.y = 1 - k * .88; })); MUSIC.sfx("bell"); }],
     ["crabbe", "Long ago, when I was a cabin kid just like you, I scrubbed HIS decks. I was the only one who ever got away. Until you two.", crabShot(), () => { const a = W.crabbe.userData.armR; tween(.8, k => { a.rotation.x = TAT_POSE.x * (1 - k); a.rotation.z = TAT_POSE.z * (1 - k); }); }],
     ["feathers", "CRABBY?! Is that YOU?! SQUAWK!", "parrotShot", () => { W.parrot.userData.flap = 1.4; MUSIC.sfx("whoosh"); }],
     ["crabbe", "Well. A deal's a deal. ...MAC AND CHEESE!", potShot(), () => liftLid()],
@@ -2038,9 +2072,9 @@ const PAGES = {
   dawnRock: { epilogue: true, mood: "dawn", music: "dawn", enter: () => { crabbeHome(); W.bigTentacle.position.y = -30; W.crabbe.rotation.y = Math.PI; WORLD.setMood("dawn", .3); W.lamps.forEach(l => l.target = 1); const cb = W.crabBoat; cb.userData.home = cb.userData.home || cb.position.clone(); cb.position.set(66, 0, -70); cb.rotation.set(0, Math.atan2(18, -20), 0); W.macPot.position.set(0, -50, 0); showSkip(); }, beats: [
     ["n", "The sun comes up over Kraken Reef. You're still stuck on top of the tallest, pointiest rock.", () => [V(70, 16, -66), V(88, 8, -95)]],
     ["n", "Then a grumpy little fishing boat comes chugging through the waves...", () => [V(60, 8, -56), V(76, 2, -82)], () => { const cb = W.crabBoat; tween(3, k => cb.position.set(66 + k * 12, 0, -70 - k * 14)); MUSIC.sfx("splash"); }],
-    ["crabbe", "What in the seven seas are you two doing up THERE?!", rockShot()],
+    ["crabbe", "What in the seven seas are you two doing up THERE?!", crabFaceShot(), () => crabbeFaceKids()],
     ["n", "A big purple tentacle rises out of the water, lifts your boat down ever so gently, and plops it right next to Captain Crabbe. Then it waves goodbye.", () => [V(68, 12, -66), V(84, 5, -90)], () => { const t = W.bigTentacle; t.position.set(90, -14, -90); t.rotation.set(0, 0, 0); tween(1, k => t.position.y = -14 + k * 13, () => { const rb = W.rowboat, f = rb.position.clone(); tween(1.6, (k, r) => rb.position.set(f.x + (81 - f.x) * k, f.y + (0 - f.y) * k + Math.sin(r * Math.PI) * 3, f.z + (-82 - f.z) * k), () => tween(2, (k, r) => t.rotation.z = Math.sin(r * Math.PI * 4) * .35, () => tween(1, k => t.position.y = -1 - k * 20))); }); }],
-    ["crabbe", "Hmph. Well. A deal's a deal. Who wants MAC AND CHEESE?", rockShot(), () => { const p = W.macPot; W.crabBoat.add(p); p.position.set(0, 1.25, .8); p.userData.lid.position.set(0, .82, 0); p.userData.lid.rotation.set(0, 0, 0); p.userData.on = .35; liftLid(); }],
+    ["crabbe", "Hmph. Well. A deal's a deal. Who wants MAC AND CHEESE?", crabFaceShot(), () => { crabbeFaceKids(); const p = W.macPot; W.crabBoat.add(p); p.position.set(0, 1.25, .8); p.userData.lid.position.set(0, .82, 0); p.userData.lid.rotation.set(0, 0, 0); p.userData.on = .35; liftLid(); }],
     ["a", "YESSSS! MAC AND CHEESE! ...Can Freddie have some?", rockShot(), () => happy()],
     ["mum", "BREAKFAAAAST!", () => [V(60, 14, -60), V(0, 6, -40)]],
     ["n", "Uh oh. Mum is NOT happy about the soggy pyjamas.", () => [V(70, 9, -70), V(80, 3, -84)], () => { W.macPot.userData.on = 0; }]
@@ -2115,7 +2149,7 @@ const PAGES = {
   ] },
 
   /* ================= SMUGGLERS' ALLEY ================= */
-  alley1: { mood: "night", music: "market", take: "coin", enter: () => { kidsInBoat(); boatAt(SEA.harbour, V(0, 0, -10)); resetMonkey(); }, beats: [
+  alley1: { mood: "night", music: "market", take: "coin", enter: () => { alleyTidy(); kidsInBoat(); boatAt(SEA.harbour, V(0, 0, -10)); resetMonkey(); }, beats: [
     ["n", "Back in Gullwhistle, you tie up the rowboat and tiptoe into the town. Down a narrow lane, between the wonky old houses, lanterns are glowing...", () => [V(10, 9, 14), V(0, 5, -16)]],
     ["n", "This is Smugglers' Alley. It's packed with stalls, and shady pirates selling shady things.", sh("alley", 2.5, 4.4, 21, 0, 3.6, -2), () => fadeDo(() => placeKids(W.alley, V(-1.4, 0, 5.4), V(1.2, 0, 5.8), Math.PI))],
     ["lolly", "Lucky eyeballs! Pickled rats! Gold chocolate coins! Get 'em while they're sticky!", sh("alley", 1, 4.5, 11, -1, 2.8, -2), () => { const L = W.lolly; tween(1.2, (k, r) => { L.userData.armR.rotation.z = Math.sin(r * Math.PI * 4) * .6 + .9; L.userData.armR.rotation.x = -.5; }, () => { L.userData.armR.rotation.set(0, 0, 0); }); }],
@@ -2125,9 +2159,9 @@ const PAGES = {
     ["n", "The monkey drops off the roof, snatches the cursed coin out of {b}'s pocket, and scrambles straight back up the wall!", sh("alley", 3, 6, 16, 0, 5, 2), () => { const m = W.monkey, P = W.monkeyPerch; tween(.6, (k, r) => m.position.set(P.x + (1.2 - P.x) * k, P.y + (.6 - P.y) * k + Math.sin(r * Math.PI) * 1.5, P.z + (5.6 - P.z) * k), () => { MUSIC.sfx("coin"); tween(1.3, (k, r) => { m.position.set(1.2 + k * 3.6, .6 + k * 8.2, 5.6 - k * 2); m.rotation.y = -Math.PI / 2; }, () => tween(.8, k => m.position.set(4.8 + k * 4, 8.8 + k * 1.6, 3.6 - k * 6))); }); }]
   ], choices: [{ label: "Chase it over the rooftops", em: "🏃", to: "gameRoof" }, { label: "Buy a banana and wait", em: "🍌", to: "gameCatch" }] },
   gameRoof: { game: "roof", next: "alleyRoof", title: "Rooftop Run", how: "After that monkey! Tap to jump over the gaps between the roofs. Grab pieces of eight as you go." },
-  alleyRoof: { price: true, mood: "night", music: "market", give: ["coin", "choc"], enter: () => placeKids(W.alley, V(-1.4, 0, 5.4), V(1.2, 0, 5.8), Math.PI), beats: [
-    ["n", "You climb, leap and slide across the slippery rooftops. {a} grabs the monkey's tail. {b} grabs the coin. And all three of you crash through the lolly-seller's awning...", sh("alley", 4, 7, 16, -1, 4, -2), () => { W.monkey.position.set(-1, 9, -1); tween(.7, k => W.monkey.position.y = 9 - k * 6.8); }],
-    ["n", "...straight into the lolly-seller's stall. CRASH! Chocolate coins everywhere!", sh("alley", 2, 4.5, 10, 0, 1.5, 2), () => { MUSIC.sfx("bonk"); W.chocPile.position.set(-.5, 0, 3); }],
+  alleyRoof: { price: true, mood: "night", music: "market", give: ["coin", "choc"], enter: () => { alleyTidy(); placeKids(W.alley, ROOF_START[0], ROOF_START[1], .5); W.monkey.position.copy(ROOF_START[2]); }, beats: [
+    ["n", "You climb, leap and slide across the slippery rooftops. {a} grabs the monkey's tail. {b} grabs the coin. And all three of you crash through the lolly-seller's awning...", sh("alley", 3.4, 7.2, 13, -2.8, 5.6, -2), () => roofCrash()],
+    ["n", "...straight into the lolly-seller's stall. CRASH! Chocolate coins everywhere!", sh("alley", 2, 4.6, 10.5, -1, 1.4, 1), () => coinSpill()],
     ["lolly", "HA! Best show I've seen all week! Now, you squashed half my stall, so you'll be buying something. Five pieces of eight for a chocolate coin!", sh("alley", 2.5, 4.2, 9.5, -.4, 2.8, 0)],
     ["a", "Lollies! YESSS!", sh("alley", 2.5, 4.2, 9.5, -.4, 2.8, 0), () => payCoins(PRICE, W.lolly, () => { const c = W.chocGift; c.position.copy(W.lolly.getWorldPosition(V()).add(V(.9, 3.2, 1))); c.scale.setScalar(1.2); MUSIC.sfx("coin"); giveFly(c, W.kidA, 1.1); })],
     ["n", "It's a gold-wrapped chocolate coin. Hmm... it looks EXACTLY like Grimtide's cursed coin. That could come in handy for a sneaky trick! Into the bag it goes.", () => { const h = kidHand(); return [h.clone().add(V(2.6, 1.2, 3.2)), h]; }, () => popInBag(W.chocGift, "choc", W.kidA, 2200)]
@@ -2236,6 +2270,33 @@ function payCoins(n, to, done) {
     arc(c, dest(), 1.2, .55, () => { WORLD.scene.remove(c); MUSIC.sfx("coin"); drawHud(); if (i === n - 1) { const h = $("hudP8"); if (h) { h.classList.remove("pay"); void h.offsetWidth; h.classList.add("pay"); } done && setTimeout(done, 250); } }); }, i * 160);
 }
 const shortBy = () => PRICE - purse();
+/* Smugglers' Alley: the rooftop crash through the lolly-seller's awning, and the coins spilling out */
+const ROOF_START = [V(-5.6, 7.4, -1), V(-5.6, 7.4, -3.2), V(-5.3, 7.4, -2.1)];
+const ROOF_LAND = [V(-4.2, 0, 1.6), V(2.2, 0, 1.8), V(-.8, 0, 2.6)];
+const ROOF_AWN = [V(-2.4, 6, -1.9), V(.1, 6, -2.1), V(-1.2, 6, -2)];
+function alleyTidy() { while (W.chocScatter.children.length) W.chocScatter.remove(W.chocScatter.children[0]); W.awning.rotation.set(0, 0, 0); W.awning.position.y = 5.6; hideAt(W.chocPile); }
+function roofCrash() {
+  const who = [W.kidA, W.kidB, W.monkey]; let banged = false;
+  who.forEach((o, i) => { o.position.copy(ROOF_START[i]); o.userData.busy = true; });
+  setTimeout(() => MUSIC.sfx("jump"), 500);
+  tween(2.2, (k, r) => {
+    who.forEach((o, i) => {
+      const a = ROOF_START[i], b = ROOF_AWN[i], c = ROOF_LAND[i];
+      if (r < .45) { const q = r / .45; o.position.lerpVectors(a, b, q); o.position.y += Math.sin(q * Math.PI) * 1.6; }
+      else if (r < .6) { const q = (r - .45) / .15; o.position.copy(b); o.position.y = 6 - q * .9; }
+      else { const q = (r - .6) / .4; o.position.lerpVectors(V(b.x, 5.1, b.z), c, q); o.position.y = 5.1 * (1 - q * q); o.rotation.x = Math.sin(q * Math.PI) * .5; }
+    });
+    if (r >= .45 && !banged) { banged = true; MUSIC.sfx("bonk"); setTimeout(() => MUSIC.sfx("splat"), 150); }
+    const sag = r < .45 ? 0 : r < .6 ? (r - .45) / .15 : Math.max(0, 1 - (r - .6) * 4) * Math.cos((r - .6) * 30);
+    W.awning.rotation.x = sag * .55; W.awning.position.y = 5.6 - Math.max(0, sag) * .5;
+  }, () => { who.forEach((o, i) => { o.position.copy(ROOF_LAND[i]); o.rotation.x = 0; o.userData.busy = false; }); W.kidA.rotation.y = .5; W.kidB.rotation.y = -.5; W.monkey.rotation.y = 0; W.awning.rotation.x = 0; W.awning.position.y = 5.6; MUSIC.sfx("bonk"); });
+}
+function coinSpill() {
+  MUSIC.sfx("coin"); const from = O("alley", -1.2, 2.3, -1.6);
+  for (let i = 0; i < 20; i++) { const c = WORLD.make.chocCoin(); W.chocScatter.add(c); const st = W.alley.worldToLocal(from.clone()); c.position.copy(st); c.visible = false;
+    const to = V(-4.4 + Math.random() * 7, .06, -.6 + Math.random() * 4.6), h = 1 + Math.random() * 2.2, spin = Math.random() * 12, d = .7 + Math.random() * .5;
+    setTimeout(() => { c.visible = true; tween(d, (k, r) => { c.position.lerpVectors(st, to, r); c.position.y = st.y + (to.y - st.y) * r + Math.sin(r * Math.PI) * h; c.rotation.set(spin * r, spin * r * .5, 0); }, () => { c.rotation.set(0, spin, 0); c.position.y = .06; if (i % 4 === 0) MUSIC.sfx("coin"); }); }, i * 45); }
+}
 /* the inside of the lighthouse: Brine's kitchen, and the lamp room at the top */
 function lhKitchen() { const w = W.witch; w.visible = true; W.lhIn.add(w); w.position.set(3.6, 0, -5.2); w.rotation.set(0, -.45, 0);
   placeKids(W.lhIn, V(-1.8, 0, 6.4), V(1.8, 0, 6.4), Math.PI); W.cat.userData.hiss(0); W.cat.userData.busy = false; W.kLadle.rotation.y = 0; W.kStirRing.visible = false; }
@@ -2296,12 +2357,14 @@ function nextBeat() {
   applyFaces(who, t);
   $("caption").classList.remove("show"); $("bubble").classList.remove("show"); $("bubble")._who = null;
   void $("caption").offsetWidth;
-  if (who === "mum") { $("caption").textContent = "Mum, from far away: \u201c" + t + "\u201d"; $("caption").classList.add("show"); mumShout(t); MUSIC.sfx("page"); $("next").classList.add("show"); return; }
+  if (who === "mum") { $("caption").textContent = "Mum, from far away: \u201c" + t + "\u201d"; $("caption").classList.add("show"); mumShout(t); MUSIC.sfx("page"); $("next").classList.add("show"); if (S.beat === pg.beats.length - 1 && (pg.epilogue || pg.ending)) autoTimer = setTimeout(nextBeat, 3200); return; }
   if (who === "n") { $("caption").textContent = t; $("caption").classList.add("show"); }
   else { const c = CHARS[who]; const bub = $("bubble"); bub.querySelector(".who").textContent = fill(c.name); bub.querySelector(".who").style.background = c.col; bub.querySelector(".txt").textContent = t; bub.dataset.who = who; bub.classList.add("show"); }
   MUSIC.sfx("page");
   $("next").classList.add("show");
   speak(who, t, () => { autoTimer = setTimeout(nextBeat, 650); });
+  /* the very last line of an ending rolls on to THE END by itself (no tap needed) */
+  if (S.beat === pg.beats.length - 1 && (pg.epilogue || (pg.ending && !pg.epi)) && !(S.reading && S.narrator === "computer")) { clearTimeout(autoTimer); autoTimer = setTimeout(nextBeat, 2600 + t.split(" ").length * 300); }
 }
 function showChoices() {
   const pg = PAGES[S.page];
@@ -2339,7 +2402,7 @@ function showEnding(pg) {
   }, 900);
 }
 function newGame() {
-  S.items = []; S.eight = {}; S.spent = 0; S.hours = 0; S.visited = []; S.flags = {}; S.boatPos = null; S.frog = false;
+  S.items = []; S.eight = {}; S.spent = 0; S.hours = 0; W.crabbe.userData.sleeve.scale.y = 1; S.visited = []; S.flags = {}; S.boatPos = null; S.frog = false;
   resetWorld(); goPage("intro1");
 }
 function placeBubble() {
@@ -2425,7 +2488,7 @@ const GAMES3D = {
     function done() { flying = false; left--; hudGame(); if (left <= 0) { over = true; setTimeout(() => endGame({ pieces: score, msg: score === 8 ? "Every fish in the barrel! Mac and cheese for everyone!" : `${score} of 8 fish in the barrel. Not bad for cabin kids!` }), 900); return; } setTimeout(() => { moveBarrel(false); newFish(); }, 500); }
     return {
       setup() {
-        placeKids(W.harbour, V(-1.4, 1.15, 7.6), V(1, 1.15, 6.6), 0); W.kidB.rotation.y = Math.PI; W.kidB.userData.busy = true;
+        placeKids(W.harbour, V(-1.4, 1.15, 7.6), V(1, 1.15, 6.6), 0); W.kidB.rotation.y = Math.PI; W.kidB.userData.busy = true; W.kidA.rotation.y = Math.PI - .35; W.kidA.userData.busy = true;
         W.barrelFish.forEach(f => f.parent && f.parent.remove(f)); W.barrelFish = []; W.pile.children.forEach(f => f.visible = true);
         WORLD.setMood("dusk", 1); moveBarrel(true);
         frame(W.barrel.position.z, 1.8);
@@ -2460,7 +2523,7 @@ const GAMES3D = {
         f.rotation.z += dt * 8;
         const rim = b.y + 2, r = S.hard ? .8 : 1.1;
         if (prevY >= rim && f.position.y < rim && Math.hypot(f.position.x - b.x, f.position.z - b.z) < r && vel.y < 0) {
-          score++; MUSIC.sfx("splash"); MUSIC.sfx("coin"); popText("+1", f.position);
+          score++; MUSIC.sfx("splash"); MUSIC.sfx("coin"); popText("+1", f.position); { const ka = W.kidA, y0 = ka.position.y; ka.userData.armL.rotation.z = -2.6; ka.userData.armR.rotation.z = 2.6; tween(.5, (k, r) => ka.position.y = y0 + Math.sin(r * Math.PI) * .45, () => { ka.position.y = y0; ka.userData.armL.rotation.z = 0; ka.userData.armR.rotation.z = 0; }); }
           f.position.set(b.x + rnd(-.3, .3), rim - .3, b.z + rnd(-.3, .3)); f.rotation.set(Math.random(), Math.random(), 1.2); W.barrelFish.push(f); fish = null; return done();
         }
         const onDock = Math.abs(f.position.x) < 2.9 && f.position.z > -6.8 && f.position.z < 10;
@@ -2894,10 +2957,12 @@ const ITEM_INFO = {
   choc: ["Chocolate Coin", "Gold-wrapped chocolate. It looks EXACTLY like the cursed coin..."]
 };
 let lastBag = 0;
+let lastPurse = 0;
 function drawHud() {
+  const pp = purse(), gained = pp > lastPurse; lastPurse = pp;
   const left = Math.max(0, 3 - S.hours), n = S.items.length, grew = n > lastBag; lastBag = n;
   $("hud").innerHTML = `<span class="chip" id="hudMoon">🌙 ${[0, 1, 2].map(i => `<span class="pip${i < S.hours ? " gone" : ""}"></span>`).join("")} ${left}h</span><button class="chip bagbtn${grew ? " grew" : ""}" id="bagBtn" aria-label="Open your bag">🎒 ${n ? S.items.map(i => `<span class="bagit">${ITEM_EM[i] || ""}</span>`).join("") : `<span class="bagempty">empty</span>`}</button><span class="chip" id="hudP8"><span class="p8">8</span> ${purse()}</span>`;
-  $("bagBtn").onclick = openBag; if (SPOT) [].concat(SPOT).forEach(i => { const e = $(i); if (e) e.classList.add("spot"); });
+  $("bagBtn").onclick = openBag; if (gained) { const h = $("hudP8"); h.classList.add("gain"); } if (SPOT) [].concat(SPOT).forEach(i => { const e = $(i); if (e) e.classList.add("spot"); });
 }
 let SPOT = null;
 function spotlight(id) { SPOT = id; document.querySelectorAll("#hud .spot").forEach(e => e.classList.remove("spot")); [].concat(id || []).forEach(i => { if ($(i)) $(i).classList.add("spot"); }); if (id) MUSIC.sfx("tick"); }
@@ -2960,7 +3025,7 @@ function sailTo(pl) {
 function showStart() {
   hush(); clearTimeout(autoTimer); hideStory(); clearLabels(); $("mapbar").classList.remove("show"); $("ghud").classList.remove("show"); hint(null); $("hud").style.display = "none"; $("dim").style.opacity = 0;
   if (GAME) { GAME.stop(); GAME = null; }
-  S.mode = "start"; S.items = []; S.eight = {}; S.spent = 0; S.hours = 0; S.visited = []; S.flags = {}; S.boatPos = null;
+  S.mode = "start"; S.items = []; S.eight = {}; S.spent = 0; S.hours = 0; W.crabbe.userData.sleeve.scale.y = 1; S.visited = []; S.flags = {}; S.boatPos = null;
   resetWorld(); WORLD.setMood("dusk", 1.5); MUSIC.play("shanty");
   CAM.follow = null; CAM.orbit = { c: V(0, 2, 3), r: 20, h: 8, speed: .08 }; CAM.drift = 1;
   const dad = S.narrator === "dad";
