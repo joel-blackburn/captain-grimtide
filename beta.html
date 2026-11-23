@@ -1341,8 +1341,8 @@ const V = (x, y, z) => new THREE.Vector3(x, y, z);
 /* ---------- characters: names, voices, bubble colours ---------- */
 const CHARS = {
   n:        { name: "", pitch: 1, rate: .95 },
-  a:        { name: "{a}", pitch: 1.35, rate: 1, col: "#3a86ff" },
-  b:        { name: "{b}", pitch: 1.6, rate: 1.05, col: "#ff8a3d" },
+  a:        { name: "{a}", pitch: 1.7, rate: 1.05, col: "#3a86ff" },
+  b:        { name: "{b}", pitch: 1.35, rate: 1, col: "#ff8a3d" },
   crabbe:   { name: "Captain Crabbe", pitch: .45, rate: .9, col: "#e63946" },
   feathers: { name: "Mister Feathers", pitch: 1.9, rate: 1.15, col: "#2bb673" },
   bones:    { name: "Bones McGee", pitch: .7, rate: 1.1, col: "#6b6f92" },
@@ -1357,9 +1357,13 @@ const PREFIX = ["Barnacle", "Salty", "Stinky-Boots", "Cannonball", "Squid-Lips",
 const SUFFIX = ["the Bold", "the Sneaky", "the Terrible", "of the Seven Snacks", "the Unwashed", "the Fearless", "Saltbeard", "the Loud", "the Wobbly", "Stormbringer", "the Slippery", "Bonecrusher", "the Smelly", "Goldtooth"];
 const hash = s => { let h = 7; for (const c of s.toLowerCase()) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h; };
 const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
-function makeNames(ra, rb, roll) {
-  const ia = (hash(ra) + roll * 5) % PREFIX.length; let ib = (hash(rb) + roll * 7 + 3) % PREFIX.length; if (ib === ia) ib = (ib + 1) % PREFIX.length;
-  const sa = (hash(ra + "x") + roll * 3) % SUFFIX.length; let sb = (hash(rb + "y") + roll * 2 + 1) % SUFFIX.length; if (sb === sa) sb = (sb + 1) % SUFFIX.length;
+function makeNames(ra, rb, roll, swapped) {
+  /* names depend only on the two names, never on which box they were typed in */
+  swapped = ra.toLowerCase() < rb.toLowerCase();
+  const P1 = n => (hash(n) + roll * 5) % PREFIX.length, P2 = n => (hash(n) + roll * 7 + 3) % PREFIX.length;
+  const S1 = n => (hash(n + "x") + roll * 3) % SUFFIX.length, S2 = n => (hash(n + "y") + roll * 2 + 1) % SUFFIX.length;
+  const ia = swapped ? P2(ra) : P1(ra); let ib = swapped ? P1(rb) : P2(rb); if (ib === ia) ib = (ib + 1) % PREFIX.length;
+  const sa = swapped ? S2(ra) : S1(ra); let sb = swapped ? S1(rb) : S2(rb); if (sb === sa) sb = (sb + 1) % SUFFIX.length;
   return { a: PREFIX[ia] + " " + cap(ra), aFull: PREFIX[ia] + " " + cap(ra) + " " + SUFFIX[sa], b: PREFIX[ib] + " " + cap(rb), bFull: PREFIX[ib] + " " + cap(rb) + " " + SUFFIX[sb] };
 }
 
@@ -2599,7 +2603,7 @@ function showStart() {
     const err = el("div", "err");
     if (!dad) {
       const names = el("div", "names"); const saved = store.get("names", { a: "", b: "" });
-      ["a", "b"].forEach((k, i) => { const l = el("label", null, "Pirate " + (i + 1)); const inp = el("input"); inp.id = "n" + k; inp.maxLength = 12; inp.value = saved[k] || ""; inp.placeholder = i ? "Max" : "Sam"; l.appendChild(inp); names.appendChild(l); });
+      ["a", "b"].forEach((k, i) => { const l = el("label", null, i ? "Big pirate (orange)" : "Little pirate (blue)"); const inp = el("input"); inp.id = "n" + k; inp.maxLength = 12; inp.value = saved[k] || ""; inp.placeholder = i ? "Max" : "Sam"; l.appendChild(inp); names.appendChild(l); });
       p.appendChild(names);
     }
     p.appendChild(err);
@@ -2607,15 +2611,17 @@ function showStart() {
     go.onclick = () => {
       MUSIC.unlock();
       if (dad) { S.reading = true; store.set("reading", true); syncRead(); return reveal("Sonny", "Wylie", null); }
-      const ra = $("na").value.trim().replace(/[^\p{L}\-' ]/gu, ""), rb = $("nb").value.trim().replace(/[^\p{L}\-' ]/gu, "");
+      let ra = $("na").value.trim().replace(/[^\p{L}\-' ]/gu, ""); let rb = $("nb").value.trim().replace(/[^\p{L}\-' ]/gu, "");
       if (!ra || !rb) { err.textContent = "Both pirates need a name!"; return; }
-      store.set("names", { a: ra, b: rb }); reveal(ra, rb, 0);
+      /* Sonny is always the little pirate in blue, Wylie the big one in orange, whichever box they typed in */
+      const swapped = /^wyl/i.test(ra) || /^sonn/i.test(rb); if (swapped) { const t = ra; ra = rb; rb = t; }
+      store.set("names", swapped ? { a: rb, b: ra } : { a: ra, b: rb }); reveal(ra, rb, 0, swapped);
     };
     p.appendChild(go);
   });
 }
-function reveal(ra, rb, roll) {
-  const N = roll === null ? { a: "Sonny", aFull: "Sonny", b: "Wylie", bFull: "Wylie" } : makeNames(ra, rb, roll);
+function reveal(ra, rb, roll, swapped) {
+  const N = roll === null ? { a: "Sonny", aFull: "Sonny", b: "Wylie", bFull: "Wylie" } : makeNames(ra, rb, roll, swapped);
   CAM.orbit = null; shot("kidsClose", 1.8);
   W.kidA.userData.busy = W.kidB.userData.busy = true;
   tween(.5, k => { W.kidA.userData.armL.rotation.z = -k * 2.6; W.kidB.userData.armR.rotation.z = k * 2.6; });
@@ -2623,7 +2629,7 @@ function reveal(ra, rb, roll) {
     <div class="pname a"><div class="real">${roll === null ? "In blue" : cap(ra) + " is now..."}</div><div class="pir">${N.aFull}</div></div>
     <div class="pname b"><div class="real">${roll === null ? "In orange" : cap(rb) + " is now..."}</div><div class="pir">${N.bFull}</div></div>`, p => {
     const row = el("div", "row");
-    if (roll !== null) { const again = el("button", "big alt", "🎲 New names"); again.onclick = () => reveal(ra, rb, roll + 1); row.appendChild(again); }
+    if (roll !== null) { const again = el("button", "big alt", "🎲 New names"); again.onclick = () => reveal(ra, rb, roll + 1, swapped); row.appendChild(again); }
     const go = el("button", "big", "Set sail! ⛵");
     go.onclick = () => { S.a = N.a; S.b = N.b; $("panel").classList.remove("show"); newGame(); };
     row.appendChild(go); p.appendChild(row);
