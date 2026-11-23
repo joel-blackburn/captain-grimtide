@@ -44,7 +44,7 @@
   #skipEpi { position: fixed; right: max(14px, env(safe-area-inset-right)); top: calc(max(12px, env(safe-area-inset-top)) + 64px); display: none; font: inherit; font-family: Bungee, sans-serif; font-size: 14px; padding: 8px 14px; border-radius: 14px; border: 3px solid var(--navy); background: #fff; color: var(--navy); box-shadow: 0 4px 0 var(--navy); z-index: 25; cursor: pointer; }
   #skipEpi.show { display: block; }
   #toast { position: fixed; left: 50%; bottom: calc(max(14px, env(safe-area-inset-bottom)) + 92px); transform: translate(-50%, 40px); opacity: 0; display: flex; align-items: center; gap: 12px; background: var(--paper); border: 4px solid var(--navy); border-radius: 20px; padding: 10px 18px 10px 12px; box-shadow: 0 6px 0 var(--navy); font-size: 17px; font-weight: 800; color: var(--navy); z-index: 30; pointer-events: none; transition: transform .35s cubic-bezier(.2, 1.6, .4, 1), opacity .25s; white-space: nowrap; }
-  #featherPop { position: fixed; left: 50%; bottom: calc(max(14px, env(safe-area-inset-bottom)) + 76px); transform: translate(-50%, 30px); opacity: 0; display: flex; align-items: center; gap: 10px; background: var(--paper); border: 4px solid var(--navy); border-radius: 20px; padding: 8px 16px 8px 10px; box-shadow: 0 5px 0 var(--navy); font-size: 17px; font-weight: 800; color: var(--navy); z-index: 30; pointer-events: none; transition: transform .35s cubic-bezier(.2, 1.6, .4, 1), opacity .25s; white-space: nowrap; }
+  #featherPop { position: fixed; left: 50%; bottom: calc(max(14px, env(safe-area-inset-bottom)) + 76px); transform: translate(-50%, 30px); opacity: 0; display: flex; align-items: center; gap: 10px; background: var(--paper); border: 4px solid var(--navy); border-radius: 20px; padding: 8px 16px 8px 10px; box-shadow: 0 5px 0 var(--navy); font-size: 17px; font-weight: 800; color: var(--navy); z-index: 30; pointer-events: none; transition: transform .35s cubic-bezier(.2, 1.6, .4, 1), opacity .25s; width: max-content; max-width: calc(100vw - 32px); }
   #featherPop.show { transform: translate(-50%, 0); opacity: 1; }
   #featherPop .tbig { font-size: 32px; line-height: 1; }
   #toast.show { transform: translate(-50%, 0); opacity: 1; }
@@ -80,6 +80,8 @@
     background: var(--paper); border: 4px solid var(--navy); border-radius: 20px; padding: 14px 18px; font-size: clamp(18px, 2.4vw, 23px); line-height: 1.45; font-weight: 800;
     box-shadow: 0 6px 0 var(--navy); display: none; }
   #caption.show { display: block; animation: pop .25s ease; }
+  @media (max-height: 500px) { #caption.mapcap, #featherPop { left: max(12px, env(safe-area-inset-left)) !important; right: auto; transform: none !important; bottom: max(12px, env(safe-area-inset-bottom)) !important; width: min(250px, 32vw) !important; max-width: none; font-size: 14px !important; padding: 8px 12px !important; } #featherPop:not(.show) { opacity: 0; } }
+  #caption.mapcap { top: auto; bottom: calc(max(14px, env(safe-area-inset-bottom)) + 80px); width: min(520px, calc(100% - 24px)); font-size: clamp(16px, 2vw, 19px); padding: 10px 16px; }
 
   /* speech bubble */
   #bubble { position: absolute; left: 0; top: 0; width: max-content; max-width: min(420px, 82vw); background: #fff; border: 4px solid var(--navy); border-radius: 22px; padding: 10px 16px 12px;
@@ -1857,6 +1859,8 @@ function crabbeToDock() {
   c.userData.armR.rotation.set(0, 0, 0); c.userData.armL.rotation.set(0, 0, 0);
   const p = W.macPot; p.position.set(2.2, 1.15, 2.4); p.rotation.set(0, 0, 0); p.userData.lid.position.set(0, .82, 0); p.userData.lid.rotation.set(0, 0, 0); p.userData.on = .35;
 }
+/* a close shot of the two boys, wherever they're standing */
+function kidsShot() { return () => { const m = W.kidA.getWorldPosition(V()).add(W.kidB.getWorldPosition(V())).multiplyScalar(.5), far = innerWidth / innerHeight < 1 ? 1.6 : 1; return [m.clone().add(V(2.2 * far, 2.2 + far, 6.3 * far)), m.clone().add(V(0, 1.3, 0))]; }; }
 /* turn Captain Crabbe (standing on his own boat) to face the kids' rowboat */
 function crabbeFaceKids() { const c = W.crabbe, cw = c.getWorldPosition(V()), rb = W.rowboat.position, want = Math.atan2(rb.x - cw.x, rb.z - cw.z), y0 = c.rotation.y; let d = want - W.crabBoat.rotation.y - y0; d = Math.atan2(Math.sin(d), Math.cos(d)); tween(.5, k => c.rotation.y = y0 + d * k); }
 /* looking past the kids at Captain Crabbe on his boat, so we see his face */
@@ -1962,9 +1966,8 @@ const PAGES = {
   ], choices: [{ label: "Listen to the parrot", em: "🦜", to: "feathers" }] },
   feathers: { mood: "fog", music: "spooky", enter: () => { if (!W.parrot.visible) flyParrotIn(); }, beats: [
     ["feathers", "That's Grimtide's coin! Meanest ghost on the seven seas, he was. I should know. I was his parrot. Brrrk.", "parrotShot"],
-    ["feathers", "At midnight his ghost ship comes for that coin. Whoever's holding it joins his skeleton crew... FOREVER!", "parrotShot"],
-    ["a", "FOREVER?! But Captain Crabbe owes us MAC AND CHEESE!", "kidsClose"],
-    ["feathers", "And ye can't throw it away, neither. That coin only lets go of ye when Grimtide lets ye go!", "parrotShot"],
+    ["feathers", "At midnight his ghost ship comes for that coin. And ye can't throw it away, neither. Whoever's holding it joins his skeleton crew... FOREVER!", "parrotShot"],
+    ["a", "FOREVER?! But Captain Crabbe owes us MAC AND CHEESE!", kidsShot()],
     ["feathers", "Then don't dawdle! This island is full of things that can help ye. Take the map, take the rowboat, and pick THREE stops before midnight!", "parrotShot"]
   ], choices: [{ label: "Grab the map!", em: "🗺️", to: "howto" }] },
   /* how to play: Mister Feathers explains the quest, the moon clock, the bag and pieces of eight */
@@ -2321,6 +2324,7 @@ const ANCHOR = { lolly: () => W.lolly, a: () => S.frog ? W.frogA : W.kidA, b: ()
 let autoTimer = null;
 function goPage(id, opts) { if (W.grimSmall && id !== "endFrog") W.grimSmall.visible = false; return goPage0(id, opts); }
 function goPage0(id, opts = {}) {
+  $("caption").classList.remove("mapcap"); $("featherPop").classList.remove("show");
   hush(); clearTimeout(autoTimer);
   if (opts.give && !S.items.includes(opts.give)) S.items.push(opts.give);
   if (opts.cost) S.hours += opts.cost;
@@ -2982,7 +2986,7 @@ function enterMap() {
   shot(mapShot(), 3.2); CAM.drift = .3;
   setTimeout(buildLabels, 1800);
   /* back from a stop: Mister Feathers squawks how many hours are left (no tapping needed) */
-  const hrs = 3 - S.hours; if (S.visited.length && hrs > 0) setTimeout(() => { if (S.mode !== "map") return; const fp = $("featherPop"); fp.innerHTML = `<span class="tbig">🦜</span><span>SQUAWK! ${hrs === 1 ? "Only ONE hour left. Hurry!" : hrs + " hours left!"}</span>`; fp.classList.remove("show"); void fp.offsetWidth; fp.classList.add("show"); MUSIC.sfx("squawk"); clearTimeout(fp._h); fp._h = setTimeout(() => fp.classList.remove("show"), 2800); }, 1500);
+  const hrs = 3 - S.hours; if (S.visited.length && hrs > 0) setTimeout(() => { if (S.mode !== "map") return; const fp = $("featherPop"); fp.innerHTML = `<span class="tbig">🦜</span><span>${hrs === 1 ? "SQUAWK! Only ONE hour left! One more stop... or sail out and face Grimtide!" : "SQUAWK! " + hrs + " hours left. Where to next?"}</span>`; fp.classList.remove("show"); void fp.offsetWidth; fp.classList.add("show"); MUSIC.sfx("squawk"); clearTimeout(fp._h); fp._h = setTimeout(() => fp.classList.remove("show"), 4500); }, 1500);
   $("hud").style.display = "flex"; drawHud();
   const bar = $("mapbar"); bar.innerHTML = ""; const b = el("button", "choice", "");
   b.style.background = "#0d2f2a"; b.append(el("span", "em", "🏴‍☠️"), el("span", null, "Sail out to face Grimtide now"));
@@ -2992,7 +2996,7 @@ function enterMap() {
   const tip = S.visited.length === 0 ? "The moon is rising. Tap a place on the map, and your rowboat will sail there." : left === 1 ? "The bell is ringing louder. Time for ONE more stop... or sail out to face Grimtide now!" : "The fog is getting thicker. Where to next?";
   playClip(S.visited.length === 0 ? "map-start" : left === 1 ? "map-last" : "map-middle");
   setTimeout(() => speak("n", tip), 1500);
-  $("caption").textContent = tip; $("caption").classList.add("show"); setTimeout(() => S.mode === "map" && $("caption").classList.remove("show"), 6000);
+  if (!S.visited.length) { $("caption").textContent = tip; $("caption").classList.add("show", "mapcap"); setTimeout(() => S.mode === "map" && $("caption").classList.remove("show"), 6000); }
 }
 const ITEM_EM = { coin: "🪙", musicbox: "🎶", kraken: "🐚", salt: "🧂", choc: "🍫" };
 const ITEM_INFO = {
