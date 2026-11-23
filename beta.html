@@ -35,6 +35,8 @@
   #hud .chip.spot::after { content: "⬆"; position: absolute; left: 50%; top: calc(100% + 8px); transform: translateX(-50%); font-size: 30px; line-height: 1; color: var(--yellow); text-shadow: 0 2px 0 var(--navy), 0 0 6px var(--navy); animation: spotbob .7s ease-in-out infinite; pointer-events: none; }
   @keyframes spotpulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.12); } }
   @keyframes spotbob { 0%, 100% { margin-top: 0; } 50% { margin-top: 8px; } }
+  #skipEpi { position: fixed; right: max(14px, env(safe-area-inset-right)); top: calc(max(12px, env(safe-area-inset-top)) + 64px); display: none; font: inherit; font-family: Bungee, sans-serif; font-size: 14px; padding: 8px 14px; border-radius: 14px; border: 3px solid var(--navy); background: #fff; color: var(--navy); box-shadow: 0 4px 0 var(--navy); z-index: 25; cursor: pointer; }
+  #skipEpi.show { display: block; }
   #toast { position: fixed; left: 50%; bottom: calc(max(14px, env(safe-area-inset-bottom)) + 92px); transform: translate(-50%, 40px); opacity: 0; display: flex; align-items: center; gap: 12px; background: var(--paper); border: 4px solid var(--navy); border-radius: 20px; padding: 10px 18px 10px 12px; box-shadow: 0 6px 0 var(--navy); font-size: 17px; font-weight: 800; color: var(--navy); z-index: 30; pointer-events: none; transition: transform .35s cubic-bezier(.2, 1.6, .4, 1), opacity .25s; white-space: nowrap; }
   #toast.show { transform: translate(-50%, 0); opacity: 1; }
   #toast .tbig { font-size: 40px; line-height: 1; }
@@ -177,6 +179,7 @@
   <div id="mapbar"></div>
   <div class="panel" id="panel"></div>
   <div id="toast"></div>
+  <button id="skipEpi" onclick="hush(); showEnding(PAGES[S.endingPage])">Skip to treasure ⏭</button>
   <div id="bag" onclick="if (event.target === this) closeBag()"></div>
 </div>
 <div id="dim"></div>
@@ -439,12 +442,46 @@ const WORLD = (() => {
     k.userData = { armL, armR, head, legs, anchor, base: 0 };
     return k;
   }
+  /* Crabbe's faded tattoo: a skull over a little ship, and a banner reading SOGGY BISCUIT */
+  function tattooMat() {
+    const cv = document.createElement("canvas"); cv.width = 160; cv.height = 300; const x = cv.getContext("2d");
+    x.fillStyle = "#f2c9a0"; x.fillRect(0, 0, 160, 300);
+    const ink = "#2a4f8a"; x.strokeStyle = ink; x.fillStyle = ink; x.lineWidth = 6; x.lineCap = "round"; x.lineJoin = "round";
+    x.beginPath(); x.arc(80, 62, 34, Math.PI, 0); x.lineTo(108, 92); x.lineTo(52, 92); x.closePath(); x.stroke();
+    x.beginPath(); x.arc(67, 64, 9, 0, 7); x.arc(93, 64, 9, 0, 7); x.fill();
+    x.beginPath(); x.moveTo(80, 74); x.lineTo(74, 84); x.lineTo(86, 84); x.fill();
+    [64, 74, 86, 96].forEach(t => { x.beginPath(); x.moveTo(t, 92); x.lineTo(t, 102); x.stroke(); });
+    x.beginPath(); x.moveTo(30, 112); x.lineTo(130, 150); x.moveTo(130, 112); x.lineTo(30, 150); x.stroke();
+    x.beginPath(); x.moveTo(30, 200); x.lineTo(130, 200); x.lineTo(118, 222); x.lineTo(42, 222); x.closePath(); x.stroke();
+    x.beginPath(); x.moveTo(80, 200); x.lineTo(80, 158); x.stroke(); x.beginPath(); x.moveTo(82, 162); x.lineTo(112, 186); x.lineTo(82, 192); x.stroke();
+    x.fillStyle = "#c2303a"; x.beginPath(); x.moveTo(6, 236); x.lineTo(154, 236); x.lineTo(146, 254); x.lineTo(154, 290); x.lineTo(6, 290); x.lineTo(14, 254); x.closePath(); x.fill();
+    x.fillStyle = "#fff3d6"; x.textAlign = "center"; x.font = "900 25px Impact, sans-serif"; x.fillText("SOGGY", 80, 260); x.fillText("BISCUIT", 80, 284);
+    const tex = new THREE.CanvasTexture(cv); tex.encoding = THREE.sRGBEncoding;
+    return new THREE.MeshStandardMaterial({ map: tex, roughness: .9, polygonOffset: true, polygonOffsetFactor: -2 });
+  }
+  /* a big pot of mac and cheese with a lid and curling steam */
+  function macPot() {
+    const p = group();
+    mesh(new THREE.CylinderGeometry(.75, .65, .8, 12), flat(0x3a3f4a, { metalness: .5, roughness: .4 }), 0, .4, 0, p);
+    [-1, 1].forEach(sd => box(.3, .1, .14, 0x2a2e36, sd * .86, .66, 0, p));
+    mesh(new THREE.CylinderGeometry(.68, .68, .06, 12), flat(0xffc83a), 0, .78, 0, p);
+    for (let i = 0; i < 16; i++) { const a = i * 2.4, r = (i % 4) * .14 + .1; box(.14, .06, .06, 0xffb020, Math.cos(a) * r, .82, Math.sin(a) * r, p).rotation.y = a; }
+    const lid = group(0, .82, 0, p); mesh(new THREE.CylinderGeometry(.78, .78, .08, 12), flat(0x4a505c, { metalness: .5, roughness: .4 }), 0, 0, 0, lid); box(.3, .14, .14, 0x2a2e36, 0, .11, 0, lid);
+    const steam = [0, 1, 2, 3, 4].map(i => { const m = mesh(new THREE.IcosahedronGeometry(.18, 0), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false }), 0, 1, 0, p); m.userData.ph = i / 5; return m; });
+    p.userData = { lid, steam, on: 0 };
+    return p;
+  }
   function crabbe() {
     const c = group();
     [-.3, .3].forEach(x => box(.42, 1, .42, C.navy, x, .5, 0, c));
     box(1.5, 1.4, .9, C.navy, 0, 1.7, 0, c);
     box(1.52, .2, .92, C.yellow, 0, 1.2, 0, c);
-    [[-.95, 0], [.95, 0]].forEach(([x]) => box(.34, 1.1, .34, C.navy, x, 1.75, 0, c));
+    /* arms hang from the shoulders; the right sleeve is rolled up over a big old tattoo */
+    const armL = group(-.92, 2.3, 0, c), armR = group(.92, 2.3, 0, c);
+    box(.36, 1.15, .36, C.navy, 0, -.55, 0, armL); box(.3, .26, .3, C.skin, 0, -1.2, 0, armL);
+    box(.38, .5, .38, C.navy, 0, -.25, 0, armR); box(.42, .14, .42, C.white, 0, -.52, 0, armR);
+    box(.34, .66, .3, C.skin, 0, -.92, 0, armR); box(.32, .26, .32, C.skin, 0, -1.36, 0, armR);
+    const tat = mesh(new THREE.PlaneGeometry(.32, .6), tattooMat(), 0, -.92, .152, armR); tat.renderOrder = 2;
     const head = group(0, 2.9, 0, c);
     box(1.05, 1, 1, C.skin, 0, 0, 0, head);
     box(1.1, .75, .55, C.white, 0, -.35, .3, head);
@@ -453,7 +490,7 @@ const WORLD = (() => {
     [-.22, .22].forEach(x => box(.12, .14, .05, glowMat(C.navy), x, .2, .52, head));
     [-.22, .22].forEach(x => { const b = box(.3, .08, .05, glowMat(C.white), x, .36, .52, head); b.rotation.z = x < 0 ? -.3 : .3; });
     const anchor = group(0, 4.2, 0, c);
-    c.userData = { head, anchor };
+    c.userData = { head, anchor, armL, armR, tattoo: tat };
     return c;
   }
   function parrot() {
@@ -1130,6 +1167,8 @@ const WORLD = (() => {
     const sail = new THREE.Shape(); sail.moveTo(0, 0); sail.lineTo(0, 4.6); sail.lineTo(2.6, .2); sail.lineTo(0, 0);
     sail.scale = 1; const sm = mesh(new THREE.ShapeGeometry(sail), flat(C.white, { side: THREE.DoubleSide }), 0, 2.9, .85, W.crabBoat); sm.rotation.y = Math.PI / 2; sm.scale.set(1, .9, 1);
     box(.05, .6, 1, C.pink, 0, 7.8, 1.5, W.crabBoat);
+    W.macPot = macPot(); W.macPot.position.set(0, -50, 0); hb.add(W.macPot);
+    W.soggyHat = group(0, -50, 0); scene.add(W.soggyHat); { const tri = new THREE.CylinderGeometry(1, 1, .2, 3); const b = mesh(tri, flat(0x15151c), 0, 0, 0, W.soggyHat); b.rotation.y = Math.PI / 2; box(.8, .5, .7, 0x15151c, 0, .3, 0, W.soggyHat); box(.3, .26, .05, 0xf1ead8, 0, .32, .36, W.soggyHat); for (let i = 0; i < 4; i++) box(.14, .3, .08, 0xc8263a, -.35 - i * .12, .6 + i * .1, -.2, W.soggyHat).rotation.z = .6; }
     W.crabbe = crabbe(); W.crabbe.position.set(0, 1.25, 2.7); W.crabbe.rotation.y = -Math.PI / 2 + .6; W.crabBoat.add(W.crabbe);
     /* rowboat */
     W.rowboat = rowboat(); W.rowboat.position.set(-4.6, 0, 6);
@@ -1220,6 +1259,8 @@ const WORLD = (() => {
     W.lamps.forEach((l, i) => { l.on += (l.target - l.on) * Math.min(1, dt * 3); l.light.intensity = l.on * (1.2 + Math.sin(t * 13 + i) * .12); l.bulb.material.color.setHex(l.on > .5 ? C.yellow : 0x3a3a44); });
     /* coin */
     if (W.millBlades) W.millBlades.rotation.z = t * .6;
+    if (W.macPot && W.macPot.userData.on) W.macPot.userData.steam.forEach(m => { const k = (t * .35 + m.userData.ph) % 1; m.position.set(Math.sin(k * 9 + m.userData.ph * 6) * .25, 1 + k * 2.2, Math.cos(k * 7) * .2); m.scale.setScalar(.6 + k * 1.6); m.material.opacity = (1 - k) * .55 * W.macPot.userData.on; });
+    if (W.soggyHat && W.soggyHat.position.y > -10) { W.soggyHat.position.y = .15 + Math.sin(t * 2) * .12; W.soggyHat.rotation.z = Math.sin(t * 1.6) * .15; }
     W.coinAura.visible = W.coin.position.y > -5; W.coinAura.material.opacity = .55 + Math.sin(t * 4) * .3;
     if (W.grim && W.grim.userData.wisps) W.grim.userData.wisps.forEach((w, i) => { const a = t * (1.1 + i * .2) + i * 1.6; w.position.set(Math.cos(a) * (1.9 + i * .15), 1.6 + i * 1.5 + Math.sin(t * 2 + i) * .3, Math.sin(a) * (1.4 + i * .1)); });
     if (W.coin.position.y > -5) { W.coin.rotation.y += dt * 2.5; W.coinLight.position.copy(W.coin.position).add(new THREE.Vector3(0, .4, .5)); W.coinLight.intensity = W.coinShine * (1.1 + Math.sin(t * 5) * .4); }
@@ -1299,6 +1340,12 @@ function speak(who, text, done) {
     MUSIC.duck(true); speechSynthesis.speak(u);
   } catch (e) {}
 }
+function mumShout(text) {
+  hush(); MUSIC.duck(true);
+  const say = () => { try { const u = new SpeechSynthesisUtterance(text); u.pitch = 1.5; u.rate = .8; u.volume = 1; if (voice) u.voice = voice; u.onend = () => MUSIC.duck(false); speechSynthesis.speak(u); } catch (e) { MUSIC.duck(false); } };
+  const go = m => { const a = new Audio("audio/" + ((m && m["mum-breakfast"]) || "mum-breakfast.mp3")); clip = a; let ok = false; a.addEventListener("playing", () => ok = true); a.addEventListener("ended", () => MUSIC.duck(false)); a.addEventListener("error", () => { if (!ok) say(); }); a.play().catch(() => { if (!ok) say(); }); };
+  if (manifest) go(manifest); else fetch("audio/manifest.json", { cache: "no-store" }).then(r => r.ok ? r.json() : {}).then(m => { manifest = m || {}; go(manifest); }).catch(() => { manifest = {}; go({}); });
+}
 function playClip(id) {
   if (!S.reading || S.narrator !== "dad") return;
   if (!manifest) { manifest = {}; fetch("audio/manifest.json", { cache: "no-store" }).then(r => r.ok ? r.json() : {}).then(m => { manifest = m || {}; }).catch(() => {}); }
@@ -1370,7 +1417,7 @@ function bubbles(at, n = 10) { for (let i = 0; i < n; i++) setTimeout(() => { co
 function noteBurst(at) { W.notes.forEach((n, i) => { n.position.copy(at); WORLD.scene.add(n); setTimeout(() => tween(2.4, (k, r) => { n.position.set(at.x + Math.sin(r * 6 + i) * 1.5, at.y + r * 6, at.z + Math.cos(r * 5 + i)); n.rotation.z = r * 4; }, () => n.position.y = -50), i * 260); MUSIC.sfx("note" + (i % 4)); }); }
 
 function resetWorld() {
-  const H = W;
+  const H = W; crabbeHome(); if (H.crabBoat.userData.home) H.crabBoat.position.copy(H.crabBoat.userData.home); H.soggyHat.position.y = -50;
   H.lamps.forEach(l => l.target = 1);
   H.coin.position.set(0, -10, 0); H.coinShine = 0; H.coin.scale.setScalar(1);
   H.parrot.visible = false; H.parrot.position.set(-3.4, 18, 9.4);
@@ -1444,6 +1491,49 @@ function grimShot(dist = 11) { return () => {
   const side = V(-fwd.z, 0, fwd.x), dir = fwd.clone().multiplyScalar(.85).add(side.multiplyScalar(-.6)).normalize();
   const d = dist * (innerWidth / innerHeight < 1 ? 1.5 : 1);
   return [f.clone().add(dir.multiplyScalar(d)).add(V(0, -.8, 0)), f.clone().add(V(0, d * .13, 0))]; }; }
+/* ---------- DAWN: back at the harbour after every ending ---------- */
+const DAWN_LINE = {
+  endMusic: "High above the clouds, a ghost ship is humming a lullaby.",
+  endKraken: "Out in the bay, a giant purple tentacle waves goodbye.",
+  endDuel: "A soggy pirate hat with a skull on it bobs past the dock.",
+  endChoc: "Far away, a ghost ship is parked outside the lolly shop, with its sails full of chocolate wrappers.",
+  endScrub: "The boys row home, yawning, still holding their mops."
+};
+const DAWN_BRAG = { endMusic: "...and we made Captain Grimtide CRY!", endKraken: "...and a kraken dragged Captain Grimtide's ship to the bottom of the sea!", endDuel: "...and we bonked Captain Grimtide on the nose!", endChoc: "...and we tricked Captain Grimtide with chocolate!", endScrub: "...and we scrubbed Captain Grimtide's whole ship!" };
+function dawnBrag() {
+  const met = { skull: "some scaredy skeletons", reef: "a lonely kraken", light: "a cranky witch", alley: "a sneaky monkey" };
+  const list = S.visited.map(v => met[v]).filter(Boolean);
+  const said = list.length ? (list.length === 1 ? list[0] : list.slice(0, -1).join(", ") + " and " + list.at(-1)) : "a talking parrot";
+  return "We found a cursed coin, and we met " + said + "...";
+}
+function crabbeToDock() {
+  const c = W.crabbe; W.harbour.add(c); c.position.set(.4, 1.15, 1.6); c.rotation.set(0, .15, 0); c.visible = true;
+  c.userData.armR.rotation.set(0, 0, 0); c.userData.armL.rotation.set(0, 0, 0);
+  const p = W.macPot; p.position.set(2.2, 1.15, 2.4); p.rotation.set(0, 0, 0); p.userData.lid.position.set(0, .82, 0); p.userData.lid.rotation.set(0, 0, 0); p.userData.on = .35;
+}
+function crabbeHome() { const c = W.crabbe; W.crabBoat.add(c); c.position.set(0, 1.25, 2.7); c.rotation.set(0, -Math.PI / 2 + .6, 0); c.userData.armR.rotation.set(0, 0, 0); hideAt(W.macPot); W.macPot.userData.on = 0; }
+function dawnStage() {
+  WORLD.setMood("dawn", .2); W.lamps.forEach(l => l.target = 0);
+  W.bigShip.visible = false; W.bigShipOut = false; W.grim.visible = false; if (W.grimSmall) W.grimSmall.visible = false;
+  [W.frogA, W.frogB].forEach(f => f.visible = false); W.kidA.visible = W.kidB.visible = true;
+  W.kidA.userData.scrub = W.kidB.userData.scrub = false;
+  boatAt(SEA.harbour, V(0, 0, -10));
+  placeKids(W.harbour, V(-1, 1.15, 5.2), V(1.1, 1.15, 5.6), Math.PI);
+  if (W.crabBoat.userData.home) { W.crabBoat.position.copy(W.crabBoat.userData.home); W.crabBoat.rotation.set(0, 0, 0); }
+  crabbeToDock();
+  if (!W.parrot.visible || W.parrot.parent !== W.harbour) { W.harbour.add(W.parrot); W.parrot.visible = true; } W.parrot.position.set(-3.4, 4, 9.4);
+  showSkip();
+}
+function crabShot(dist = 5.5) { return () => { const c = W.crabbe, f = c.userData.head.getWorldPosition(V()), fwd = V(0, 0, 1).applyQuaternion(c.getWorldQuaternion(new THREE.Quaternion())); fwd.y = 0; fwd.normalize(); const side = V(-fwd.z, 0, fwd.x), d = dist * (innerWidth / innerHeight < 1 ? 1.5 : 1); return [f.clone().add(fwd.multiplyScalar(d * .9)).add(side.multiplyScalar(d * .45)).add(V(0, .2, 0)), f.clone().add(V(0, d * .12 - .3, 0))]; }; }
+function potShot() { return () => { const p = W.macPot.getWorldPosition(V()), d = innerWidth / innerHeight < 1 ? 1.5 : 1; return [p.clone().add(V(4.2 * d, 2.8 * d, 2.6 * d)), p.clone().add(V(-1.2, 1.3, .6))]; }; }
+function rockShot() { return () => { const p = W.crabBoat.position.clone(), d = innerWidth / innerHeight < 1 ? 1.5 : 1; return [V(p.x - 13 * d, 7 * d, p.z + 9 * d), V(p.x + 3, 3, p.z - 5)]; }; }
+function showSkip() { if (store.get("seenDawn", false)) $("skipEpi").classList.add("show"); }
+function liftLid() { const p = W.macPot, l = p.userData.lid; MUSIC.sfx("cheer"); tween(.8, (k, r) => { l.position.set(-.5 * r, .82 + Math.sin(r * Math.PI) * .9 + r * .2, 0); l.rotation.z = r * 1.2; }); tween(1, k => p.userData.on = .35 + k * .65); [0, 300, 600].forEach(d => setTimeout(() => sparkleAt(p.getWorldPosition(V()).add(V(0, 1.6, 0))), d)); }
+const TAT_POSE = { x: -.45, z: .1 };
+function tattooShot() { return () => {
+  const c = W.crabbe, a = c.userData.armR, ox = a.rotation.x, oz = a.rotation.z; a.rotation.x = TAT_POSE.x; a.rotation.z = TAT_POSE.z; c.updateMatrixWorld(true);
+  const tt = c.userData.tattoo, t = tt.getWorldPosition(V()), n = V(0, 0, 1).applyQuaternion(tt.getWorldQuaternion(new THREE.Quaternion())); a.rotation.x = ox; a.rotation.z = oz; c.updateMatrixWorld(true);
+  const d = innerWidth / innerHeight < 1 ? 2.4 : 1.7; return [t.clone().add(n.multiplyScalar(d)), t]; }; }
 function resetShip() {
   const sh = W.bigShip; sh.rotation.set(0, 0, 0); W.grim.visible = true; W.grim.position.set(5, 6.35, 1.5); W.grim.rotation.set(0, -Math.PI / 2 + .3, 0); setGrimSolid(false);
   W.grim.userData.armL.rotation.set(0, 0, 0); W.grim.userData.armR.rotation.set(0, 0, 0);
@@ -1508,7 +1598,7 @@ const PAGES = {
   ], choices: [{ label: "Pocket the gold coin", em: "🪙", to: "intro2", give: "coin" }] },
   intro2: { mood: "dusk", music: "spooky", enter: () => { W.kidA.userData.armL.rotation.x = W.kidA.userData.armR.rotation.x = 0; tween(.6, k => W.coin.scale.setScalar(1 - k), () => { W.coin.position.y = -10; W.coin.scale.setScalar(1); W.coinShine = 0; bagToast("coin"); }); WORLD.setMood("fog", 6); }, beats: [
     ["n", "As the sun sinks, a cold fog creeps in. Far out at sea, a bell rings. Dong... dong... dong. And every lantern on the dock flickers out.", "seaView", () => { [0, 900, 1800].forEach(d => setTimeout(() => MUSIC.sfx("bell"), d)); W.lamps.forEach((l, i) => setTimeout(() => { l.target = 0; MUSIC.sfx("fizz"); }, 2600 + i * 700)); }],
-    ["crabbe", "The Soggy Biscuit! It's Grimtide's ghost ship!", "crabbeShot", () => tween(.8, k => W.crabbe.position.y = -1.75 + k * 3)],
+    ["crabbe", "The Soggy Biscuit... I'd know those sails anywhere. It's Grimtide's ghost ship!", "crabbeShot", () => tween(.8, k => W.crabbe.position.y = -1.75 + k * 3)],
     ["n", "{a} grabs the cursed coin, winds up... and throws it as far as they possibly can!", () => [V(-3.2, 4.2, 1.5), V(-2.5, 2.4, 22)], () => coinThrow()],
     ["n", "PLOP! It sinks into the dark water. Phew. But then the sea starts to glow green... and something shoots straight back out of it. ZING!", () => [V(-13, 7, 3), V(-2, 2.2, 17)], () => coinReturn()],
     ["b", "Um... it's back in my pocket.", "kidsClose", () => { const c = W.coin; tween(.5, k => c.scale.setScalar(1.4 * (1 - k) + .001), () => { c.position.y = -10; c.scale.setScalar(1); W.coinShine = 0; W.kidB.userData.armR.rotation.x = 0; W.kidB.userData.armL.rotation.x = 0; }); MUSIC.sfx("coin"); }],
@@ -1584,12 +1674,54 @@ const PAGES = {
     ["ink", "It's my magic shell. When Grimtide comes, blow it as hard as you can and shout my name. I'll hear it from the bottom of the sea, and I'll come and help!", () => [V(63, 6, -66), V(70, 3, -82)], () => { const sh = W.shell; sh.scale.setScalar(1.3); sh.position.set(70, -1, -86); MUSIC.sfx("splash"); bubbles(V(70, 0, -86), 6); tween(.8, k => sh.position.y = -1 + k * 4, () => giveFly(sh, W.kidA, 1.1)); }],
     ["n", "{a} holds up the pearly purple shell. Put it to your ear and you can hear the whole ocean. Whooosh... Into the bag it goes!", () => { const h = kidHand(); return [h.clone().add(V(-3.2, 1.6, 3.4)), h]; }, () => popInBag(W.shell, "kraken", W.kidA, 1800)]
   ], choices: [{ label: "Wave goodbye and row back", em: "🗺️", to: "map" }] },
-  endRock: { ending: { id: "rock", title: "Stuck on a Rock", em: "🪨" }, mood: "night", music: "sea", beats: [
+  endRock: { epi: "dawnRock", ending: { id: "rock", title: "Stuck on a Rock", em: "🪨" }, mood: "night", music: "sea", beats: [
     ["n", "You row so fast the oars start to smoke. But the tentacle simply lifts your whole boat out of the water...", () => [V(62, 12, -62), V(80, 6, -90)], () => { const rb = W.rowboat, f = rb.position.clone(); rb.userData.sailing = true; tween(2.2, (k, r) => { rb.position.set(f.x + (88 - f.x) * k, r < 1 ? Math.sin(r * Math.PI) * 6 + k * 8 : 8, f.z + (-95 - f.z) * k); }); tween(1, k => W.bigTentacle.position.y = -1 - k * 16); }],
     ["n", "...and plonks it on top of the tallest, pointiest rock.", () => [V(74, 14, -76), V(88, 8, -95)], () => { MUSIC.sfx("bonk"); W.gulls.forEach((g, i) => { g.userData.circle = { c: V(88, 13 + i, -95), r: 5 + i * 2, sp: 1 + i * .3 }; }); }],
     ["ink", "MINE.", () => [V(74, 14, -76), V(88, 8, -95)]],
-    ["n", "You spend the rest of the night stuck on the rock, waving at seagulls. At midnight the Soggy Biscuit sails past, and Grimtide hooks his coin out of your pocket with a fishing rod.", () => [V(70, 18, -70), V(88, 9, -95)]],
-    ["n", "Nobody joins his crew. But Mum is NOT happy about the soggy pyjamas.", () => [V(78, 12, -82), V(88, 9, -95)]]
+    ["n", "You spend the rest of the night stuck on the rock, waving at seagulls. At midnight the Soggy Biscuit sails past, and Grimtide hooks his coin out of your pocket with a fishing rod. Nobody joins his crew. Phew.", () => [V(70, 18, -70), V(88, 9, -95)]]
+  ] },
+
+  /* ================= DAWN EPILOGUES ================= */
+  dawn: { epilogue: true, mood: "dawn", music: "dawn", enter: () => dawnStage(), beats: [
+    ["n", "The sun peeks over the sea. The fog melts away, and one by one, the lanterns on the dock flicker back on.", () => [V(9, 7, 20), V(0, 2.5, 2)], () => W.lamps.forEach((l, i) => setTimeout(() => { l.target = 1; MUSIC.sfx("tick"); }, 1200 + i * 600))],
+    ["n", () => DAWN_LINE[S.endingPage] || DAWN_LINE.endScrub, () => {
+        const e = S.endingPage;
+        if (e === "endMusic") return [V(2, 3, 14), V(-10, 40, -60)];
+        if (e === "endKraken") return [V(4, 4, 16), V(-14, 4, 34)];
+        if (e === "endDuel") return [V(6, 3.2, 3), V(3, .6, 12)];
+        if (e === "endChoc") return [V(0, 4, 16), V(30, 6, 140)];
+        return [V(4, 4.5, 11), V(0, 2.6, 5.4)];
+      }, () => {
+        const e = S.endingPage;
+        if (e === "endMusic") { const g = W.ghostShip; g.visible = true; g.position.set(-14, 34, -80); g.rotation.set(.1, .4, 0); tween(6, k => g.position.y = 34 + k * 14); }
+        if (e === "endKraken") { const t = W.bigTentacle; t.position.set(-14, -16, 36); t.rotation.set(0, 0, 0); tween(1.4, k => t.position.y = -16 + k * 15, () => tween(6, (k, r) => t.rotation.z = Math.sin(r * Math.PI * 8) * .35, () => tween(1.2, k => t.position.y = -1 - k * 20))); MUSIC.sfx("splash"); }
+        if (e === "endDuel") { W.soggyHat.position.set(3, .15, 12); W.soggyHat.rotation.set(0, .6, 0); tween(6, k => W.soggyHat.position.z = 12 - k * 4); }
+      }],
+    ["crabbe", "THERE you are, you barnacles! Out all night, were you?", crabShot()],
+    ["b", () => dawnBrag(), "kidsClose"],
+    ["a", () => DAWN_BRAG[S.endingPage] || DAWN_BRAG.endScrub, "kidsClose"],
+    ["n", "Captain Crabbe goes very quiet. Slowly, he rolls up his sleeve. On his arm is a faded old tattoo: a skull, a ship, and two words. SOGGY BISCUIT.", tattooShot(), () => { const a = W.crabbe.userData.armR; tween(1, k => { a.rotation.x = TAT_POSE.x * k; a.rotation.z = TAT_POSE.z * k; }); MUSIC.sfx("bell"); }],
+    ["crabbe", "Long ago, when I was a cabin kid just like you, I scrubbed HIS decks. I was the only one who ever got away. Until you two.", crabShot(), () => { const a = W.crabbe.userData.armR; tween(.8, k => { a.rotation.x = TAT_POSE.x * (1 - k); a.rotation.z = TAT_POSE.z * (1 - k); }); }],
+    ["feathers", "CRABBY?! Is that YOU?! SQUAWK!", "parrotShot", () => { W.parrot.userData.flap = 1.4; MUSIC.sfx("whoosh"); }],
+    ["crabbe", "Well. A deal's a deal. ...MAC AND CHEESE!", potShot(), () => liftLid()]
+  ] },
+  dawnRock: { epilogue: true, mood: "dawn", music: "dawn", enter: () => { crabbeHome(); W.bigTentacle.position.y = -30; W.crabbe.rotation.y = Math.PI; WORLD.setMood("dawn", .3); W.lamps.forEach(l => l.target = 1); const cb = W.crabBoat; cb.userData.home = cb.userData.home || cb.position.clone(); cb.position.set(66, 0, -70); cb.rotation.set(0, Math.atan2(18, -20), 0); W.macPot.position.set(0, -50, 0); showSkip(); }, beats: [
+    ["n", "The sun comes up over Kraken Reef. You're still stuck on top of the tallest, pointiest rock.", () => [V(70, 16, -66), V(88, 8, -95)]],
+    ["n", "Then a grumpy little fishing boat comes chugging through the waves...", () => [V(60, 8, -56), V(76, 2, -82)], () => { const cb = W.crabBoat; tween(3, k => cb.position.set(66 + k * 12, 0, -70 - k * 14)); MUSIC.sfx("splash"); }],
+    ["crabbe", "What in the seven seas are you two doing up THERE?!", rockShot()],
+    ["n", "A big purple tentacle rises out of the water, lifts your boat down ever so gently, and plops it right next to Captain Crabbe. Then it waves goodbye.", () => [V(68, 12, -66), V(84, 5, -90)], () => { const t = W.bigTentacle; t.position.set(90, -14, -90); t.rotation.set(0, 0, 0); tween(1, k => t.position.y = -14 + k * 13, () => { const rb = W.rowboat, f = rb.position.clone(); tween(1.6, (k, r) => rb.position.set(f.x + (81 - f.x) * k, f.y + (0 - f.y) * k + Math.sin(r * Math.PI) * 3, f.z + (-82 - f.z) * k), () => tween(2, (k, r) => t.rotation.z = Math.sin(r * Math.PI * 4) * .35, () => tween(1, k => t.position.y = -1 - k * 20))); }); }],
+    ["crabbe", "Hmph. Well. A deal's a deal. Who wants MAC AND CHEESE?", rockShot(), () => { const p = W.macPot; W.crabBoat.add(p); p.position.set(0, 1.25, .8); p.userData.lid.position.set(0, .82, 0); p.userData.lid.rotation.set(0, 0, 0); p.userData.on = .35; liftLid(); }],
+    ["mum", "BREAKFAAAAST!", () => [V(60, 14, -60), V(0, 6, -40)]],
+    ["n", "Uh oh. Mum is NOT happy about the soggy pyjamas.", () => [V(70, 9, -70), V(80, 3, -84)], () => { W.macPot.userData.on = 0; }]
+  ] },
+  dawnFrog: { epilogue: true, mood: "dawn", music: "dawn", enter: () => { dawnStage(); W.kidA.visible = W.kidB.visible = false; [[W.frogA, V(-1, 1.15, 5.2)], [W.frogB, V(1.1, 1.15, 5.6)]].forEach(([f, p]) => { W.harbour.add(f); f.position.copy(p); f.rotation.set(0, Math.PI, 0); f.scale.setScalar(1); f.visible = true; }); }, beats: [
+    ["n", "Next morning, two little green frogs come hopping all the way down to Gullwhistle Harbour. Hop. Hop. Ribbit.", "kidsClose", () => [W.frogA, W.frogB].forEach((f, i) => { const z0 = f.position.z + 3; tween(2, (k, r) => { f.position.z = z0 - k * 3; f.position.y = 1.15 + Math.abs(Math.sin(r * Math.PI * 4)) * .5; }); })],
+    ["n", "POP! POP! They turn back into kids... just as Captain Crabbe comes stomping down the dock.", "kidsClose", () => { zap(); [[W.frogA, W.kidA], [W.frogB, W.kidB]].forEach(([f, k]) => { f.visible = false; k.visible = true; sparkleAt(k.getWorldPosition(V()).add(V(0, 1, 0))); }); }],
+    ["crabbe", "Why are you two so... SLIMY?", crabShot()],
+    ["b", "Long story.", "kidsClose"],
+    ["crabbe", "Hmph. Well. A deal's a deal. ...MAC AND CHEESE!", potShot(), () => liftLid()],
+    ["mum", "BREAKFAAAAST!", () => [V(0, 12, 22), V(0, 6, -30)]],
+    ["n", "And up on the cliff, a seagull wearing a skull-coin necklace looks VERY nervous.", sh("light", -13.5, 5.6, 9.5, -9, 3.8, 6), () => { const g = W.gulls[0]; g.userData.circle = null; g.position.copy(O("light", -9, 3.4, 6)); g.rotation.set(0, 2.2, 0); g.scale.setScalar(1.6); W.coin.position.copy(O("light", -8.7, 3.75, 6.25)); W.coin.scale.setScalar(.7); W.coinShine = .4; W.macPot.userData.on = 0; }]
   ] },
 
   /* ================= THE WITCH'S LIGHTHOUSE ================= */
@@ -1623,12 +1755,12 @@ const PAGES = {
     ["n", "SLAM! The door shuts in your faces.", sh("light", -12, 6, 4, -3, 5.5, 0), () => { W.witch.visible = false; tween(.3, k => W.doorPivot.rotation.y = 1.6 * (1 - k)); MUSIC.sfx("bonk"); }],
     ["b", "Oops. That was a whole hour wasted.", sh("light", -12, 5, 5, -8, 4.4, -1.3)]
   ], choices: [{ label: "Back to the map", em: "🗺️", to: "map" }] },
-  endFrog: { ending: { id: "frog", title: "Two Frogs and a Ghost", em: "🐸" }, mood: "witch", music: "witch", beats: [
+  endFrog: { epi: "dawnFrog", ending: { id: "frog", title: "Two Frogs and a Ghost", em: "🐸" }, mood: "witch", music: "witch", beats: [
     ["brine", "You WANT to be a frog? Suit yourselves.", sh("light", -9, 6.3, 3.4, -2.7, 6.7, 0), () => openDoor()],
     ["n", "ZAP! ZAP! Now there are two small green frogs on the doorstep. And frogs don't have pockets.", sh("light", -11, 5, 4, -8, 4, 0), () => { zap(); [[W.frogA, W.kidA], [W.frogB, W.kidB]].forEach(([f, k]) => { f.position.copy(k.position); f.rotation.y = Math.PI / 2; f.visible = true; k.visible = false; }); S.frog = true; }],
     ["n", "The cursed coin drops, clinks down the cliff, and lands right in a seagull's nest.", sh("light", -16, 8, 10, -8, 3, 4), () => { const g = W.gulls[0]; g.position.copy(O("light", -9, 3, 6)); g.userData.circle = null; W.coin.position.copy(O("light", -8, 4.2, 0)); W.coinShine = 1; arc(W.coin, O("light", -9, 3.4, 6), 3, 1, () => MUSIC.sfx("coin")); }],
     ["n", "At midnight the Soggy Biscuit arrives. Grimtide searches everywhere for the cursed kids. All he finds are two frogs, who say ribbit in a very innocent way.", sh("light", -22, 10, 12, -8, 4, 0), () => { if (!W.grimSmall) { W.grimSmall = WORLD.make.grimtide(); WORLD.scene.add(W.grimSmall); } const gs = W.grimSmall; gs.visible = true; gs.scale.setScalar(.7); gs.position.copy(O("light", -16, 2.5, -4)); gs.rotation.y = Math.PI / 2; tween(3, k => gs.position.copy(O("light", -16 + k * 4, 2.5, -4 + k * 2))); WORLD.setMood("ghost", 2); }],
-    ["n", "The next morning the seagull is wearing a skull-coin necklace and looking VERY nervous. And the frogs hop home just in time to turn back into kids before Mum sees.", sh("light", -12, 6, 7, -8, 3.5, 2), () => { WORLD.setMood("dawn", 3); if (W.grimSmall) W.grimSmall.visible = false; }]
+    ["n", "And when Grimtide finally sails off in a huff, the two frogs hop all the way home through the dark.", sh("light", -12, 6, 7, -8, 3.5, 2), () => { if (W.grimSmall) W.grimSmall.visible = false; }]
   ] },
 
   /* ================= SMUGGLERS' ALLEY ================= */
@@ -1687,14 +1819,14 @@ const PAGES = {
   gameDuel: { game: "duel", next: "endDuel", title: "Sword Duel", how: "Grimtide raises his cutlass... wait for it to FLASH white, then tap to block! When he's dizzy and seeing stars, tap his big glowing red nose to BONK him!" },
 
   /* ================= THE ENDINGS ================= */
-  endMusic: { ending: { id: "music", title: "The Lullaby", em: "🎶" }, mood: "ghost", music: "spooky", beats: [
+  endMusic: { epi: "dawn", ending: { id: "music", title: "The Lullaby", em: "🎶" }, mood: "ghost", music: "spooky", beats: [
     ["n", "{b} winds up the little music box. Plink... plink... plonk...", () => [deck(-8, 9, 10), deck(-3.4, 8, 3)], () => { W.musicBox.position.copy(deck(-3, 8.2, 3.6)); WORLD.scene.add(W.musicBox); noteBurst(deck(-3, 9, 3.6)); }],
     ["grim", "Me mum... me mum used to play that song...", () => [deck(0, 10, 9), deck(5, 11, 1.5)], () => noteBurst(deck(-3, 9, 3.6))],
     ["n", "Then the scariest ghost on the seven seas bursts into tears. Big, wet, see-through tears. As the music plays, the curse lifts.", () => [V(8, 14, 22), V(30, 14, 52)], () => { MUSIC.play("dawn"); WORLD.setMood("dawn", 5); fadeDo(() => { kidsInBoat(); boatAt(V(20, 0, 36), V(30, 0, 52)); }); setTimeout(() => tween(6, k => { W.bigShip.position.y = k * 60; W.bigShip.rotation.z = k * .2; }), 900); }],
     ["n", "The coin crumbles into gold dust, and the Soggy Biscuit sails up, up, up into the stars.", () => [V(6, 6, 22), V(30, 30, 60)]],
     ["feathers", "Not bad, you two. Not bad at all.", () => [V(16, 4, 30), V(20, 2, 36)], () => { W.harbour.remove(W.parrot); WORLD.scene.add(W.parrot); W.parrot.visible = true; W.parrot.position.set(20.6, .9, 35); W.parrot.userData.flap = 0; }]
   ] },
-  endKraken: { ending: { id: "kraken", title: "Kraken Attack", em: "🦑" }, mood: "ghost", music: "spooky", beats: [
+  endKraken: { epi: "dawn", ending: { id: "kraken", title: "Kraken Attack", em: "🦑" }, mood: "ghost", music: "spooky", beats: [
     ["n", "{a} pulls out Inkbeard's shell and blows it as hard as they can. HOOOOOONK!", () => [deck(-10, 9, 14), deck(-4.5, 8, 2.4)], () => { const sh = W.shell; sh.scale.setScalar(1.3); sh.position.copy(kidHand()); MUSIC.sfx("bell"); }],
     ["a", "INKBEEEEEARD!", () => [deck(-10, 9, 14), deck(-4.5, 8, 2.4)], () => hideAt(W.shell)],
     ["n", "The sea goes very, very quiet...", () => [V(4, 12, 22), V(30, 6, 52)], () => fadeDo(() => { kidsInBoat(); boatAt(V(18, 0, 30), V(30, 0, 52)); })],
@@ -1703,24 +1835,24 @@ const PAGES = {
     ["n", "With one mighty tug, he drags the whole ghost ship down to the bottom of the sea. Bubble... bubble... gone.", () => [V(4, 12, 22), V(30, 4, 52)], () => { tween(3, k => { W.bigShip.position.y = -k * 30; W.bigShip.rotation.z = k * .4; W.bigTentacle.position.y = -2 - k * 30; }); bubbles(V(30, 0, 52), 14); }],
     ["ink", "Same time next week?", () => [V(8, 8, 30), V(16, 5, 52)], () => { MUSIC.play("dawn"); WORLD.setMood("dawn", 4); }]
   ] },
-  endChoc: { ending: { id: "choc", title: "The Chocolate Trick", em: "🍫" }, mood: "ghost", music: "spooky", beats: [
+  endChoc: { epi: "dawn", ending: { id: "choc", title: "The Chocolate Trick", em: "🍫" }, mood: "ghost", music: "spooky", beats: [
     ["b", "Here's your coin, Captain.", () => [deck(-8, 9, 12), deck(-1, 8, 2.4)]],
     ["n", "Grimtide snatches it and bites it. Crunch. His ghostly eyes go wide.", () => [deck(0, 10, 9), deck(5, 11, 1.5)], () => MUSIC.sfx("bonk")],
     ["grim", "It's... it's... CHOCOLATE! I haven't tasted chocolate in three hundred years! MORE! Full sail to the lolly shop!", () => [deck(-1, 11, 12), deck(5, 11, 1.5)]],
     ["n", "And off goes the Soggy Biscuit at full speed, forgetting all about you.", () => [V(0, 12, 22), V(40, 8, 60)], () => { fadeDo(() => { kidsInBoat(); boatAt(V(20, 0, 34), V(30, 0, 52)); }); setTimeout(() => tween(5, k => W.bigShip.position.x = W.origins.ship.x + k * 180), 900); }],
     ["n", "While nobody's looking, {a} drops the real cursed coin over the side. Plop. This time, it doesn't come back.", () => [V(14, 5, 28), V(20, 1, 36)], () => { W.coin.position.set(20.6, 1.6, 36); W.coinShine = 1; arc(W.coin, V(22, -1, 39), 1.5, .9, () => { MUSIC.sfx("splash"); W.coin.position.y = -10; W.coinShine = 0; MUSIC.play("dawn"); WORLD.setMood("dawn", 4); }); }]
   ] },
-  endDuel: { ending: { id: "duel", title: "Duel at Midnight", em: "⚔️" }, mood: "ghost", music: "spooky", enter: () => setGrimSolid(true), beats: [
+  endDuel: { epi: "dawn", ending: { id: "duel", title: "Duel at Midnight", em: "⚔️" }, mood: "ghost", music: "spooky", enter: () => setGrimSolid(true), beats: [
     ["n", "CLANG! Grimtide spins around, gets tangled in his own crabby beard, and... BONK!", () => [deck(-2, 10, 15), deck(4, 9, 1.5)], () => { MUSIC.sfx("bonk"); tween(.8, k => W.grim.rotation.z = k * .5); }],
     ["n", "The captain topples over the rail. SPLOSH!", () => [deck(-6, 12, 22), deck(6, 2, 8)], () => { const g = W.grim, f = g.position.clone(); tween(1.3, (k, r) => { g.position.set(f.x + k * 2, f.y + Math.sin(r * Math.PI) * 3 - k * 9, f.z + k * 8); g.rotation.x = r * 2; }, () => { MUSIC.sfx("splash"); g.visible = false; bubbles(deck(7, 0, 10), 8); }); }],
     ["n", "The skeleton crew throw their hats in the air.", () => [deck(0, 11, 14), deck(0, 8, -4)], () => W.crew.forEach((c, i) => setTimeout(() => { c.userData.armL.rotation.z = -2.6; c.userData.armR.rotation.z = 2.6; MUSIC.sfx("jump"); tween(.5, (k, r) => c.position.y = 6.3 + Math.sin(r * Math.PI) * 1.2); }, i * 180))],
     ["bones", "NEW CAPTAINS! NEW CAPTAINS!", () => [deck(-4, 10, 14), deck(-2, 8, 0)], () => { MUSIC.play("dawn"); WORLD.setMood("dawn", 4); }]
   ] },
-  endScrub: { ending: { id: "scrub", title: "Saved by Mum", em: "🧽" }, mood: "ghost", music: "spooky", beats: [
+  endScrub: { epi: "dawn", ending: { id: "scrub", title: "Saved by Mum", em: "🧽" }, mood: "ghost", music: "spooky", beats: [
     ["n", "You run around the deck screaming. Grimtide runs around after you. The skeletons run around after him. Round and round, until everyone is too dizzy to stand.", () => [deck(0, 14, 18), deck(0, 7, 1)], () => { const g = W.grim, a = W.kidA, b = W.kidB; tween(3, (k, r) => { const ang = r * Math.PI * 4; a.position.set(Math.cos(ang) * 6, 6.35, 1 + Math.sin(ang) * 3); b.position.set(Math.cos(ang + .6) * 6, 6.35, 1 + Math.sin(ang + .6) * 3); g.position.set(Math.cos(ang - .8) * 6, 6.35, 1 + Math.sin(ang - .8) * 3); a.rotation.y = -ang; b.rotation.y = -ang; g.rotation.y = -ang; }); }],
     ["grim", "Fine. Now... SCRUB.", () => [deck(0, 10, 10), deck(3, 9, 1.5)], () => { W.kidA.position.set(-5, 6.35, 2.2); W.kidB.position.set(-2.5, 6.35, 3); W.kidA.rotation.y = W.kidB.rotation.y = 0; W.grim.position.set(5, 6.35, 1.5); W.grim.rotation.y = -Math.PI / 2 + .3; W.kidA.userData.scrub = W.kidB.userData.scrub = true; }],
     ["n", "So you scrub, and scrub, and scrub all night long... until, as the sun comes up, a voice rings out across the water:", () => [deck(-6, 9, 14), deck(-3.5, 7, 2.6)], () => { MUSIC.play("dawn"); WORLD.setMood("dawn", 5); }],
-    ["n", "\"BREAKFAAAAST!\"", () => [V(0, 10, 20), V(0, 4, -10)]],
+    ["mum", "BREAKFAAAAST!", () => [V(0, 10, 20), V(0, 4, -10)]],
     ["grim", "Is that... your MOTHER?! Even ghosts are scared of mums. Off ye go. Just this once.", () => [deck(0, 10, 10), deck(4, 10, 1.5)], () => { W.grim.userData.armL.rotation.z = -2.6; W.grim.userData.armR.rotation.z = 2.6; W.kidA.userData.scrub = W.kidB.userData.scrub = false; }]
   ] }
 };
@@ -1766,15 +1898,16 @@ function resolveShot(sh) { return typeof sh === "function" ? sh() : sh; }
 function nextBeat() {
   clearTimeout(autoTimer);
   const pg = PAGES[S.page]; if (!pg || !pg.beats) return;
-  if (S.beat >= pg.beats.length - 1) return pg.ending ? showEnding(pg) : showChoices();
+  if (S.beat >= pg.beats.length - 1) return pg.ending ? (pg.epi ? (S.endingPage = S.page, goPage(pg.epi)) : showEnding(pg)) : pg.epilogue ? showEnding(PAGES[S.endingPage]) : showChoices();
   S.beat++;
   const [who, text, sh, act] = pg.beats[S.beat];
   /* whenever Grimtide speaks, frame his face low-middle with room above for his bubble */
   if (who === "grim" && W.grim.visible) { if (act) act(); shot(grimShot(9)()); }
   else { if (sh) shot(resolveShot(sh)); if (act) act(); }
-  const t = fill(text);
+  const t = fill(typeof text === "function" ? text() : text);
   $("caption").classList.remove("show"); $("bubble").classList.remove("show"); $("bubble")._who = null;
   void $("caption").offsetWidth;
+  if (who === "mum") { $("caption").textContent = "Mum, from far away: \u201c" + t + "\u201d"; $("caption").classList.add("show"); mumShout(t); MUSIC.sfx("page"); $("next").classList.add("show"); return; }
   if (who === "n") { $("caption").textContent = t; $("caption").classList.add("show"); }
   else { const c = CHARS[who]; const bub = $("bubble"); bub.querySelector(".who").textContent = fill(c.name); bub.querySelector(".who").style.background = c.col; bub.querySelector(".txt").textContent = t; bub.dataset.who = who; bub.classList.add("show"); }
   MUSIC.sfx("page");
@@ -1797,7 +1930,7 @@ function showChoices() {
   else speak("n", "What will you do? " + list.map((c, i) => (i + 1) + ". " + c.label).join(". "));
 }
 function showEnding(pg) {
-  $("next").classList.remove("show");
+  $("next").classList.remove("show"); $("skipEpi").classList.remove("show"); store.set("seenDawn", true); W.macPot.userData.on = 0;
   const found = store.get("found", []); const isNew = !found.includes(pg.ending.id); if (isNew) { found.push(pg.ending.id); store.set("found", found); }
   const tot = eightTotal(), best = Math.max(store.get("best8", 0), tot); store.set("best8", best);
   const ends = Object.values(PAGES).filter(p => p.ending).map(p => p.ending);
