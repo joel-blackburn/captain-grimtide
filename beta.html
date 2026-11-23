@@ -2126,7 +2126,7 @@ const PAGES = {
     ["brine", "Lovely. But the salt isn't finished yet. It needs MOONLIGHT. Up we go!", sh("lhIn", 0, 5.5, 4.5, 2.6, 4.3, -4.6), () => { const j = W.saltJar; W.witch.add(j); j.position.set(.75, 2.6, .9); j.scale.setScalar(1); j.visible = true; }],
     ["n", "Up, up, up the twisty stairs. Round and round and round, all the way to the very top of the lighthouse.", sh("lhTop", 3.6, 4.6, 4.4, -2.4, 2.4, 0), () => lhTop()],
     ["n", "The giant green lamp hums and turns. Through the window, the moon shines one silver beam onto a little stone table.", sh("lhTop", -4.2, 4.4, 4, 3.4, 4.2, -3.4)],
-    ["n", "Brine holds her jar up in the moonbeam. The salt inside begins to glitter and glow, like a jar full of moonlight.", sh("lhTop", -.5, 4.3, 6.8, 4, 3.6, -1.6), () => { const j = W.saltJar, p0 = j.position.clone(); tween(.8, k => { j.position.lerpVectors(p0, V(-.5, 3.7, .9), k); j.scale.setScalar(1 + k * .5); }, () => { MUSIC.sfx("cheer"); sparkleAt(j.getWorldPosition(V())); j.children[0].material.emissiveIntensity = 2; }); }],
+    ["n", "Brine sets her jar down on the stone table, right in the moonbeam. The salt inside begins to glitter and glow, like a jar full of moonlight.", sh("lhTop", -.2, 4, 5.4, 4.2, 2.4, -2.6), () => { const j = W.saltJar; W.lhTop.attach(j); const p0 = j.position.clone(), s0 = j.scale.x; tween(1, (k, r) => { j.position.lerpVectors(p0, V(4.2, 1.8, -2.6), r); j.position.y += Math.sin(r * Math.PI) * .6; j.scale.setScalar(s0 + (1.5 - s0) * r); }, () => { MUSIC.sfx("cheer"); sparkleAt(j.getWorldPosition(V()).add(V(0, .6, 0))); tween(1.2, k => j.children[0].material.emissiveIntensity = .8 + k * 1.6); }); }],
     ["brine", "Moonlight Salt. One sprinkle on a ghost and POOF! He turns solid as a rock. Solid enough to bonk on the nose!", sh("lhTop", -1.5, 4.6, 5.8, 2.2, 3.4, -1.2), () => giveFly(W.saltJar, W.kidA, 1)],
     ["brine", "Throw it, don't eat it. And DON'T sneeze on it. Now shoo!", sh("lhTop", -.5, 4.3, 6.8, 4, 3.8, -1.4), () => popInBag(W.saltJar, "salt", W.kidA, 900)]
   ], choices: [{ label: "Back to the map", em: "🗺️", to: "map" }] },
@@ -2300,7 +2300,7 @@ function coinSpill() {
 /* the inside of the lighthouse: Brine's kitchen, and the lamp room at the top */
 function lhKitchen() { const w = W.witch; w.visible = true; W.lhIn.add(w); w.position.set(3.6, 0, -5.2); w.rotation.set(0, -.45, 0);
   placeKids(W.lhIn, V(-1.8, 0, 6.4), V(1.8, 0, 6.4), Math.PI); W.cat.userData.hiss(0); W.cat.userData.busy = false; W.kLadle.rotation.y = 0; W.kStirRing.visible = false; }
-function lhTop() { WORLD.setMood("lhTop", .4); const w = W.witch, j = W.saltJar; W.lhTop.add(w); w.position.set(4.6, 0, -1.2); w.rotation.set(0, -1.2, 0); j.children[0].material.emissiveIntensity = .8;
+function lhTop() { WORLD.setMood("lhTop", .4); const w = W.witch, j = W.saltJar; W.lhTop.add(w); w.position.set(5.4, 0, -4.4); w.rotation.set(0, -.9, 0); j.children[0].material.emissiveIntensity = .8;
   placeKids(W.lhTop, V(-3.6, 0, 1.2), V(-2.4, 0, 3.6), 1.95); }
 function lhOut() { const w = W.witch; if (w.parent !== W.light) { W.light.add(w); w.position.set(-2.6, 3.55, 0); w.rotation.set(0, -Math.PI / 2, 0); } const j = W.saltJar; if (j.parent !== W.light) W.light.add(j); }
 function openDoor() { W.witch.visible = true; tween(.5, k => W.doorPivot.rotation.y = k * 1.6); MUSIC.sfx("whoosh"); }
