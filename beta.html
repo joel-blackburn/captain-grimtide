@@ -129,6 +129,8 @@
   .won { font-size: 26px; font-weight: 900; margin: 6px 0; }
 
   /* game HUD */
+  #hudP8.pay { animation: payflash .6s ease; }
+  @keyframes payflash { 0% { transform: scale(1); } 30% { transform: scale(1.25); background: #ffd6d6; } 100% { transform: scale(1); } }
   #ghud { position: absolute; top: calc(max(10px, env(safe-area-inset-top)) + 58px); left: 50%; transform: translateX(-50%); display: none; gap: 8px; }
   #ghud.show { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; width: max-content; max-width: calc(100vw - 24px); }
   #ghud .chip { white-space: nowrap; justify-content: center; text-align: center; border-radius: 999px; padding: 6px 14px; }
@@ -1575,6 +1577,8 @@ const S = { a: "Sonny", b: "Wylie", narrator: store.get("narrator", "computer"),
             page: null, beat: 0, items: [], eight: {}, hours: 0, mode: "start", visited: [], flags: {}, frog: false, boatPos: null };
 const fill = t => t.replace(/\{a\}/g, S.a).replace(/\{b\}/g, S.b);
 const eightTotal = () => Object.values(S.eight).reduce((a, b) => a + b, 0);
+const purse = () => Math.max(0, eightTotal() - (S.spent || 0));
+const PRICE = 5;
 const ease = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 
@@ -2080,14 +2084,21 @@ const PAGES = {
     ["a", "Ewwww! Mermaid SNOT?!", sh("lhIn", -3.5, 3.6, 10.5, -1.8, 2.2, 6.4)]
   ], choices: [{ label: "Start brewing!", em: "🧪", to: "gameBrew" }] },
   gameBrew: { game: "brew", next: "lightRight", give: "salt", title: "Brew the Moonlight Salt", how: "Watch which ingredients Old Mother Brine picks, then tap them in the same order. At the end, swirl your finger round the cauldron to stir!" },
-  lightRight: { mood: "lhIn", music: "witch", enter: () => { lhKitchen(); }, beats: [
-    ["brine", "Hmph. Clever little barnacles. But it isn't finished yet. It needs MOONLIGHT. Up we go!", sh("lhIn", 0, 5.5, 4.5, 2.6, 4.3, -4.6), () => { const j = W.saltJar; W.witch.add(j); j.position.set(.75, 2.6, .9); j.scale.setScalar(1); j.visible = true; }],
+  lightRight: { price: true, mood: "lhIn", music: "witch", enter: () => { lhKitchen(); }, beats: [
+    ["brine", "Hmph. Clever little barnacles. Now, that'll be five pieces of eight. I told you, nothing's free!", sh("lhIn", 0, 5.5, 4.5, 2.6, 4.3, -4.6)],
+    ["n", "{a} counts out five shiny pieces of eight, one, two, three, four, five, into Brine's bony hand.", sh("lhIn", -.5, 4.6, 5.5, 2, 3.4, -2), () => payCoins(PRICE, W.witch)],
+    ["brine", "Lovely. But the salt isn't finished yet. It needs MOONLIGHT. Up we go!", sh("lhIn", 0, 5.5, 4.5, 2.6, 4.3, -4.6), () => { const j = W.saltJar; W.witch.add(j); j.position.set(.75, 2.6, .9); j.scale.setScalar(1); j.visible = true; }],
     ["n", "Up, up, up the twisty stairs. Round and round and round, all the way to the very top of the lighthouse.", sh("lhTop", 3.6, 4.6, 4.4, -2.4, 2.4, 0), () => lhTop()],
     ["n", "The giant green lamp hums and turns. Through the window, the moon shines one silver beam onto a little stone table.", sh("lhTop", -4.2, 4.4, 4, 3.4, 4.2, -3.4)],
     ["n", "Brine holds her jar up in the moonbeam. The salt inside begins to glitter and glow, like a jar full of moonlight.", sh("lhTop", -.5, 4.3, 6.8, 4, 3.6, -1.6), () => { const j = W.saltJar, p0 = j.position.clone(); tween(.8, k => { j.position.lerpVectors(p0, V(-.5, 3.7, .9), k); j.scale.setScalar(1 + k * .5); }, () => { MUSIC.sfx("cheer"); sparkleAt(j.getWorldPosition(V())); j.children[0].material.emissiveIntensity = 2; }); }],
     ["brine", "Moonlight Salt. One sprinkle on a ghost and POOF! He turns solid as a rock. Solid enough to bonk on the nose!", sh("lhTop", -1.5, 4.6, 5.8, 2.2, 3.4, -1.2), () => giveFly(W.saltJar, W.kidA, 1)],
     ["brine", "Throw it, don't eat it. And DON'T sneeze on it. Now shoo!", sh("lhTop", -.5, 4.3, 6.8, 4, 3.8, -1.4), () => popInBag(W.saltJar, "salt", W.kidA, 900)]
   ], choices: [{ label: "Back to the map", em: "🗺️", to: "map" }] },
+  lightRightShort: { mood: "lhIn", music: "witch", enter: () => { lhKitchen(); }, beats: [
+    ["brine", "Hmph. Clever little barnacles. Now, that'll be five pieces of eight. I told you, nothing's free!", sh("lhIn", 0, 5.5, 4.5, 2.6, 4.3, -4.6)],
+    ["n", () => `{a} and {b} turn out every pocket. ${purse() ? "Only " + purse() + (purse() === 1 ? " piece" : " pieces") + " of eight." : "Not a single piece of eight."} That's ${shortBy()} short!`, sh("lhIn", 5.5, 4, 11, .5, 2.2, 6)],
+    ["brine", () => S.hours < 3 ? "No pay, no salt! Brew it again and earn some more. But it'll cost you an hour, mind." : "No pay, no salt! And it's nearly midnight, so there's no time to brew another. Off you go!", sh("lhIn", -1.5, 5.5, 5.5, 1.2, 4.3, -4.6)]
+  ], choices: [{ label: "Have another go (costs an hour)", em: "⏳", to: "gameBrew", cost: 1, when: () => S.hours < 3 }, { label: "Leave without the salt", em: "🗺️", to: "map" }] },
   lightWrong: { mood: "witch", music: "witch", beats: [
     ["brine", "WRONG! A snake has a head and a tail AND a body. It's ALL body, you silly sprats!", sh("light", -9, 6.3, 3.4, -2.7, 6.7, 0)],
     ["n", "SLAM! The door shuts in your faces.", sh("light", -12, 6, 4, -3, 5.5, 0), () => { W.witch.visible = false; tween(.3, k => W.doorPivot.rotation.y = 1.6 * (1 - k)); MUSIC.sfx("bonk"); }],
@@ -2106,25 +2117,39 @@ const PAGES = {
     ["n", "Back in Gullwhistle, you tie up the rowboat and tiptoe into the town. Down a narrow lane, between the wonky old houses, lanterns are glowing...", () => [V(10, 9, 14), V(0, 5, -16)]],
     ["n", "This is Smugglers' Alley. It's packed with stalls, and shady pirates selling shady things.", sh("alley", 2.5, 4.4, 21, 0, 3.6, -2), () => fadeDo(() => placeKids(W.alley, V(-1.4, 0, 5.4), V(1.2, 0, 5.8), Math.PI))],
     ["lolly", "Lucky eyeballs! Pickled rats! Gold chocolate coins! Get 'em while they're sticky!", sh("alley", 1, 4.5, 11, -1, 2.8, -2), () => { const L = W.lolly; tween(1.2, (k, r) => { L.userData.armR.rotation.z = Math.sin(r * Math.PI * 4) * .6 + .9; L.userData.armR.rotation.x = -.5; }, () => { L.userData.armR.rotation.set(0, 0, 0); }); }],
-    ["a", "Ooh! Can we get lollies? PLEEEASE?", "kidsClose"],
-    ["b", "Not now, {a}. We've got a cursed coin to look after.", "kidsClose"],
+    ["a", "Ooh! Can we get lollies? PLEEEASE?", sh("alley", 1.6, 3.5, -.6, -.1, 2.5, 5.6)],
+    ["b", "Not now, {a}. We've got a cursed coin to look after.", sh("alley", 1.6, 3.5, -.6, -.1, 2.5, 5.6)],
     ["n", "Up on a rooftop, something is watching you. Something small and hairy... in a waistcoat.", sh("alley", 3, 8.6, 5.5, -5, 7.6, -1.5), () => { W.monkey.userData.head.rotation.y = -.6; }],
     ["n", "The monkey drops off the roof, snatches the cursed coin out of {b}'s pocket, and scrambles straight back up the wall!", sh("alley", 3, 6, 16, 0, 5, 2), () => { const m = W.monkey, P = W.monkeyPerch; tween(.6, (k, r) => m.position.set(P.x + (1.2 - P.x) * k, P.y + (.6 - P.y) * k + Math.sin(r * Math.PI) * 1.5, P.z + (5.6 - P.z) * k), () => { MUSIC.sfx("coin"); tween(1.3, (k, r) => { m.position.set(1.2 + k * 3.6, .6 + k * 8.2, 5.6 - k * 2); m.rotation.y = -Math.PI / 2; }, () => tween(.8, k => m.position.set(4.8 + k * 4, 8.8 + k * 1.6, 3.6 - k * 6))); }); }]
   ], choices: [{ label: "Chase it over the rooftops", em: "🏃", to: "gameRoof" }, { label: "Buy a banana and wait", em: "🍌", to: "gameCatch" }] },
   gameRoof: { game: "roof", next: "alleyRoof", title: "Rooftop Run", how: "After that monkey! Tap to jump over the gaps between the roofs. Grab pieces of eight as you go." },
-  alleyRoof: { mood: "night", music: "market", give: ["coin", "choc"], enter: () => placeKids(W.alley, V(-1.4, 0, 5.4), V(1.2, 0, 5.8), Math.PI), beats: [
+  alleyRoof: { price: true, mood: "night", music: "market", give: ["coin", "choc"], enter: () => placeKids(W.alley, V(-1.4, 0, 5.4), V(1.2, 0, 5.8), Math.PI), beats: [
     ["n", "You climb, leap and slide across the slippery rooftops. {a} grabs the monkey's tail. {b} grabs the coin. And all three of you crash through the lolly-seller's awning...", sh("alley", 4, 7, 16, -1, 4, -2), () => { W.monkey.position.set(-1, 9, -1); tween(.7, k => W.monkey.position.y = 9 - k * 6.8); }],
     ["n", "...straight into the lolly-seller's stall. CRASH! Chocolate coins everywhere!", sh("alley", 2, 4.5, 10, 0, 1.5, 2), () => { MUSIC.sfx("bonk"); W.chocPile.position.set(-.5, 0, 3); }],
-    ["lolly", "HA! Best show I've seen all week! Here, have one on the house, my little pirates.", sh("alley", 2.5, 4.2, 9.5, -.4, 2.8, 0), () => { const c = W.chocGift; c.position.copy(W.lolly.getWorldPosition(V()).add(V(.9, 3.2, 1))); c.scale.setScalar(1.2); MUSIC.sfx("coin"); giveFly(c, W.kidA, 1.1); }],
+    ["lolly", "HA! Best show I've seen all week! Now, you squashed half my stall, so you'll be buying something. Five pieces of eight for a chocolate coin!", sh("alley", 2.5, 4.2, 9.5, -.4, 2.8, 0)],
+    ["a", "Lollies! YESSS!", sh("alley", 2.5, 4.2, 9.5, -.4, 2.8, 0), () => payCoins(PRICE, W.lolly, () => { const c = W.chocGift; c.position.copy(W.lolly.getWorldPosition(V()).add(V(.9, 3.2, 1))); c.scale.setScalar(1.2); MUSIC.sfx("coin"); giveFly(c, W.kidA, 1.1); })],
     ["n", "It's a gold-wrapped chocolate coin. Hmm... it looks EXACTLY like Grimtide's cursed coin. That could come in handy for a sneaky trick! Into the bag it goes.", () => { const h = kidHand(); return [h.clone().add(V(2.6, 1.2, 3.2)), h]; }, () => popInBag(W.chocGift, "choc", W.kidA, 2200)]
   ], choices: [{ label: "Back to the map", em: "🗺️", to: "map" }] },
   gameCatch: { game: "catch", next: "alleyBanana", title: "Coin Catch", how: "While you wait, the lolly stall wobbles... and chocolate coins rain down! Drag the hat to catch them, but dodge the rotten fish!" },
-  alleyBanana: { mood: "night", music: "market", give: ["coin", "choc"], enter: () => { hideAt(W.catchHat); placeKids(W.alley, V(-1.4, 0, 5.4), V(1.2, 0, 5.8), Math.PI); W.monkey.position.set(3, 0, 4.5); W.monkey.rotation.y = -.6; }, beats: [
+  alleyBanana: { price: true, mood: "night", music: "market", give: ["coin", "choc"], enter: () => { hideAt(W.catchHat); placeKids(W.alley, V(-1.4, 0, 5.4), V(1.2, 0, 5.8), Math.PI); W.monkey.position.set(3, 0, 4.5); W.monkey.rotation.y = -.6; }, beats: [
     ["n", "The monkey sniffs the air. It can't resist. It creeps back down, swaps the cursed coin for the banana, and eats it in three bites, peel and all.", sh("alley", 6, 4, 12, 2, 1.5, 4)],
-    ["lolly", "Smart thinking! Here, have one on the house, my little pirates.", sh("alley", 2.5, 4.2, 9.5, -.4, 2.8, 0), () => { const c = W.chocGift; c.position.copy(W.lolly.getWorldPosition(V()).add(V(.9, 3.2, 1))); c.scale.setScalar(1.2); MUSIC.sfx("coin"); giveFly(c, W.kidA, 1.1); }],
+    ["lolly", "Smart thinking! Now, how about a treat for clever pirates? Five pieces of eight for a chocolate coin!", sh("alley", 2.5, 4.2, 9.5, -.4, 2.8, 0)],
+    ["a", "Lollies! YESSS!", sh("alley", 2.5, 4.2, 9.5, -.4, 2.8, 0), () => payCoins(PRICE, W.lolly, () => { const c = W.chocGift; c.position.copy(W.lolly.getWorldPosition(V()).add(V(.9, 3.2, 1))); c.scale.setScalar(1.2); MUSIC.sfx("coin"); giveFly(c, W.kidA, 1.1); })],
     ["n", "It's a gold-wrapped chocolate coin. Hmm... it looks EXACTLY like Grimtide's cursed coin. That could come in handy for a sneaky trick! Into the bag it goes.", () => { const h = kidHand(); return [h.clone().add(V(2.6, 1.2, 3.2)), h]; }, () => popInBag(W.chocGift, "choc", W.kidA, 2200)]
   ], choices: [{ label: "Back to the map", em: "🗺️", to: "map" }] },
 
+  alleyRoofShort: { mood: "night", music: "market", give: "coin", enter: () => { hideAt(W.catchHat); placeKids(W.alley, V(-1.4, 0, 5.4), V(1.2, 0, 5.8), Math.PI); }, beats: [
+    ["n", "You got the cursed coin back from that cheeky monkey! On the way down, you pass the lolly-seller's stall. Gold chocolate coins, glittering...", sh("alley", 4, 7, 16, -1, 4, -2)],
+    ["lolly", "Five pieces of eight for a chocolate coin, my little pirates!", sh("alley", 2.5, 4.2, 9.5, -.4, 2.8, 0)],
+    ["n", () => `{a} and {b} turn out every pocket. ${purse() ? "Only " + purse() + (purse() === 1 ? " piece" : " pieces") + " of eight." : "Not a single piece of eight."} That's ${shortBy()} short!`, sh("alley", 1.6, 3.5, -.6, -.1, 2.5, 5.6)],
+    ["lolly", () => S.hours < 3 ? "No coins, no chocolate! Come back when your pockets jingle." : "No coins, no chocolate! And it's nearly midnight. Off home with you!", sh("alley", 2.5, 4.2, 9.5, -.4, 2.8, 0)]
+  ], choices: [{ label: "Have another go (costs an hour)", em: "⏳", to: "gameRoof", cost: 1, when: () => S.hours < 3 }, { label: "Leave without the chocolate", em: "🗺️", to: "map" }] },
+  alleyBananaShort: { mood: "night", music: "market", give: "coin", enter: () => { hideAt(W.catchHat); placeKids(W.alley, V(-1.4, 0, 5.4), V(1.2, 0, 5.8), Math.PI); }, beats: [
+    ["n", "The monkey swaps the cursed coin for the banana and gobbles it up. You've got the coin back! Then you spot the lolly-seller's chocolate coins, glittering...", sh("alley", 4, 7, 16, -1, 4, -2)],
+    ["lolly", "Five pieces of eight for a chocolate coin, my little pirates!", sh("alley", 2.5, 4.2, 9.5, -.4, 2.8, 0)],
+    ["n", () => `{a} and {b} turn out every pocket. ${purse() ? "Only " + purse() + (purse() === 1 ? " piece" : " pieces") + " of eight." : "Not a single piece of eight."} That's ${shortBy()} short!`, sh("alley", 1.6, 3.5, -.6, -.1, 2.5, 5.6)],
+    ["lolly", () => S.hours < 3 ? "No coins, no chocolate! Come back when your pockets jingle." : "No coins, no chocolate! And it's nearly midnight. Off home with you!", sh("alley", 2.5, 4.2, 9.5, -.4, 2.8, 0)]
+  ], choices: [{ label: "Have another go (costs an hour)", em: "⏳", to: "gameCatch", cost: 1, when: () => S.hours < 3 }, { label: "Leave without the chocolate", em: "🗺️", to: "map" }] },
   /* ================= MIDNIGHT ================= */
   midnight: { mood: "ghost", music: "boss", enter: () => { resetShip(); crewFace(true); kidsInBoat(); boatAt(V(20, 0, 36), V(30, 0, 52)); W.ghostShip.visible = false; shipIn(5); }, beats: [
     ["n", "DONG. DONG. DONG. Midnight.", () => [V(6, 8, 22), V(28, 6, 60)], () => [0, 900, 1800].forEach(d => setTimeout(() => MUSIC.sfx("bell"), d))],
@@ -2201,6 +2226,14 @@ const PAGES = {
     ["grim", "But I'll keep THIS.", () => [deck(0, 10, 10), deck(4, 10, 1.5)], () => { const g = W.grim; g.userData.armL.rotation.z = 0; g.userData.armR.rotation.set(-1.2, 0, 0); coinFly(kidHand(W.kidB), () => g.userData.armR.localToWorld(V(0, -2, .3)), 2, 1, () => { MUSIC.sfx("coin"); sparkleAt(W.coin.position.clone()); }); }]
   ] }
 };
+/* paying for something: pieces of eight fly from the kids' hands to whoever is selling */
+function payCoins(n, to, done) {
+  const from = kidHand(W.kidA), dest = () => to.getWorldPosition(V()).add(V(0, 3, 0));
+  S.spent = (S.spent || 0) + n;
+  for (let i = 0; i < n; i++) setTimeout(() => { const c = new THREE.Mesh(new THREE.CylinderGeometry(.32, .32, .06, 12), WORLD.flat(0xeef2f6, { metalness: .6, roughness: .25, emissive: 0x777777 })); c.rotation.x = Math.PI / 2; c.position.copy(from); WORLD.scene.add(c);
+    arc(c, dest(), 1.2, .55, () => { WORLD.scene.remove(c); MUSIC.sfx("coin"); drawHud(); if (i === n - 1) { const h = $("hudP8"); if (h) { h.classList.remove("pay"); void h.offsetWidth; h.classList.add("pay"); } done && setTimeout(done, 250); } }); }, i * 160);
+}
+const shortBy = () => PRICE - purse();
 /* the inside of the lighthouse: Brine's kitchen, and the lamp room at the top */
 function lhKitchen() { const w = W.witch; w.visible = true; W.lhIn.add(w); w.position.set(3.6, 0, -5.2); w.rotation.set(0, -.45, 0);
   placeKids(W.lhIn, V(-1.8, 0, 6.4), V(1.8, 0, 6.4), Math.PI); W.cat.userData.hiss(0); W.cat.userData.busy = false; W.kLadle.rotation.y = 0; W.kStirRing.visible = false; }
@@ -2229,6 +2262,8 @@ function goPage0(id, opts = {}) {
   if (opts.cost) S.hours += opts.cost;
   if (opts.flag) S.flags[opts.flag] = true;
   if (id === "map" && S.hours >= 3) id = "midnight";
+  /* items you have to buy: not enough pieces of eight, and you get the 'short' scene instead (and not the item) */
+  if (PAGES[id] && PAGES[id].price && purse() < PRICE) { if (opts.give) S.items = S.items.filter(x => x !== opts.give); id = id + "Short"; }
   const pg = PAGES[id]; S.page = id; S.beat = -1;
   const arr = v => v ? [].concat(v) : [];
   arr(pg.take).forEach(it => S.items = S.items.filter(x => x !== it));
@@ -2269,7 +2304,7 @@ function nextBeat() {
 function showChoices() {
   const pg = PAGES[S.page];
   $("next").classList.remove("show");
-  const list = pg.choices.filter(c => !c.need || S.items.includes(c.need));
+  const list = pg.choices.filter(c => (!c.need || S.items.includes(c.need)) && (!c.when || c.when()));
   const box = $("choices"); box.innerHTML = "";
   list.forEach(c => {
     const b = el("button", "choice" + (list.length === 1 ? " solo" : "")); b.type = "button";
@@ -2302,7 +2337,7 @@ function showEnding(pg) {
   }, 900);
 }
 function newGame() {
-  S.items = []; S.eight = {}; S.hours = 0; S.visited = []; S.flags = {}; S.boatPos = null; S.frog = false;
+  S.items = []; S.eight = {}; S.spent = 0; S.hours = 0; S.visited = []; S.flags = {}; S.boatPos = null; S.frog = false;
   resetWorld(); goPage("intro1");
 }
 function placeBubble() {
@@ -2359,9 +2394,10 @@ function endGame(res) {
   MUSIC.sfx(res.pieces ? "win" : "lose");
   showPanel(`<h2>${res.pieces ? "Arrr, well done!" : "Good try!"}</h2><p>${res.msg}</p><div class="won">+ <span class="p8">8</span> ${res.pieces} pieces of eight</div>${before > res.pieces ? `<p style="margin:0">Your best here is ${before}</p>` : ""}`, panel => {
     const row = el("div", "row");
-    const again = el("button", "big alt", "🔁 Have another go"); again.onclick = () => { $("panel").classList.remove("show"); GAME.stop(); GAME = GAMES3D[pg.game](); GAME.setup(); S.mode = "game"; GAME.start(); hudGame(); };
     const go = el("button", "big", "Carry on ▶"); go.onclick = carry;
-    row.append(again, go); panel.appendChild(row);
+    /* a free replay only in the dock game; at the stops a replay costs an hour (see the 'short' scenes) */
+    if (pg.game === "fish") { const again = el("button", "big alt", "🔁 Have another go"); again.onclick = () => { $("panel").classList.remove("show"); GAME.stop(); GAME = GAMES3D[pg.game](); GAME.setup(); S.mode = "game"; GAME.start(); hudGame(); }; row.append(again); }
+    row.append(go); panel.appendChild(row);
   });
   speak("n", res.msg);
 }
@@ -2856,7 +2892,7 @@ const ITEM_INFO = {
 let lastBag = 0;
 function drawHud() {
   const left = Math.max(0, 3 - S.hours), n = S.items.length, grew = n > lastBag; lastBag = n;
-  $("hud").innerHTML = `<span class="chip" id="hudMoon">🌙 ${[0, 1, 2].map(i => `<span class="pip${i < S.hours ? " gone" : ""}"></span>`).join("")} ${left}h</span><button class="chip bagbtn${grew ? " grew" : ""}" id="bagBtn" aria-label="Open your bag">🎒 ${n ? S.items.map(i => `<span class="bagit">${ITEM_EM[i] || ""}</span>`).join("") : `<span class="bagempty">empty</span>`}</button><span class="chip" id="hudP8"><span class="p8">8</span> ${eightTotal()}</span>`;
+  $("hud").innerHTML = `<span class="chip" id="hudMoon">🌙 ${[0, 1, 2].map(i => `<span class="pip${i < S.hours ? " gone" : ""}"></span>`).join("")} ${left}h</span><button class="chip bagbtn${grew ? " grew" : ""}" id="bagBtn" aria-label="Open your bag">🎒 ${n ? S.items.map(i => `<span class="bagit">${ITEM_EM[i] || ""}</span>`).join("") : `<span class="bagempty">empty</span>`}</button><span class="chip" id="hudP8"><span class="p8">8</span> ${purse()}</span>`;
   $("bagBtn").onclick = openBag; if (SPOT) { const e = $(SPOT); if (e) e.classList.add("spot"); }
 }
 let SPOT = null;
@@ -2920,7 +2956,7 @@ function sailTo(pl) {
 function showStart() {
   hush(); clearTimeout(autoTimer); hideStory(); clearLabels(); $("mapbar").classList.remove("show"); $("ghud").classList.remove("show"); hint(null); $("hud").style.display = "none"; $("dim").style.opacity = 0;
   if (GAME) { GAME.stop(); GAME = null; }
-  S.mode = "start"; S.items = []; S.eight = {}; S.hours = 0; S.visited = []; S.flags = {}; S.boatPos = null;
+  S.mode = "start"; S.items = []; S.eight = {}; S.spent = 0; S.hours = 0; S.visited = []; S.flags = {}; S.boatPos = null;
   resetWorld(); WORLD.setMood("dusk", 1.5); MUSIC.play("shanty");
   CAM.follow = null; CAM.orbit = { c: V(0, 2, 3), r: 20, h: 8, speed: .08 }; CAM.drift = 1;
   const dad = S.narrator === "dad";
