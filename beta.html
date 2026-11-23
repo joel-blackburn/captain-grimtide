@@ -38,6 +38,9 @@
   #skipEpi { position: fixed; right: max(14px, env(safe-area-inset-right)); top: calc(max(12px, env(safe-area-inset-top)) + 64px); display: none; font: inherit; font-family: Bungee, sans-serif; font-size: 14px; padding: 8px 14px; border-radius: 14px; border: 3px solid var(--navy); background: #fff; color: var(--navy); box-shadow: 0 4px 0 var(--navy); z-index: 25; cursor: pointer; }
   #skipEpi.show { display: block; }
   #toast { position: fixed; left: 50%; bottom: calc(max(14px, env(safe-area-inset-bottom)) + 92px); transform: translate(-50%, 40px); opacity: 0; display: flex; align-items: center; gap: 12px; background: var(--paper); border: 4px solid var(--navy); border-radius: 20px; padding: 10px 18px 10px 12px; box-shadow: 0 6px 0 var(--navy); font-size: 17px; font-weight: 800; color: var(--navy); z-index: 30; pointer-events: none; transition: transform .35s cubic-bezier(.2, 1.6, .4, 1), opacity .25s; white-space: nowrap; }
+  #featherPop { position: fixed; left: 50%; bottom: calc(max(14px, env(safe-area-inset-bottom)) + 76px); transform: translate(-50%, 30px); opacity: 0; display: flex; align-items: center; gap: 10px; background: var(--paper); border: 4px solid var(--navy); border-radius: 20px; padding: 8px 16px 8px 10px; box-shadow: 0 5px 0 var(--navy); font-size: 17px; font-weight: 800; color: var(--navy); z-index: 30; pointer-events: none; transition: transform .35s cubic-bezier(.2, 1.6, .4, 1), opacity .25s; white-space: nowrap; }
+  #featherPop.show { transform: translate(-50%, 0); opacity: 1; }
+  #featherPop .tbig { font-size: 32px; line-height: 1; }
   #toast.show { transform: translate(-50%, 0); opacity: 1; }
   #toast .tbig { font-size: 40px; line-height: 1; }
   #toast b { font-family: Bungee, sans-serif; font-weight: 400; color: var(--pink); }
@@ -180,7 +183,7 @@
   <div id="labels"></div>
   <div id="mapbar"></div>
   <div class="panel" id="panel"></div>
-  <div id="toast"></div>
+  <div id="featherPop"></div><div id="toast"></div>
   <button id="skipEpi" onclick="hush(); showEnding(PAGES[S.endingPage])">Skip to treasure ⏭</button>
   <div id="bag" onclick="if (event.target === this) closeBag()"></div>
 </div>
@@ -344,6 +347,7 @@ const MUSIC = (() => {
     splat: t => { noise(t, .25, .3, sfxBus, 600, .6, "lowpass", 150); tone(180, t, .2, "sawtooth", .08, sfxBus, 90); },
     error: t => { tone(160, t, .25, "sawtooth", .12, sfxBus); tone(150, t + .15, .3, "sawtooth", .12, sfxBus); },
     burp: t => { tone(95, t, .55, "sawtooth", .16, sfxBus, 55); noise(t, .5, .25, sfxBus, 300, .8, "lowpass", 120); },
+    squawk: t => { tone(1500, t, .09, "sawtooth", .07, sfxBus, 900); tone(1700, t + .11, .14, "sawtooth", .07, sfxBus, 800); },
     hiss: t => noise(t, .7, .16, sfxBus, 3500, 1, "highpass"),
     tick: t => tone(1800, t, .03, "square", .05, sfxBus),
     cheer: t => [0, 4, 7, 12].forEach((s, i) => tone(mtof(74 + s), t + i * .09, .3, "square", .07, sfxBus)),
@@ -1931,11 +1935,9 @@ const PAGES = {
   ], choices: [{ label: "Grab the map!", em: "🗺️", to: "howto" }] },
   /* how to play: Mister Feathers explains the quest, the moon clock, the bag and pieces of eight */
   howto: { mood: "fog", music: "spooky", hud: true, enter: () => { if (!W.parrot.visible) flyParrotIn(); }, beats: [
-    ["feathers", "Listen up, {a} and {b}! From tonight, ye're not cabin kids any more. Ye're PIRATES on a quest: get rid of that cursed coin before midnight!", "parrotShot", () => spotlight(null)],
-    ["feathers", "See the moon up top? That's yer clock. Every stop ye visit takes ONE hour. When all three hours are gone... it's MIDNIGHT!", "parrotShot", () => spotlight("hudMoon")],
-    ["feathers", "That's yer bag. Treasures ye find go in there. Tap it any time to have a look. Some of 'em might save yer skins at midnight!", "parrotShot", () => spotlight("bagBtn")],
-    ["feathers", "And every game ye play wins ye pieces of eight! Shiny pirate coins! Grab as many as ye can, ye scallywags!", "parrotShot", () => spotlight("hudP8")],
-    ["feathers", "Now tap a place on the map, and row like the wind! SQUAWK!", "kidsClose", () => spotlight(null)]
+    ["feathers", "Ye're PIRATES now, {a} and {b}! Get rid of that cursed coin before midnight!", "parrotShot", () => spotlight(null)],
+    ["feathers", "The moon's yer clock. Every stop takes ONE hour!", "parrotShot", () => spotlight("hudMoon")],
+    ["feathers", "Win pieces of eight to buy things. Treasures go in yer bag. Now pick a stop! SQUAWK!", "parrotShot", () => spotlight(["hudP8", "bagBtn"])]
   ], choices: [{ label: "Row to the first stop!", em: "🚣", to: "map" }] },
   map: { map: true },
 
@@ -2860,7 +2862,7 @@ const PLACES = [
   { id: "alley", name: "Smugglers' Alley", em: "🏮", sea: SEA.alley, label: V(4, 16, -12), start: "alley1" }
 ];
 function enterMap() {
-  S.mode = "map"; S.frog = false;
+  S.mode = "map"; S.frog = false; spotlight(null);
   hideStory(); MUSIC.play("shanty"); WORLD.setMood("night", 3);
   kidsInBoat();
   W.rowboat.position.copy(S.boatPos || SEA.harbour); W.rowboat.position.y = 0;
@@ -2870,6 +2872,8 @@ function enterMap() {
   if (W.bigTentacle.position.y > -10) { const y1 = W.bigTentacle.position.y; tween(1, k => W.bigTentacle.position.y = y1 - k * 30); }
   shot(mapShot(), 3.2); CAM.drift = .3;
   setTimeout(buildLabels, 1800);
+  /* back from a stop: Mister Feathers squawks how many hours are left (no tapping needed) */
+  const hrs = 3 - S.hours; if (S.visited.length && hrs > 0) setTimeout(() => { if (S.mode !== "map") return; const fp = $("featherPop"); fp.innerHTML = `<span class="tbig">🦜</span><span>SQUAWK! ${hrs === 1 ? "Only ONE hour left. Hurry!" : hrs + " hours left!"}</span>`; fp.classList.remove("show"); void fp.offsetWidth; fp.classList.add("show"); MUSIC.sfx("squawk"); clearTimeout(fp._h); fp._h = setTimeout(() => fp.classList.remove("show"), 2800); }, 1500);
   $("hud").style.display = "flex"; drawHud();
   const bar = $("mapbar"); bar.innerHTML = ""; const b = el("button", "choice", "");
   b.style.background = "#0d2f2a"; b.append(el("span", "em", "🏴‍☠️"), el("span", null, "Sail out to face Grimtide now"));
@@ -2893,10 +2897,10 @@ let lastBag = 0;
 function drawHud() {
   const left = Math.max(0, 3 - S.hours), n = S.items.length, grew = n > lastBag; lastBag = n;
   $("hud").innerHTML = `<span class="chip" id="hudMoon">🌙 ${[0, 1, 2].map(i => `<span class="pip${i < S.hours ? " gone" : ""}"></span>`).join("")} ${left}h</span><button class="chip bagbtn${grew ? " grew" : ""}" id="bagBtn" aria-label="Open your bag">🎒 ${n ? S.items.map(i => `<span class="bagit">${ITEM_EM[i] || ""}</span>`).join("") : `<span class="bagempty">empty</span>`}</button><span class="chip" id="hudP8"><span class="p8">8</span> ${purse()}</span>`;
-  $("bagBtn").onclick = openBag; if (SPOT) { const e = $(SPOT); if (e) e.classList.add("spot"); }
+  $("bagBtn").onclick = openBag; if (SPOT) [].concat(SPOT).forEach(i => { const e = $(i); if (e) e.classList.add("spot"); });
 }
 let SPOT = null;
-function spotlight(id) { SPOT = id; document.querySelectorAll("#hud .spot").forEach(e => e.classList.remove("spot")); if (id && $(id)) { $(id).classList.add("spot"); MUSIC.sfx("tick"); } }
+function spotlight(id) { SPOT = id; document.querySelectorAll("#hud .spot").forEach(e => e.classList.remove("spot")); [].concat(id || []).forEach(i => { if ($(i)) $(i).classList.add("spot"); }); if (id) MUSIC.sfx("tick"); }
 function openBag() {
   MUSIC.sfx("page");
   const list = S.items.length ? S.items.map(i => `<div class="bagcard"><div class="bagbig">${ITEM_EM[i]}</div><div><b>${ITEM_INFO[i][0]}</b><p>${ITEM_INFO[i][1]}</p></div></div>`).join("") : `<p class="bagnone">Nothing in here yet. Keep exploring!</p>`;
