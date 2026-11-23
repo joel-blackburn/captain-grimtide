@@ -337,6 +337,7 @@ const MUSIC = (() => {
     clang: t => { tone(1400, t, .4, "square", .07, sfxBus); tone(2100, t, .35, "triangle", .08, sfxBus); noise(t, .15, .2, sfxBus, 5000, 2); },
     swish: t => noise(t, .2, .2, sfxBus, 1200, 3, "bandpass", 4000),
     ouch: t => tone(300, t, .3, "sawtooth", .12, sfxBus, 150),
+    woof: t => { tone(330, t, .09, "square", .07, sfxBus, 240); tone(300, t + .16, .11, "square", .07, sfxBus, 210); },
     jump: t => tone(300, t, .18, "square", .07, sfxBus, 700),
     splat: t => { noise(t, .25, .3, sfxBus, 600, .6, "lowpass", 150); tone(180, t, .2, "sawtooth", .08, sfxBus, 90); },
     error: t => { tone(160, t, .25, "sawtooth", .12, sfxBus); tone(150, t + .15, .3, "sawtooth", .12, sfxBus); },
@@ -425,22 +426,60 @@ const WORLD = (() => {
   }
 
   /* ---------- characters ---------- */
-  function kid(shirt, band) {
-    const k = group();
-    const legs = [-.22, .22].map(x => box(.3, .8, .3, C.rockDark, x, .4, 0, k));
-    box(.95, .95, .55, shirt, 0, 1.25, 0, k);
-    box(.97, .14, .57, C.navy, 0, .9, 0, k);
-    const armL = group(-.6, 1.65, 0, k), armR = group(.6, 1.65, 0, k);
-    box(.22, .8, .22, C.skin, 0, -.36, 0, armL); box(.22, .8, .22, C.skin, 0, -.36, 0, armR);
-    const head = group(0, 2.15, 0, k);
-    box(.8, .8, .8, C.skin, 0, 0, 0, head);
-    box(.86, .25, .86, band, 0, .35, 0, head);
-    box(.18, .3, .1, band, .3, .2, -.45, head);
-    [-.18, .18].forEach(x => box(.1, .14, .05, glowMat(C.navy), x, .05, .41, head));
-    box(.24, .06, .05, glowMat(0x8a3a2a), 0, -.18, .41, head);
-    const anchor = group(0, 3.2, 0, k);
-    k.userData = { armL, armR, head, legs, anchor, base: 0 };
+  /* a cabin boy: striped sailor shirt, neckerchief, rolled trousers, bare feet, his own haircut, and a face that changes */
+  function kid(o) {
+    const k = group(), skin = flat(C.skin), hairM = flat(o.hair), dark = glowMat(0x2a1a14);
+    const legs = [-.2, .2].map(x => { const l = group(x, .82, 0, k); box(.3, .46, .3, o.pants, 0, -.2, 0, l); box(.32, .1, .32, 0xe8dcc0, 0, -.46, 0, l); box(.24, .3, .24, C.skin, 0, -.65, 0, l); box(.26, .1, .38, C.skin, 0, -.79, .06, l); return l; });
+    box(.95, .2, .57, o.pants, 0, .92, 0, k); box(.97, .08, .59, 0x5a3a20, 0, 1.0, 0, k);
+    box(.92, .82, .52, 0xffffff, 0, 1.44, 0, k);
+    [1.16, 1.36, 1.56, 1.76].forEach(y => box(.94, .09, .54, o.shirt, 0, y, 0, k));
+    const nk = mesh(new THREE.ConeGeometry(.24, .34, 3), flat(0xd63a3a), 0, 1.66, .27, k); nk.rotation.x = Math.PI; nk.rotation.y = Math.PI; nk.scale.z = .35;
+    box(.5, .12, .5, 0xd63a3a, 0, 1.86, 0, k);
+    const armL = group(-.58, 1.78, 0, k), armR = group(.58, 1.78, 0, k);
+    [armL, armR].forEach(a => { box(.26, .3, .26, 0xffffff, 0, -.12, 0, a); box(.27, .08, .27, o.shirt, 0, -.2, 0, a); box(.2, .5, .2, C.skin, 0, -.5, 0, a); box(.22, .16, .22, C.skin, 0, -.8, 0, a); });
+    const head = group(0, 2.3, 0, k);
+    box(.8, .8, .76, skin, 0, 0, 0, head);
+    [-1, 1].forEach(sd => box(.08, .2, .14, C.skin, sd * .42, -.02, 0, head));
+    const eyes = [-1, 1].map(sd => { const e = group(sd * .17, .04, .385, head); box(.16, .18, .02, 0xffffff, 0, 0, 0, e); box(.09, .11, .02, 0x2a1a14, 0, -.01, .012, e); box(.035, .035, .01, glowMat(0xffffff), .02, .03, .024, e); return e; });
+    const brows = [-1, 1].map(sd => box(.2, .05, .03, o.hair, sd * .17, .2, .39, head));
+    [-1, 1].forEach(sd => mesh(new THREE.IcosahedronGeometry(.06, 0), flat(0xffa0a0), sd * .27, -.14, .38, head).scale.set(1, .6, .3));
+    if (o.freckles) [[-.24, -.06], [-.3, -.08], [.24, -.06], [.3, -.08], [-.27, -.02], [.27, -.02]].forEach(([x, y]) => box(.03, .03, .01, 0xb8703a, x, y, .385, head));
+    const mouths = {};
+    mouths.smile = mesh(new THREE.TorusGeometry(.1, .025, 4, 10, Math.PI), dark, 0, -.16, .385, head); mouths.smile.rotation.z = Math.PI;
+    mouths.grin = group(0, -.18, .385, head); box(.26, .1, .02, 0x5a1a1a, 0, 0, 0, mouths.grin); box(.22, .04, .025, 0xffffff, 0, .025, .002, mouths.grin);
+    mouths.open = group(0, -.2, .385, head); box(.14, .14, .02, 0x5a1a1a, 0, 0, 0, mouths.open); box(.1, .05, .025, 0xff8a9a, 0, -.04, .002, mouths.open);
+    mouths.worried = mesh(new THREE.TorusGeometry(.08, .022, 4, 10, Math.PI), dark, 0, -.22, .385, head);
+    /* haircuts */
+    if (o.style === "bowl") {
+      box(.88, .3, .86, hairM, 0, .32, 0, head); box(.86, .16, .1, hairM, 0, .22, .4, head);
+      [-1, 1].forEach(sd => box(.1, .42, .84, hairM, sd * .43, .14, -.02, head)); box(.86, .55, .1, hairM, 0, .1, -.42, head);
+      mesh(new THREE.SphereGeometry(.46, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), hairM, 0, .4, 0, head).scale.set(1, .5, 1);
+    } else {
+      box(.84, .22, .82, hairM, 0, .45, 0, head); [-.22, 0, .22].forEach((x, i) => { const t = mesh(new THREE.ConeGeometry(.1, .3, 4), hairM, x, .58, .32 - i % 2 * .1, head); t.rotation.x = .6; });
+      [-1, 1].forEach(sd => box(.08, .26, .7, hairM, sd * .42, .26, -.04, head)); box(.78, .72, .14, hairM, 0, -.06, -.44, head);
+      [-.24, 0, .24].forEach(x => { const f = mesh(new THREE.ConeGeometry(.09, .28, 4), hairM, x, -.5, -.46, head); f.rotation.x = Math.PI + .3; });
+    }
+    const anchor = group(0, 3.3, 0, k);
+    const setFace = f => { Object.entries(mouths).forEach(([n, m]) => m.visible = n === f); brows.forEach((b, i) => { b.rotation.z = f === "worried" ? (i ? -.35 : .35) : f === "open" ? 0 : (i ? .12 : -.12); b.position.y = f === "open" ? .26 : .2; }); eyes.forEach(e => e.scale.y = f === "grin" ? .55 : f === "open" ? 1.25 : 1); };
+    setFace("smile");
+    k.userData = { armL, armR, head, legs, anchor, base: 0, setFace, size: o.size || 1 };
     return k;
+  }
+  /* Freddie: a fluffy apricot cavoodle */
+  function dog() {
+    const d = group(), fur = flat(0xe0a468), furL = flat(0xf0c48e), fluff = (r, x, y, z, m = fur, p = d) => mesh(new THREE.IcosahedronGeometry(r, 0), m, x, y, z, p);
+    const body = group(0, 0, 0, d);
+    [[0, .55, 0, .34], [0, .58, -.28, .32], [0, .58, .22, .3], [-.16, .66, -.05, .22], [.16, .66, -.05, .22], [0, .74, -.1, .24], [0, .45, .05, .26]].forEach(([x, y, z, r]) => fluff(r, x, y, z, fur, body));
+    const legs = [[-.16, .22], [.16, .22], [-.16, -.3], [.16, -.3]].map(([x, z]) => { const l = group(x, .42, z, body); fluff(.12, 0, -.12, 0, fur, l); fluff(.11, 0, -.28, .02, furL, l); return l; });
+    const head = group(0, .92, .42, d);
+    [[0, 0, 0, .26], [-.12, .1, -.04, .17], [.12, .1, -.04, .17], [0, .18, -.06, .18], [0, -.04, .16, .16]].forEach(([x, y, z, r], i) => fluff(r, x, y, z, i === 4 ? furL : fur, head));
+    fluff(.07, 0, -.02, .32, flat(0x1a1210), head);
+    [-1, 1].forEach(sd => { box(.08, .09, .03, 0x1a1210, sd * .1, .07, .24, head); box(.03, .03, .02, glowMat(0xffffff), sd * .1 + .02, .09, .26, head); });
+    const tongue = box(.08, .03, .1, 0xff7f95, 0, -.14, .26, head);
+    const ears = [-1, 1].map(sd => { const e = group(sd * .24, .06, -.02, head); fluff(.13, 0, -.12, 0, fur, e); fluff(.11, 0, -.26, .02, fur, e); return e; });
+    const tail = group(0, .72, -.5, body); fluff(.14, 0, .08, -.06, fur, tail); fluff(.11, 0, .2, -.1, furL, tail);
+    d.userData = { head, legs, ears, tail, body, tongue, anchor: group(0, 1.6, 0, d), wag: 1 };
+    return d;
   }
   /* Crabbe's faded tattoo: a skull over a little ship, and a banner reading SOGGY BISCUIT */
   function tattooMat() {
@@ -848,7 +887,7 @@ const WORLD = (() => {
     box(.42, .1, .42, 0x2a2a2a, 0, -cord - .02, 0, p); box(.34, .44, .34, glowMat(col), 0, -cord - .3, 0, p); box(.42, .08, .42, 0x2a2a2a, 0, -cord - .55, 0, p);
     p.userData.ph = Math.random() * 6; (W.swing = W.swing || []).push(p); return p;
   }
-  const make = { greenAura, conch, tentacle, jollyRoger, skeleton, witch, frog, monkey, inkbeard, grimtide, gull, musicBox, saltJar, chocCoin, torch, kid, makeFish, rowboat };
+  const make = { dog, greenAura, conch, tentacle, jollyRoger, skeleton, witch, frog, monkey, inkbeard, grimtide, gull, musicBox, saltJar, chocCoin, torch, kid, makeFish, rowboat };
 
   /* =====================================================================
      MORE SETS
@@ -1157,8 +1196,9 @@ const WORLD = (() => {
     W.coin.rotation.order = "YXZ"; W.coin.rotation.x = Math.PI / 2;
     W.coinLight = new THREE.PointLight(0xffd23f, 0, 5); hb.add(W.coinLight);
     /* the kids */
-    W.kidA = kid(C.blue, C.red); W.kidA.position.set(-1.2, 1.15, 6.2); hb.add(W.kidA);
-    W.kidB = kid(C.orange, 0x222222); W.kidB.position.set(1, 1.15, 6.6); hb.add(W.kidB);
+    W.kidA = kid({ shirt: C.blue, pants: 0x3a4a7a, hair: 0x9a6a3c, style: "bowl", size: .9 }); W.kidA.position.set(-1.2, 1.15, 6.2); hb.add(W.kidA);
+    W.kidB = kid({ shirt: C.orange, pants: 0x6a5a3a, hair: 0xc89c5c, style: "mullet", freckles: true, size: 1 }); W.kidB.position.set(1, 1.15, 6.6); hb.add(W.kidB);
+    W.freddie = dog(); W.freddie.position.set(2, 1.15, 6.6); hb.add(W.freddie);
     /* Captain Crabbe's fishing boat */
     W.crabBoat = group(8.5, 0, 3);
     box(3, 1.4, 8, C.red, 0, .4, 0, W.crabBoat); box(3.1, .25, 8.1, C.yellow, 0, 1.15, 0, W.crabBoat);
@@ -1267,6 +1307,7 @@ const WORLD = (() => {
     /* idle characters */
     [W.kidA, W.kidB].forEach((k, i) => { if (!k.userData.busy) { k.userData.armL.rotation.z = Math.sin(t * 2 + i) * .08; k.userData.armR.rotation.z = -Math.sin(t * 2 + i) * .08; k.userData.head.rotation.y = Math.sin(t * .7 + i * 2) * .15; } });
     W.crabbe.userData.head.rotation.y = Math.sin(t * .9) * .2;
+    { const fd = W.freddie.userData, w = fd.wag || 1; fd.tail.rotation.z = Math.sin(t * 14 * w) * .6; fd.head.rotation.z = Math.sin(t * 1.3) * .12; fd.body.position.y = Math.abs(Math.sin(t * 3)) * .03 * w; fd.ears.forEach((e, i) => e.rotation.z = (i ? -1 : 1) * (.15 + Math.sin(t * 3 + i) * .08)); fd.tongue.visible = w > 1.2; }
     if (W.parrot.visible) { W.parrot.userData.head.rotation.y = Math.sin(t * 1.7) * .4; const f = W.parrot.userData.flap || 0; W.parrot.userData.wingL.rotation.z = Math.sin(t * 30) * f; W.parrot.userData.wingR.rotation.z = -Math.sin(t * 30) * f; }
     W.tentacles.forEach(tn => { tn.rotation.z = Math.sin(t * 1.1 + tn.userData.ph) * .2; tn.rotation.x = Math.cos(t * .9 + tn.userData.ph) * .12; });
     (W.flags || []).forEach((f, i) => { if (!f.parent || !f.parent.visible) return; const p = f.geometry.attributes.position, b = f.userData.base, w = f.userData.w; for (let v = 0; v < p.count; v++) { const x = b[v * 3]; p.array[v * 3 + 2] = Math.sin(x * 1.3 - t * 6 + i) * .28 * (x / w); p.array[v * 3 + 1] = b[v * 3 + 1] - (x / w) * .3 * (1 + Math.sin(t * 2 + i) * .3); } p.needsUpdate = true; f.geometry.computeVertexNormals(); });
@@ -1406,9 +1447,33 @@ const SEA = { skull: V(-70, 0, -82), reef: V(70, 0, -78), light: V(62, 0, 46), a
 
 /* ---------- putting the kids where the scene needs them ---------- */
 function placeKids(parent, pa, pb, rotY = 0, scale = 1) {
-  [W.kidA, W.kidB].forEach((k, i) => { parent.add(k); k.position.copy(i ? pb : pa); k.rotation.set(0, rotY, 0); k.scale.setScalar(scale); k.visible = true; k.userData.busy = false; k.userData.armL.rotation.set(0, 0, 0); k.userData.armR.rotation.set(0, 0, 0); });
+  [W.kidA, W.kidB].forEach((k, i) => { parent.add(k); k.position.copy(i ? pb : pa); k.rotation.set(0, rotY, 0); k.scale.setScalar(scale * (k.userData.size || 1)); k.visible = true; k.userData.busy = false; k.userData.armL.rotation.set(0, 0, 0); k.userData.armR.rotation.set(0, 0, 0); });
+  const f = W.freddie; parent.add(f); f.position.copy(pb).add(V(.95, 0, .45).applyAxisAngle(V(0, 1, 0), rotY).multiplyScalar(scale)); f.rotation.set(0, rotY, 0); f.scale.setScalar(scale * .9); f.visible = true;
 }
-function kidsInBoat() { placeKids(W.rowboat, V(0, .3, .7), V(0, .3, -.7), 0, .85); W.rowboat.userData.lantern.visible = !S.flags.noLantern; }
+function kidsInBoat() { placeKids(W.rowboat, V(0, .3, .7), V(0, .3, -.7), 0, .85); W.freddie.position.set(.25, .32, 0); W.freddie.scale.setScalar(.6); W.freddie.rotation.set(0, Math.PI / 2, 0); W.rowboat.userData.lantern.visible = !S.flags.noLantern; }
+/* happy moments: Wylie does a cartwheel, everyone grins, Freddie woofs and wags */
+function cartwheel(k = W.kidB) {
+  if (k.userData.wheel || !k.visible || k.parent === W.rowboat) return; k.userData.wheel = k.userData.busy = true;
+  const y0 = k.position.y, r0 = k.rotation.z; MUSIC.sfx("jump");
+  tween(.9, (q, r) => { k.rotation.z = r0 - r * Math.PI * 2; k.position.y = y0 + Math.sin(r * Math.PI) * 1.3 * k.scale.y; k.userData.armL.rotation.z = -2.6 * Math.sin(r * Math.PI); k.userData.armR.rotation.z = 2.6 * Math.sin(r * Math.PI); }, () => { k.rotation.z = r0; k.position.y = y0; k.userData.wheel = k.userData.busy = false; });
+}
+function happy() {
+  [W.kidA, W.kidB].forEach(k => k.userData.setFace("grin")); cartwheel(W.kidB);
+  const f = W.freddie, fd = f.userData, y0 = f.position.y; fd.wag = 2.2; setTimeout(() => MUSIC.sfx("woof"), 300);
+  tween(.5, (k, r) => f.position.y = y0 + Math.sin(r * Math.PI) * .5 * f.scale.y, () => { f.position.y = y0; tween(.5, (k, r) => f.position.y = y0 + Math.sin(r * Math.PI) * .35 * f.scale.y, () => f.position.y = y0); });
+  setTimeout(() => fd.wag = 1, 2600);
+}
+/* faces follow the mood of the scene and of each line */
+function applyFaces(who, t) {
+  const spooky = /ghost|cave|fog|night|witch/.test(S.mood || ""); const base = spooky ? "worried" : "smile";
+  [W.kidA, W.kidB].forEach(k => k.userData.setFace(base));
+  const feel = s => /uh oh|oops|\bum\b|scared|n-n|help|blub/i.test(s) ? "worried" : /mac and cheese|yes|friends|\bha\b|yay|love|easy peasy|cheer/i.test(s) ? "grin" : /!|\?/.test(s) ? "open" : null;
+  if (who === "a" || who === "b") (who === "a" ? W.kidA : W.kidB).userData.setFace(feel(t) || "smile");
+  else if (who === "n" && /CRASH|BONK|SPLOSH|ZING|POP|ZAP|WHOOSH|STOMP|KNOCK|SPLAT|PLOP|CLINK/.test(t)) [W.kidA, W.kidB].forEach(k => k.userData.setFace("open"));
+  else if (/laugh|giggl/i.test(t)) [W.kidA, W.kidB].forEach(k => k.userData.setFace("grin"));
+  if (/MAC AND CHEESE/.test(t)) W.kidA.userData.setFace("grin");
+  W.freddie.userData.wag = spooky ? .5 : 1;
+}
 function boatAt(pos, faceTo) { const rb = W.rowboat; rb.position.set(pos.x, 0, pos.z); if (faceTo) rb.rotation.y = Math.atan2(faceTo.x - pos.x, faceTo.z - pos.z); rb.userData.sailing = false; }
 function fadeDo(fn, hold = 450) { const f = $("fade"); f.style.opacity = 1; setTimeout(() => { fn(); setTimeout(() => f.style.opacity = 0, 120); }, hold); }
 function show(obj, at) { obj.visible = true; if (at) obj.position.copy(at); }
@@ -1589,9 +1654,10 @@ function bagToast(item) {
 const PAGES = {
   /* ================= THE HARBOUR ================= */
   intro1: { mood: "dusk", music: "shanty", enter: () => resetWorld(), beats: [
-    ["n", "Gullwhistle Harbour smells of fish, seaweed and trouble. {a} and {b} are the cabin kids on Captain Crabbe's grumpy old fishing boat.", "harbourWide"],
+    ["n", "Gullwhistle Harbour smells of fish, seaweed and trouble. {a} and {b} are the cabin kids on Captain Crabbe's grumpy old fishing boat. And Freddie, their fluffy little dog, comes everywhere they go.", "harbourWide", () => setTimeout(() => MUSIC.sfx("woof"), 1500)],
     ["crabbe", "Right, you two barnacles! Every fish in that barrel before I get back... or there'll be NO MAC AND CHEESE!", "crabbeShot", () => setTimeout(() => tween(1.2, k => W.crabbe.position.y = 1.25 - k * 3), 2600)],
-    ["b", "Easy peasy. How hard can it be?", "kidsClose"]
+    ["a", "MAC AND CHEESE?! Let's GO!", "kidsClose"],
+    ["b", "Careful, {a}. Those fish are slippery.", "kidsClose"]
   ], choices: [{ label: "Start flinging fish!", em: "🐟", to: "gameFish" }] },
   gameFish: { game: "fish", next: "coinFind", title: "Fish Fling", how: "Drag back and to the side, then let go to fling the fish over to the barrel. The barrel moves after every throw!" },
   coinFind: { mood: "dusk", music: "shanty", enter: () => placeKids(W.harbour, V(-1.2, 1.15, 6.2), V(1, 1.15, 6.6)), beats: [
@@ -1611,7 +1677,7 @@ const PAGES = {
   feathers: { mood: "fog", music: "spooky", enter: () => { if (!W.parrot.visible) flyParrotIn(); }, beats: [
     ["feathers", "That's Grimtide's coin! Meanest ghost on the seven seas, he was. I should know. I was his parrot. Brrrk.", "parrotShot"],
     ["feathers", "At midnight his ghost ship comes for that coin. Whoever's holding it joins his skeleton crew... FOREVER!", "parrotShot"],
-    ["b", "FOREVER?! But Captain Crabbe owes us MAC AND CHEESE!", "kidsClose"],
+    ["a", "FOREVER?! But Captain Crabbe owes us MAC AND CHEESE!", "kidsClose"],
     ["feathers", "And ye can't throw it away, neither. That coin only lets go of ye when Grimtide lets ye go!", "parrotShot"],
     ["feathers", "Then don't dawdle! This island is full of things that can help ye. Take the map, take the rowboat, and pick THREE stops before midnight!", "parrotShot"]
   ], choices: [{ label: "Grab the map!", em: "🗺️", to: "howto" }] },
@@ -1630,6 +1696,8 @@ const PAGES = {
     ["n", "Skull Rock is a giant stone skull poking out of the sea. Its eyes glow ghostly green.", () => [V(-62, 14, -60), V(-85, 9, -105)]],
     ["n", "You row straight into its gaping mouth...", () => [V(-74, 7, -70), V(-85, 4, -96)], () => { const rb = W.rowboat, f = rb.position.clone(); tween(2.6, k => rb.position.set(f.x + (-85 - f.x) * k, 0, f.z + (-95 - f.z) * k)); }],
     ["n", "Inside, torches flicker along the cave walls. And in the middle of the cave, a whole crew of skeletons is huddled together, hugging each other... and shaking like jelly. Clickety-clack!", sh("cave", 1, 5, 11, 0, 2.5, -2), () => fadeDo(() => { WORLD.setMood("cave", .1); $("dim").style.opacity = 0; W.torches.forEach(t => { t.userData.flame.visible = true; t.userData.flame.scale.setScalar(1); }); placeKids(W.cave, V(-3, .95, 9), V(-.8, .95, 9.6), Math.PI); W.skels.forEach(sk => { sk.userData.head.rotation.y = 0; sk.userData.shake = true; }); })]
+,
+    ["b", "Stay close, {a}. I've got you.", sh("cave", -3.5, 3.4, 13, -2, 2.2, 8.5)]
   ], choices: [{ label: "Sneak past them", em: "🤫", to: "skullSneak" }, { label: "Say hello", em: "👋", to: "skullChat" }] },
   skullSneak: { mood: "cave", music: "cave", beats: [
     ["n", "You tiptoe past ever so quietly... and {a} steps right on a skeleton's toe.", sh("cave", 6, 4, 8, 0, 2, -1), () => tween(1.2, k => W.kidA.position.set(-3 + k * 1.6, .95, 9 - k * 9.6))],
@@ -1708,7 +1776,8 @@ const PAGES = {
     ["n", "Captain Crabbe goes very quiet. Slowly, he rolls up his sleeve. On his arm is a faded old tattoo: a skull, a ship, and two words. SOGGY BISCUIT.", tattooShot(), () => { const a = W.crabbe.userData.armR; tween(1, k => { a.rotation.x = TAT_POSE.x * k; a.rotation.z = TAT_POSE.z * k; }); MUSIC.sfx("bell"); }],
     ["crabbe", "Long ago, when I was a cabin kid just like you, I scrubbed HIS decks. I was the only one who ever got away. Until you two.", crabShot(), () => { const a = W.crabbe.userData.armR; tween(.8, k => { a.rotation.x = TAT_POSE.x * (1 - k); a.rotation.z = TAT_POSE.z * (1 - k); }); }],
     ["feathers", "CRABBY?! Is that YOU?! SQUAWK!", "parrotShot", () => { W.parrot.userData.flap = 1.4; MUSIC.sfx("whoosh"); }],
-    ["crabbe", "Well. A deal's a deal. ...MAC AND CHEESE!", potShot(), () => liftLid()]
+    ["crabbe", "Well. A deal's a deal. ...MAC AND CHEESE!", potShot(), () => liftLid()],
+    ["a", "YESSSS! MAC AND CHEESE! Best. Night. EVER!", "kidsClose", () => happy()]
   ] },
   dawnRock: { epilogue: true, mood: "dawn", music: "dawn", enter: () => { crabbeHome(); W.bigTentacle.position.y = -30; W.crabbe.rotation.y = Math.PI; WORLD.setMood("dawn", .3); W.lamps.forEach(l => l.target = 1); const cb = W.crabBoat; cb.userData.home = cb.userData.home || cb.position.clone(); cb.position.set(66, 0, -70); cb.rotation.set(0, Math.atan2(18, -20), 0); W.macPot.position.set(0, -50, 0); showSkip(); }, beats: [
     ["n", "The sun comes up over Kraken Reef. You're still stuck on top of the tallest, pointiest rock.", () => [V(70, 16, -66), V(88, 8, -95)]],
@@ -1716,6 +1785,7 @@ const PAGES = {
     ["crabbe", "What in the seven seas are you two doing up THERE?!", rockShot()],
     ["n", "A big purple tentacle rises out of the water, lifts your boat down ever so gently, and plops it right next to Captain Crabbe. Then it waves goodbye.", () => [V(68, 12, -66), V(84, 5, -90)], () => { const t = W.bigTentacle; t.position.set(90, -14, -90); t.rotation.set(0, 0, 0); tween(1, k => t.position.y = -14 + k * 13, () => { const rb = W.rowboat, f = rb.position.clone(); tween(1.6, (k, r) => rb.position.set(f.x + (81 - f.x) * k, f.y + (0 - f.y) * k + Math.sin(r * Math.PI) * 3, f.z + (-82 - f.z) * k), () => tween(2, (k, r) => t.rotation.z = Math.sin(r * Math.PI * 4) * .35, () => tween(1, k => t.position.y = -1 - k * 20))); }); }],
     ["crabbe", "Hmph. Well. A deal's a deal. Who wants MAC AND CHEESE?", rockShot(), () => { const p = W.macPot; W.crabBoat.add(p); p.position.set(0, 1.25, .8); p.userData.lid.position.set(0, .82, 0); p.userData.lid.rotation.set(0, 0, 0); p.userData.on = .35; liftLid(); }],
+    ["a", "YESSSS! MAC AND CHEESE! ...Can Freddie have some?", rockShot(), () => happy()],
     ["mum", "BREAKFAAAAST!", () => [V(60, 14, -60), V(0, 6, -40)]],
     ["n", "Uh oh. Mum is NOT happy about the soggy pyjamas.", () => [V(70, 9, -70), V(80, 3, -84)], () => { W.macPot.userData.on = 0; }]
   ] },
@@ -1725,6 +1795,7 @@ const PAGES = {
     ["crabbe", "Why are you two so... SLIMY?", crabShot()],
     ["b", "Long story.", "kidsClose"],
     ["crabbe", "Hmph. Well. A deal's a deal. ...MAC AND CHEESE!", potShot(), () => liftLid()],
+    ["a", "YESSSS! MAC AND CHEESE!", "kidsClose", () => happy()],
     ["mum", "BREAKFAAAAST!", () => [V(0, 12, 22), V(0, 6, -30)]],
     ["n", "And up on the cliff, a seagull wearing a skull-coin necklace looks VERY nervous.", sh("light", -13.5, 5.6, 9.5, -9, 3.8, 6), () => { const g = W.gulls[0]; g.userData.circle = null; g.position.copy(O("light", -9, 3.4, 6)); g.rotation.set(0, 2.2, 0); g.scale.setScalar(1.6); W.coin.position.copy(O("light", -8.7, 3.75, 6.25)); W.coin.scale.setScalar(.7); W.coinShine = .4; W.macPot.userData.on = 0; }]
   ] },
@@ -1773,6 +1844,8 @@ const PAGES = {
     ["n", "Back in Gullwhistle, you tie up the rowboat and tiptoe into the town. Down a narrow lane, between the wonky old houses, lanterns are glowing...", () => [V(10, 9, 14), V(0, 5, -16)]],
     ["n", "This is Smugglers' Alley. It's packed with stalls, and shady pirates selling shady things.", sh("alley", 2.5, 4.4, 21, 0, 3.6, -2), () => fadeDo(() => placeKids(W.alley, V(-1.4, 0, 5.4), V(1.2, 0, 5.8), Math.PI))],
     ["lolly", "Lucky eyeballs! Pickled rats! Gold chocolate coins! Get 'em while they're sticky!", sh("alley", 1, 4.5, 11, -1, 2.8, -2), () => { const L = W.lolly; tween(1.2, (k, r) => { L.userData.armR.rotation.z = Math.sin(r * Math.PI * 4) * .6 + .9; L.userData.armR.rotation.x = -.5; }, () => { L.userData.armR.rotation.set(0, 0, 0); }); }],
+    ["a", "Ooh! Can we get lollies? PLEEEASE?", "kidsClose"],
+    ["b", "Not now, {a}. We've got a cursed coin to look after.", "kidsClose"],
     ["n", "Up on a rooftop, something is watching you. Something small and hairy... in a waistcoat.", sh("alley", 3, 8.6, 5.5, -5, 7.6, -1.5), () => { W.monkey.userData.head.rotation.y = -.6; }],
     ["n", "The monkey drops off the roof, snatches the cursed coin out of {b}'s pocket, and scrambles straight back up the wall!", sh("alley", 3, 6, 16, 0, 5, 2), () => { const m = W.monkey, P = W.monkeyPerch; tween(.6, (k, r) => m.position.set(P.x + (1.2 - P.x) * k, P.y + (.6 - P.y) * k + Math.sin(r * Math.PI) * 1.5, P.z + (5.6 - P.z) * k), () => { MUSIC.sfx("coin"); tween(1.3, (k, r) => { m.position.set(1.2 + k * 3.6, .6 + k * 8.2, 5.6 - k * 2); m.rotation.y = -Math.PI / 2; }, () => tween(.8, k => m.position.set(4.8 + k * 4, 8.8 + k * 1.6, 3.6 - k * 6))); }); }]
   ], choices: [{ label: "Chase it over the rooftops", em: "🏃", to: "gameRoof" }, { label: "Buy a banana and wait", em: "🍌", to: "gameCatch" }] },
@@ -1800,7 +1873,8 @@ const PAGES = {
         const a = V(-9.5, 6.35, -4.2), steps = [[a, plankAt(0)], [plankAt(0), plankAt(.25)], [plankAt(.25), plankAt(.5)], [plankAt(.5), plankAt(.72)]];
         let i = 0; const next = () => { if (i >= steps.length) return; const [f, t] = steps[i++]; tween(.5, (k, r) => { g.position.lerpVectors(f, t, k); g.position.y += Math.sin(r * Math.PI) * .45 + .08; }, () => { if (i > 1) MUSIC.sfx("bonk"); next(); }); }; next();
       }); }],
-    ["n", "Captain Grimtide is see-through, seven feet tall, and his beard is full of crabs. One eye glows. The other hides behind a patch. And he does NOT look happy.", () => { const p = plankAt(.72), f = deck(p.x, p.y + 6.1, p.z), d = innerWidth / innerHeight < 1 ? 8 : 5.6; return [f.clone().add(V(-1.6, -.4, -d)), f.clone().add(V(0, d * .2, 0))]; }]
+    ["n", "Captain Grimtide is see-through, seven feet tall, and his beard is full of crabs. One eye glows. The other hides behind a patch. And he does NOT look happy.", () => { const p = plankAt(.72), f = deck(p.x, p.y + 6.1, p.z), d = innerWidth / innerHeight < 1 ? 8 : 5.6; return [f.clone().add(V(-1.6, -.4, -d)), f.clone().add(V(0, d * .2, 0))]; }],
+    ["b", "Stay behind me, {a}.", () => [V(10, 5, 26), V(20, 4, 36)], () => { W.kidB.userData.armL.rotation.z = -1.2; }]
   ], choices: [{ label: "Face him", em: "😤", to: "grimChat" }] },
   grimChat: { mood: "ghost", music: "boss", enter: () => fadeDo(() => { placeKids(W.bigShip, V(-6, 6.35, 2.2), V(-3.4, 6.35, 3), Math.PI / 2); setPlank(0); crewFace(false); W.grim.position.set(5, 6.35, 1.5); W.grim.rotation.set(0, -Math.PI / 2 + .3, 0); }, 50), beats: [
     ["n", "He grabs you both by the collars, stomps back up the plank, and plonks you down on the deck of his ship. The skeleton crew crowds round.", () => innerWidth / innerHeight < 1 ? [deck(-11, 9, 19), deck(1, 11.6, 1)] : [deck(-13, 8.8, 13), deck(1, 11, 1)]],
@@ -1896,7 +1970,7 @@ function goPage0(id, opts = {}) {
   if (pg.map) return enterMap();
   S.mode = "story"; CAM.drift = 1;
   $("hud").style.display = pg.hud ? "flex" : "none"; if (pg.hud) { lastBag = S.items.length; drawHud(); } else spotlight(null);
-  if (pg.mood) WORLD.setMood(pg.mood, 2);
+  if (pg.mood) { WORLD.setMood(pg.mood, 2); S.mood = pg.mood; }
   MUSIC.play(pg.music || "shanty");
   if (pg.enter) pg.enter();
   playClip(id);
@@ -1914,6 +1988,7 @@ function nextBeat() {
   if (who === "grim" && W.grim.visible) { if (act) act(); shot(grimShot(9)()); }
   else { if (sh) shot(resolveShot(sh)); if (act) act(); }
   const t = fill(typeof text === "function" ? text() : text);
+  applyFaces(who, t);
   $("caption").classList.remove("show"); $("bubble").classList.remove("show"); $("bubble")._who = null;
   void $("caption").offsetWidth;
   if (who === "mum") { $("caption").textContent = "Mum, from far away: \u201c" + t + "\u201d"; $("caption").classList.add("show"); mumShout(t); MUSIC.sfx("page"); $("next").classList.add("show"); return; }
@@ -2011,7 +2086,7 @@ function endGame(res) {
   $("ghud").classList.remove("show"); hint(null); $("dim").style.opacity = 0;
   const carry = () => { $("panel").classList.remove("show"); if (GAME) { GAME.stop(); GAME = null; } goPage(pg.next, { give: pg.give }); };
   if (!res) return carry();
-  S.mode = "gameover";
+  S.mode = "gameover"; setTimeout(happy, 400);
   const before = S.eight[pg.game] || 0; S.eight[pg.game] = Math.max(before, res.pieces);
   MUSIC.sfx(res.pieces ? "win" : "lose");
   showPanel(`<h2>${res.pieces ? "Arrr, well done!" : "Good try!"}</h2><p>${res.msg}</p><div class="won">+ <span class="p8">8</span> ${res.pieces} pieces of eight</div>${before > res.pieces ? `<p style="margin:0">Your best here is ${before}</p>` : ""}`, panel => {
