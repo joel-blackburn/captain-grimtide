@@ -142,6 +142,8 @@
   .lvl { display: flex; gap: 8px; justify-content: center; margin: 4px 0 14px; }
   .lvlbtn { font: inherit; font-weight: 900; font-size: 16px; padding: 8px 14px; border-radius: 999px; border: 3px solid var(--navy); background: #fff; cursor: pointer; box-shadow: 0 3px 0 var(--navy); }
   .lvlbtn[aria-pressed="true"] { background: var(--yellow); }
+  .pickcard.soon { position: relative; overflow: hidden; filter: grayscale(1); opacity: .55; cursor: not-allowed; box-shadow: none; }
+  .soonbanner { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-12deg); width: 140%; text-align: center; background: var(--pink); color: #fff; font-family: Bungee, sans-serif; font-size: 14px; letter-spacing: 1px; padding: 3px 0; border-top: 2px solid var(--navy); border-bottom: 2px solid var(--navy); filter: grayscale(0); }
   .levels { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 8px auto 4px; }
   .lvtog { display: inline-flex; align-items: center; gap: 6px; font: inherit; font-weight: 800; font-size: 13px; padding: 4px 10px 4px 8px; border-radius: 999px; border: 2px solid var(--navy); background: #fff; color: var(--navy); cursor: pointer; }
   .lvtog .lvname { font-weight: 900; } .lvtog.ta .lvname { color: #3a86ff; } .lvtog.tb .lvname { color: #e06a1f; }
@@ -3211,7 +3213,9 @@ function sailTo(pl) {
 /* =====================================================================
    START SCREEN
    ===================================================================== */
+const DAD_READY = false; /* flip to true once Captain Dad's recordings are in */
 function showStart() {
+  if (!DAD_READY && S.narrator === "dad") S.narrator = "computer";
   hush(); clearTimeout(autoTimer); hideStory(); clearLabels(); $("mapbar").classList.remove("show"); $("ghud").classList.remove("show"); hint(null); $("hud").style.display = "none"; $("dim").style.opacity = 0;
   if (GAME) { GAME.stop(); GAME = null; }
   S.mode = "start"; S.items = []; S.eight = {}; S.spent = 0; S.hours = 0; W.crabbe.userData.sleeve.scale.y = 1; S.visited = []; S.flags = {}; S.boatPos = null;
@@ -3223,7 +3227,9 @@ function showStart() {
     [["dad", "🎙️", "Captain Dad", "Dad tells the story. Starring Sonny and Wylie."], ["computer", "🤖", "Robo-Parrot", "The computer reads it. Make your own pirate names."]].forEach(([k, em, t, s]) => {
       const c = el("button", "pickcard"); c.type = "button"; c.setAttribute("aria-pressed", String(S.narrator === k));
       c.append(el("span", "pe", em)); const tx = el("span"); tx.append(el("strong", null, t), el("span", null, s)); c.append(tx);
-      c.onclick = () => { S.narrator = k; store.set("narrator", k); showStart(); };
+      /* Captain Dad isn't recorded yet: greyed out with a "Coming soon" banner */
+      if (k === "dad" && !DAD_READY) { c.disabled = true; c.classList.add("soon"); c.setAttribute("aria-pressed", "false"); c.appendChild(el("span", "soonbanner", "Coming soon")); }
+      else c.onclick = () => { S.narrator = k; store.set("narrator", k); showStart(); };
       pick.appendChild(c);
     });
     p.appendChild(pick);
