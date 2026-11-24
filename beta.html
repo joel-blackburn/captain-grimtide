@@ -2574,14 +2574,18 @@ function startGameIntro(pg) {
      Wylie always throws the fish, Sonny always catches in Monkey Business; the rest take turns. */
   const fixed = { fish: "b", catch: "a" }[pg.game];
   if (fixed) S.turn = fixed; else { S.turn = S.nextTurn || "a"; }
-  const build = () => { S.levels = S.levels || store.get("levels", { a: "easy", b: "easy" }); S.hard = S.levels[S.turn] === "hard"; if (GAME) GAME.stop(); GAME = GAMES3D[pg.game](); GAME.setup(); };
+  const build = () => { S.hard = store.get("hard", false); if (GAME) GAME.stop(); GAME = GAMES3D[pg.game](); GAME.setup(); };
   build();
   showPanel(`<h2>${pg.title}</h2><p>${fill(pg.how)}</p>`, panel => {
     const lvl = el("div", "lvl");
-    const badge = el("div", "turnbadge"); const paint = () => { badge.className = "turnbadge " + (S.turn === "a" ? "ta" : "tb"); badge.textContent = (S.turn === "a" ? "🔵 " + S.a : "🟠 " + S.b) + "'s turn! " + (S.hard ? "🦈 Hard" : "🐣 Easy"); };
+    const badge = el("div", "turnbadge"); const paint = () => { badge.className = "turnbadge " + (S.turn === "a" ? "ta" : "tb"); badge.textContent = (S.turn === "a" ? "🔵 " + S.a : "🟠 " + S.b) + "'s turn!"; };
     paint(); lvl.appendChild(badge);
     if (!fixed) { const sw = el("button", "lvlbtn", "🔁 Swap"); sw.onclick = () => { S.turn = S.turn === "a" ? "b" : "a"; build(); paint(); MUSIC.sfx("page"); }; lvl.appendChild(sw); }
     panel.appendChild(lvl);
+    const lv2 = el("div", "lvl");
+    [["easy", "🐣 Easy"], ["hard", "🦈 Hard"]].forEach(([k, l]) => { const b = el("button", "lvlbtn", l); b.setAttribute("aria-pressed", String((k === "hard") === S.hard)); b.onclick = () => { S.hard = k === "hard"; store.set("hard", S.hard); lv2.querySelectorAll(".lvlbtn").forEach((x, i) => x.setAttribute("aria-pressed", String((i === 1) === S.hard))); build(); paint(); MUSIC.sfx("page"); }; lv2.appendChild(b); });
+    panel.appendChild(lv2);
+
     const go = el("button", "big", "Play! ▶"); go.onclick = () => { $("panel").classList.remove("show"); hush(); if (!fixed) S.nextTurn = S.turn === "a" ? "b" : "a"; S.mode = "game"; GAME.start(); hudGame(); }; panel.appendChild(go);
     panel.appendChild(el("br"));
     const sk = el("button", "skip", "Skip the game"); sk.onclick = () => endGame(null); panel.appendChild(sk);
@@ -3236,16 +3240,9 @@ function showStart() {
     const err = el("div", "err");
     if (!dad) {
       const names = el("div", "names"); const saved = store.get("names", { a: "", b: "" });
-      ["a", "b"].forEach((k, i) => { const l = el("label", null, i ? "Big pirate (orange)" : "Little pirate (blue)"); const inp = el("input"); inp.id = "n" + k; inp.maxLength = 12; inp.value = saved[k] || ""; inp.placeholder = i ? "Max" : "Sam"; l.appendChild(inp); names.appendChild(l); });
+      ["a", "b"].forEach((k, i) => { const l = el("label", null, i ? "🟠 Orange pirate" : "🔵 Blue pirate"); const inp = el("input"); inp.id = "n" + k; inp.maxLength = 12; inp.value = saved[k] || ""; inp.placeholder = i ? "Max" : "Sam"; l.appendChild(inp); names.appendChild(l); });
       p.appendChild(names);
     }
-    /* each pirate picks how hard their own games are: one small toggle each, side by side */
-    const lv = el("div", "levels"); S.levels = store.get("levels", { a: "easy", b: "easy" });
-    ["a", "b"].forEach(k => { const t = el("button", "lvtog " + (k === "a" ? "ta" : "tb")); t.type = "button";
-      const paint = () => { const hard = S.levels[k] === "hard"; t.setAttribute("aria-pressed", String(hard)); t.innerHTML = `<span class="lvname">${dad ? (k === "a" ? "Sonny" : "Wylie") : (k === "a" ? "Little" : "Big")}</span><span class="sw"><span class="knob"></span></span><span class="lvval">${hard ? "🦈 Hard" : "🐣 Easy"}</span>`; };
-      t.onclick = () => { S.levels[k] = S.levels[k] === "hard" ? "easy" : "hard"; store.set("levels", S.levels); paint(); MUSIC.sfx("page"); };
-      paint(); lv.appendChild(t); });
-    p.appendChild(lv);
     p.appendChild(err);
     const go = el("button", "big", dad ? "Ready, Captain Dad! 🎙️" : "Make us pirates! 🏴‍☠️");
     go.onclick = () => {
