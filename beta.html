@@ -2106,7 +2106,7 @@ const PAGES = {
     ["a", "Why didn't the skeleton go to the party?", kidFront("a")],
     ["bones", "W-w-why?", sh("cave", 4.4, 4, 5.5, 0, 2.6, -1.5)],
     ["b", "Because he had no BODY to go with!", kidFront("b")],
-    ["n", "The skeletons laugh so hard that one of them falls to pieces. They put him back together, mostly right. His foot is on his head.", sh("cave", -4.6, 3.6, 3.4, -1.4, 1.6, -2), () => fallApart(W.skels[0])],
+    ["n", "The skeletons laugh so hard that one of them falls to pieces. They put him back together, mostly right. His foot is on his head.", sh("cave", -5.2, 2.6, 4.6, -1.5, 3.3, -2), () => fallApart(W.skels[0])],
     ...MB_BEATS
   ], choices: [{ label: "Back to the map", em: "🗺️", to: "map" }] },
   skullLantern: { mood: "cave", music: "cave", beats: [
@@ -2403,7 +2403,7 @@ function coinSpill() {
 /* the inside of the lighthouse: Brine's kitchen, and the lamp room at the top */
 function lhKitchen() { const w = W.witch; w.visible = true; W.lhIn.add(w); w.position.set(3.6, 0, -5.2); w.rotation.set(0, -.45, 0);
   placeKids(W.lhIn, V(-1.8, 0, 6.4), V(1.8, 0, 6.4), Math.PI); W.cat.userData.hiss(0); W.cat.userData.busy = false; W.kLadle.rotation.y = 0; W.kStirRing.visible = false; }
-function lhTop() { WORLD.setMood("lhTop", .4); const w = W.witch, j = W.saltJar; W.lhTop.add(w); w.position.set(5.4, 0, -4.4); w.rotation.set(0, -.9, 0); j.children[0].material.emissiveIntensity = .8;
+function lhTop() { WORLD.setMood("lhTop", .4); W.lhIn.visible = false; /* the kitchen set would show through the lamp-room windows */ const w = W.witch, j = W.saltJar; W.lhTop.add(w); w.position.set(5.4, 0, -4.4); w.rotation.set(0, -.9, 0); j.children[0].material.emissiveIntensity = .8;
   placeKids(W.lhTop, V(-3.6, 0, 1.2), V(-2.4, 0, 3.6), 1.95); }
 function lhOut() { const w = W.witch; if (w.parent !== W.light) { W.light.add(w); w.position.set(-2.6, 3.55, 0); w.rotation.set(0, -Math.PI / 2, 0); } const j = W.saltJar; if (j.parent !== W.light) W.light.add(j); }
 function openDoor() { W.witch.visible = true; tween(.5, k => W.doorPivot.rotation.y = k * 1.6); MUSIC.sfx("whoosh"); }
