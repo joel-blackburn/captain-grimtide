@@ -379,7 +379,11 @@ const MUSIC = (() => {
     win: t => [0, 4, 7, 12, 7, 12].forEach((s, i) => tone(mtof(74 + s), t + i * .12, i === 5 ? .7 : .2, "triangle", .14, sfxBus)),
     lose: t => [7, 5, 3, 0].forEach((s, i) => tone(mtof(62 + s), t + i * .16, .3, "triangle", .12, sfxBus)),
     page: t => noise(t, .15, .08, sfxBus, 3000, .7, "bandpass", 1500),
-    musicbox: t => [79, 76, 72, 74, 71, 72, 69, 67].forEach((n, i) => { tone(mtof(n), t + i * .32, .9, "sine", .1, sfxBus); tone(mtof(n) * 2, t + i * .32, .3, "sine", .03, sfxBus); }),
+    /* the music box: Brahms' Lullaby, plinked like a little music box (about 11 seconds) */
+    musicbox: t => { const B = .42, L = [[76, .75], [76, .25], [79, 2], [76, .75], [76, .25], [79, 2], [76, .5], [79, .5], [84, 1], [83, 1.5], [81, .5], [81, 1], [79, 1], [74, .5], [76, .5], [77, 1], [74, 1], [74, .5], [76, .5], [77, 2], [74, .5], [77, .5], [83, .5], [81, .5], [79, 1], [83, 1], [84, 3]];
+      let at = t; L.forEach(([n, d]) => { const f = mtof(n); tone(f, at, 1.6, "sine", .2, sfxBus); tone(f * 2, at, .5, "sine", .06, sfxBus); tone(f * 3.01, at, .18, "triangle", .025, sfxBus); at += d * B; });
+      [48, 55, 52, 55, 50, 55, 53, 55, 50, 55, 53, 55, 48].forEach((n, i) => tone(mtof(n + 12), t + i * 3 * B, 1.1, "sine", .05, sfxBus));
+      duck(true); setTimeout(() => duck(false), (at - t) * 1000 + 600); },
     bell: t => { tone(mtof(57), t, 2.4, "sine", .22, sfxBus); tone(mtof(57) * 2.76, t, 1.4, "sine", .07, sfxBus); tone(mtof(57) * 5.4, t, .6, "sine", .03, sfxBus); },
     note0: t => tone(mtof(72), t, .45, "sine", .2, sfxBus), note1: t => tone(mtof(76), t, .45, "sine", .2, sfxBus),
     note2: t => tone(mtof(79), t, .45, "sine", .2, sfxBus), note3: t => tone(mtof(83), t, .45, "sine", .2, sfxBus)
@@ -725,23 +729,34 @@ const WORLD = (() => {
     return f;
   }
   /* the lolly-seller: round and cheerful, big curly hair with a lollipop stuck in her bun, stripy apron */
+  /* Mama Mango, the sweets-seller from the islands: warm brown skin, a tall bright headwrap, gold hoops,
+     shell-and-bead necklaces, a flowing patterned dress and a little glowing charm (she's a bit magic) */
   function lollyLady() {
-    const L = group(), dress = flat(0xff6fae), hair = flat(0xe8562a);
-    box(1.3, 1.5, .8, dress, 0, 1.15, 0, L); box(1.36, .3, .84, flat(0xd9478c), 0, .5, 0, L);
-    [0, 1, 2, 3].forEach(i => box(.95, .16, .06, i % 2 ? 0xffffff : 0xff4f8b, 0, 1.55 - i * .2, .43, L));
-    box(1, .12, .07, 0xffffff, 0, 1.75, .42, L);
-    const armL = group(-.78, 1.75, 0, L), armR = group(.78, 1.75, 0, L);
-    [armL, armR].forEach(a => { box(.3, .55, .3, dress, 0, -.15, 0, a); box(.24, .5, .24, C.skin, 0, -.62, 0, a); });
-    const head = group(0, 2.45, 0, L);
-    box(.84, .84, .8, C.skin, 0, 0, 0, head);
-    [[-.48, .1, -.05, .32], [.48, .1, -.05, .32], [-.4, .42, -.1, .3], [.4, .42, -.1, .3], [0, .5, -.15, .36], [-.2, .2, -.42, .34], [.2, .2, -.42, .34]].forEach(([x, y, z, r]) => mesh(new THREE.IcosahedronGeometry(r, 0), hair, x, y, z, head));
-    mesh(new THREE.IcosahedronGeometry(.3, 0), hair, 0, .82, -.15, head);
-    box(.05, .5, .05, 0xffffff, .12, 1.1, -.15, head); const lp = mesh(new THREE.CylinderGeometry(.22, .22, .08, 12), flat(0x3fd0ff), .12, 1.4, -.15, head); lp.rotation.x = Math.PI / 2;
-    mesh(new THREE.TorusGeometry(.12, .035, 4, 10), flat(0xffffff), .12, 1.4, -.1, head);
-    [-.2, .2].forEach(x => { box(.12, .14, .05, glowMat(C.navy), x, .06, .41, head); mesh(new THREE.IcosahedronGeometry(.07, 0), flat(0xff9fb0), x * 1.6, -.12, .4, head).scale.set(1, .6, .4); });
-    const smile = mesh(new THREE.TorusGeometry(.16, .03, 4, 10, Math.PI), flat(0x8a2a2a), 0, -.15, .42, head); smile.rotation.z = Math.PI;
-    [-.44, .44].forEach(x => mesh(new THREE.IcosahedronGeometry(.07, 0), glowMat(0xffd23f), x, -.2, 0, head));
-    L.userData = { armL, armR, head, anchor: group(0, 3.6, 0, L) };
+    const L = group(), skin = flat(0x3e2416), skinDk = flat(0x2a170c), dress = flat(0x7b2d8e), dress2 = flat(0x2bb5a5), sun = flat(0xffb627), red = flat(0xe4572e), gold = flat(C.gold, { metalness: .5, roughness: .35 });
+    /* flowing dress with bands of colour and little patterns */
+    const skirt = mesh(new THREE.CylinderGeometry(.62, .95, 1.4, 8), dress, 0, .72, 0, L);
+    [[.25, dress2], [.55, sun], [.85, dress2]].forEach(([y, m]) => mesh(new THREE.CylinderGeometry(.95 - y * .36 + .01, .95 - y * .36 + .05, .1, 8), m, 0, y, 0, L));
+    for (let i = 0; i < 8; i++) { const a2 = i / 8 * Math.PI * 2; const d2 = box(.12, .12, .04, sun, Math.sin(a2) * .78, .42, Math.cos(a2) * .78, L); d2.rotation.set(0, a2, Math.PI / 4); }
+    box(1.05, .8, .66, dress, 0, 1.75, 0, L); box(1.08, .14, .7, red, 0, 1.38, 0, L);
+    /* necklaces of beads and shells, and a glowing charm */
+    [[1.95, .34, red], [1.82, .4, sun], [1.68, .46, dress2]].forEach(([y, r, m], j) => { for (let i = 0; i < 9; i++) { const a2 = -1.1 + i / 8 * 2.2; mesh(new THREE.IcosahedronGeometry(.055, 0), m, Math.sin(a2) * r, y - Math.cos(a2) * .12 - (1 - Math.abs(a2) / 1.1) * .12 * j, .34, L); } });
+    mesh(new THREE.ConeGeometry(.08, .16, 6), flat(0xfff1e0), 0, 1.5, .37, L).rotation.x = Math.PI;
+    const charm = mesh(new THREE.OctahedronGeometry(.1, 0), glowMat(0x7dffb0), .22, 1.52, .38, L);
+    const armL = group(-.66, 2.05, 0, L), armR = group(.66, 2.05, 0, L);
+    [armL, armR].forEach((a2, i) => { box(.3, .42, .3, dress, 0, -.12, 0, a2); box(.22, .5, .22, skin, 0, -.55, 0, a2); [0, 1, 2].forEach(k => mesh(new THREE.TorusGeometry(.13, .03, 4, 10), [gold, red, sun][k], 0, -.4 - k * .08, 0, a2).rotation.x = Math.PI / 2); });
+    const head = group(0, 2.62, 0, L);
+    box(.78, .78, .74, skin, 0, 0, 0, head); box(.8, .12, .76, skinDk, 0, -.38, 0, head);
+    /* tall headwrap in bright stripes, tied with a knot */
+    const wrap = group(0, .42, -.04, head); [[0, .86, .2, sun], [.2, .82, .2, red], [.4, .74, .2, dress2], [.6, .62, .2, sun]].forEach(([y, w2, h2, m]) => { const t = mesh(new THREE.CylinderGeometry(w2 / 2, w2 / 2 + .04, h2, 8), m, 0, y, -.02 * y, wrap); t.rotation.z = y * .12; });
+    mesh(new THREE.IcosahedronGeometry(.18, 0), red, .3, .2, .3, wrap); { const t = box(.12, .3, .05, red, .42, .05, .32, wrap); t.rotation.z = -.5; }
+    /* face: big warm eyes, a wide smile with a gold tooth, rosy cheeks */
+    [-.18, .18].forEach(x => { box(.18, .15, .04, flat(0xfff6e8), x, .08, .38, head); box(.09, .11, .05, glowMat(0x1a0f08), x, .07, .4, head); const lash = box(.22, .04, .04, 0x1a0f08, x, .18, .39, head); lash.rotation.z = x > 0 ? -.2 : .2; });
+    box(.12, .14, .12, skinDk, 0, -.06, .42, head);
+    const smile = mesh(new THREE.TorusGeometry(.17, .035, 4, 10, Math.PI), flat(0x6a1a2a), 0, -.18, .39, head); smile.rotation.z = Math.PI; box(.06, .06, .03, gold, .06, -.3, .4, head);
+    [-.3, .3].forEach(x => mesh(new THREE.IcosahedronGeometry(.06, 0), flat(0xc0566a), x, -.1, .37, head).scale.set(1, .6, .4));
+    /* big gold hoop earrings */
+    [-.42, .42].forEach(x => mesh(new THREE.TorusGeometry(.13, .025, 5, 14), gold, x, -.25, 0, head).rotation.y = Math.PI / 2);
+    L.userData = { armL, armR, head, charm, anchor: group(0, 3.9, 0, L) };
     return L;
   }
   function monkey() {
@@ -835,9 +850,19 @@ const WORLD = (() => {
     /* the head */
     const head = group(0, 5.95, 0, g);
     box(1.5, 1.55, 1.4, skin, 0, 0, 0, head);
-    box(.5, .45, .06, glowMat(0x0a2a22), .36, .18, .72, head); box(.2, .2, .06, glowMat(0x9effd0), .36, .18, .76, head);
+    /* one burning red eye, narrowed in a glare */
+    box(.5, .34, .06, glowMat(0x1a0505), .36, .14, .72, head); box(.2, .14, .06, glowMat(0xff3322), .36, .14, .76, head); box(.08, .08, .04, glowMat(0xffd0a0), .38, .16, .79, head);
+    { const eg = new THREE.Sprite(new THREE.SpriteMaterial({ map: fireGlow().map, color: 0xff3322, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true })); eg.scale.setScalar(.7); eg.position.set(.36, .14, .82); head.add(eg); }
+    /* a jagged scar across the eyepatch cheek */
+    [[-.62, .0, .6], [-.52, -.2, .3], [-.44, -.36, .7]].forEach(([x, y, r]) => { const sc = box(.06, .22, .04, flat(0xd06a6a), x, y, .73, head); sc.rotation.z = r; });
     box(.5, .45, .08, flat(0x111111), -.36, .18, .73, head); box(1.6, .1, .06, flat(0x111111), 0, .32, .74, head).rotation.z = .25;
-    [-.36, .36].forEach((x, i) => box(.6, .16, .2, beard, x, .52, .72, head).rotation.z = i ? -.35 : .35);
+    /* heavy brows slammed down in a furious frown, and a crease between them */
+    [-.36, .36].forEach((x, i) => box(.7, .22, .26, beard, x * 1.02, .4, .74, head).rotation.z = i ? .5 : -.5);
+    box(.06, .2, .04, flat(0x0d1f1a), 0, .28, .73, head);
+    /* a snarling mouth full of crooked teeth, under the moustache */
+    box(.74, .3, .06, glowMat(0x120404), 0, -.62, .91, head);
+    [-.27, -.11, .07, .25].forEach((x, i) => { const t = mesh(new THREE.ConeGeometry(.06, .17 + (i % 2) * .05, 4), flat(0xeae2b8), x, -.52, .94, head); t.rotation.x = Math.PI; });
+    [-.18, .17].forEach(x => mesh(new THREE.ConeGeometry(.05, .14, 4), flat(0xeae2b8), x, -.72, .94, head));
     const noseM = mesh(new THREE.IcosahedronGeometry(.3, 1), nose, 0, -.12, .82, head); noseM.scale.set(1, .9, 1.1);
     [-1, 1].forEach(sd => { const ms = box(.6, .16, .18, beard, sd * .36, -.42, .78, head); ms.rotation.z = sd * -.3; mesh(new THREE.IcosahedronGeometry(.12, 0), beard, sd * .7, -.3, .76, head); });
     box(1.6, .7, .9, beard, 0, -.85, .45, head);
@@ -1061,7 +1086,9 @@ const WORLD = (() => {
     W.skels = [0, 1, 2].map(i => { const s = skeleton(i === 1); s.position.set(-1.6 + i * 1.6, 1, -2 - (i % 2) * .6); cave.add(s); return s; });
     W.bones = W.skels[1];
     W.toeBone = box(.5, .14, .14, 0xeee6d2, 0, -50, 0, cave);
-    W.footHat = box(.4, .2, .6, 0xeee6d2, 0, -50, 0, cave);
+    /* the skeleton's leg-and-foot, for when he's put back together wrong (it ends up on his head) */
+    W.footHat = group(0, -50, 0, cave); box(.18, .8, .18, 0xeee6d2, 0, .4, 0, W.footHat); box(.24, .14, .24, 0xeee6d2, 0, .05, 0, W.footHat); box(.34, .16, .56, 0xeee6d2, 0, .86, .14, W.footHat);
+    [-.11, 0, .11].forEach(x => box(.08, .1, .12, 0xeee6d2, x, .86, .46, W.footHat));
     W.musicBox = musicBox(); W.musicBox.position.set(0, -50, 0); cave.add(W.musicBox);
     W.caveLantern = group(0, -50, 0, cave); box(.5, .6, .5, glowMat(C.yellow), 0, .3, 0, W.caveLantern);
     const cl = new THREE.PointLight(0xffd23f, 1.2, 10); cl.position.set(0, 1, 0); W.caveLantern.add(cl);
@@ -1661,7 +1688,7 @@ const CHARS = {
   ink:      { name: "Inkbeard", pitch: .1, rate: .75, col: "#9b5de5" },
   brine:    { name: "Old Mother Brine", pitch: 1.3, rate: .8, col: "#4b2a6b" },
   grim:     { name: "Captain Grimtide", pitch: .2, rate: .72, col: "#0f6e56" },
-  lolly:    { name: "The Lolly-Seller", pitch: 1.4, rate: 1.05, col: "#d9478c" }
+  lolly:    { name: "Mama Mango", pitch: 1.05, rate: .92, col: "#d9478c" }
 };
 
 /* ---------- pirate names ---------- */
@@ -1781,15 +1808,15 @@ function happy() {
 }
 /* faces follow the mood of the scene and of each line */
 function applyFaces(who, t) {
-  /* the boys only look worried when it's actually spooky (not in the busy, lantern-lit alley) */
-  const m = S.mood || "", spooky = /ghost|cave|fog|witch/.test(m) || (m === "night" && !/^alley/.test(S.page)); const base = spooky ? "worried" : "smile";
+  /* the boys only look worried at the genuinely scary moments; once they've made friends (skeletons, Inkbeard) they cheer up */
+  const SCARY = /^(intro2|skull1|skullSneak|reefIntro|reef1|light1|lightWrong|midnight|grimChat|saltFight|endRock|endFrog|lightFrog|endScrub)$/; const base = SCARY.test(S.page) ? "worried" : "smile";
   [W.kidA, W.kidB].forEach(k => k.userData.setFace(base));
   const feel = s => /uh oh|oops|\bum\b|scared|n-n|help|blub|forever/i.test(s) ? "worried" : /mac and cheese|yes|friends|\bha\b|yay|love|easy peasy|cheer|lollies|look!|shiny|got you|it's okay|no body/i.test(s) ? "grin" : /not now|careful|stay close|stay behind|hold on/i.test(s) ? "smile" : /!|\?/.test(s) ? "open" : null;
   if (who === "a" || who === "b") (who === "a" ? W.kidA : W.kidB).userData.setFace(feel(t) || "smile");
   else if (who === "n" && /CRASH|BONK|SPLOSH|ZING|POP|ZAP|WHOOSH|STOMP|KNOCK|SPLAT|PLOP|CLINK/.test(t)) [W.kidA, W.kidB].forEach(k => k.userData.setFace("open"));
   else if (/laugh|giggl/i.test(t)) [W.kidA, W.kidB].forEach(k => k.userData.setFace("grin"));
   if (/MAC AND CHEESE/.test(t)) W.kidA.userData.setFace("grin");
-  W.freddie.userData.wag = spooky ? .5 : 1;
+  W.freddie.userData.wag = base === "worried" ? .5 : 1;
 }
 function boatAt(pos, faceTo) { const rb = W.rowboat; rb.position.set(pos.x, 0, pos.z); if (faceTo) rb.rotation.y = Math.atan2(faceTo.x - pos.x, faceTo.z - pos.z); rb.userData.sailing = false; }
 function fadeDo(fn, hold = 450) { const f = $("fade"); f.style.opacity = 1; setTimeout(() => { fn(); setTimeout(() => f.style.opacity = 0, 120); }, hold); }
@@ -1801,7 +1828,7 @@ function noteBurst(at) { W.notes.forEach((n, i) => { n.position.copy(at); WORLD.
 function resetWorld() {
   const H = W; crabbeHome(); if (H.crabBoat.userData.home) H.crabBoat.position.copy(H.crabBoat.userData.home); H.soggyHat.position.y = -50;
   H.lamps.forEach(l => l.target = 1);
-  if (H.coin.userData.home && H.coin.parent !== H.coin.userData.home) H.coin.userData.home.add(H.coin); H.coin.rotation.set(0, 0, 0); if (W.gullString) W.gullString.visible = false;
+  if (H.coin.userData.home && H.coin.parent !== H.coin.userData.home) H.coin.userData.home.add(H.coin); H.coin.rotation.set(Math.PI / 2, 0, 0); if (W.gullString) W.gullString.visible = false;
   H.coin.position.set(0, -10, 0); H.coinShine = 0; H.coin.scale.setScalar(1); H.soggyHat.scale.setScalar(1);
   H.parrot.visible = false; H.parrot.position.set(-3.4, 18, 9.4);
   H.net.visible = false; H.net.position.y = 12;
@@ -1815,6 +1842,8 @@ function resetWorld() {
   H.skels.forEach((sk, i) => { sk.position.set(-1.6 + i * 1.6, 1, -2 - (i % 2) * .6); sk.rotation.set(0, 0, 0); sk.scale.setScalar(1); sk.userData.armL.rotation.set(0, 0, 0); sk.userData.armR.rotation.set(0, 0, 0); });
   H.skels.forEach(sk => { sk.userData.dance = false; sk.userData.shake = false; sk.rotation.z = 0; sk.userData.head.rotation.set(0, 0, 0); });
   H.cave.add(H.musicBox); H.musicBox.scale.setScalar(1);
+  if (H.musicBox.userData.home && H.musicBox.parent !== H.musicBox.userData.home) { H.musicBox.userData.home.add(H.musicBox); H.musicBox.scale.setScalar(1); }
+  if (H.footHat.userData.home && H.footHat.parent !== H.footHat.userData.home) H.footHat.userData.home.add(H.footHat); H.skels.forEach(sk => sk.children.forEach(c => c.visible = true));
   hideAt(H.toeBone); hideAt(H.footHat); hideAt(H.musicBox); hideAt(H.caveLantern);
   if (H.parrot.parent !== H.harbour) H.harbour.add(H.parrot);
   [H.kidA, H.kidB].forEach(k => k.userData.scrub = false);
@@ -1970,8 +1999,20 @@ function kidFront(who = "a", hand = false) { return () => { const kid = who === 
 /* low and close on where the frogs are (or are about to be) */
 function frogShot(list) { return () => { const ps = list.map(f => f().getWorldPosition(V())), m = ps.reduce((a, b) => a.add(b), V()).multiplyScalar(1 / ps.length), far = innerWidth / innerHeight < 1 ? 1.6 : 1, w = O("light", 0, 0, 0), d = w.clone().sub(m).setY(0).normalize(), side = V(-d.z, 0, d.x);
   return [m.clone().addScaledVector(d, 2.6 * far).addScaledVector(side, -2.4 * far).add(V(0, 1.7 * far, 0)), m.clone().add(V(0, .6, 0))]; }; }
+let RUNNER = null;
+/* a skeleton laughs so hard he falls to bits, then gets put back together with his foot on his head */
+function fallApart(sk) {
+  MUSIC.sfx("bonk"); const parts = sk.children.filter(c => c !== sk.userData.anchor), keep = parts.map(c => [c.position.clone(), c.rotation.clone()]);
+  const to = parts.map(() => V((Math.random() - .5) * 2.6, 0, (Math.random() - .5) * 1.8)), spin = parts.map(() => (Math.random() - .5) * 5);
+  tween(.7, (k, r) => parts.forEach((c, i) => { const p = keep[i][0]; c.position.set(p.x + to[i].x * r, p.y * (1 - r) + .15 * r + Math.sin(r * Math.PI) * .9, p.z + to[i].z * r); c.rotation.z = keep[i][1].z + spin[i] * r; }), () => {
+    MUSIC.sfx("splat"); setTimeout(() => { if (S.page !== "skullJoke" && S.page !== "skullLantern") return;
+      tween(.9, (k, r) => parts.forEach((c, i) => { const p = keep[i][0]; c.position.set(p.x + to[i].x * (1 - r), .15 + (p.y - .15) * r + Math.sin(r * Math.PI) * .6, p.z + to[i].z * (1 - r)); c.rotation.z = keep[i][1].z + spin[i] * (1 - r); }), () => {
+        parts.forEach((c, i) => { c.position.copy(keep[i][0]); c.rotation.copy(keep[i][1]); });
+        /* one leg is missing... because it's on his head */
+        parts[1].visible = false; const f = W.footHat; f.userData.home = f.userData.home || f.parent; sk.userData.head.add(f); f.position.set(.05, .38, 0); f.rotation.set(0, 0, -.25); MUSIC.sfx("cheer"); }); }, 900); });
+}
 /* the seagull wears the cursed coin on a string round its neck */
-function coinNecklace(g) { const c = W.coin; c.userData.home = c.userData.home || c.parent; g.add(c); c.position.set(.44, .5, 0); c.rotation.set(0, 0, Math.PI / 2); c.scale.setScalar(.62); W.coinShine = .4;
+function coinNecklace(g) { const c = W.coin; c.userData.home = c.userData.home || c.parent; g.add(c); c.position.set(.44, .5, 0); c.rotation.set(Math.PI / 2, Math.PI / 2, 0); c.scale.setScalar(.62); W.coinShine = .4;
   if (!W.gullString) { W.gullString = new THREE.Mesh(new THREE.TorusGeometry(.17, .022, 4, 14), WORLD.flat(0x3a2a1a)); } g.add(W.gullString); W.gullString.position.set(.4, .7, 0); W.gullString.rotation.set(0, 0, .55); W.gullString.visible = true; }
 /* both boys from the front */
 function kidsFront() { return () => { const m = W.kidA.getWorldPosition(V()).add(W.kidB.getWorldPosition(V())).multiplyScalar(.5), f = W.kidA.getWorldDirection(V()).setY(0).normalize(), side = V(-f.z, 0, f.x), far = innerWidth / innerHeight < 1 ? 1.7 : 1;
@@ -2061,7 +2102,7 @@ const PAGES = {
     ["a", "Why didn't the skeleton go to the party?", kidFront("a")],
     ["bones", "W-w-why?", sh("cave", 4.4, 4, 5.5, 0, 2.6, -1.5)],
     ["b", "Because he had no BODY to go with!", kidFront("b")],
-    ["n", "The skeletons laugh so hard that one of them falls to pieces. They put him back together, mostly right. His foot is on his head.", sh("cave", 2, 4, 8, 0, 2, -2), () => { MUSIC.sfx("bonk"); const sk = W.skels[0]; tween(.6, k => { sk.rotation.z = k * 1.5; sk.position.y = 1 - k * .7; }, () => setTimeout(() => tween(.6, k => { sk.rotation.z = 1.5 * (1 - k); sk.position.y = .3 + k * .7; }, () => { W.footHat.position.set(sk.position.x, 3.35, sk.position.z); MUSIC.sfx("cheer"); }), 600)); }],
+    ["n", "The skeletons laugh so hard that one of them falls to pieces. They put him back together, mostly right. His foot is on his head.", sh("cave", -4.6, 3.6, 3.4, -1.4, 1.6, -2), () => fallApart(W.skels[0])],
     ...MB_BEATS
   ], choices: [{ label: "Back to the map", em: "🗺️", to: "map" }] },
   skullLantern: { mood: "cave", music: "cave", beats: [
@@ -2208,7 +2249,7 @@ const PAGES = {
   alley1: { mood: "night", music: "market", take: "coin", enter: () => { alleyTidy(); kidsInBoat(); boatAt(SEA.harbour, V(0, 0, -10)); resetMonkey(); }, beats: [
     ["n", "Back in Gullwhistle, you tie up the rowboat and tiptoe into the town. Down a narrow lane, between the wonky old houses, lanterns are glowing...", () => [V(10, 9, 14), V(0, 5, -16)]],
     ["n", "This is Smugglers' Alley. It's packed with stalls, and shady pirates selling shady things.", sh("alley", 2.5, 4.4, 21, 0, 3.6, -2), () => fadeDo(() => placeKids(W.alley, V(-1.4, 0, 5.4), V(1.2, 0, 5.8), Math.PI))],
-    ["lolly", "Lucky eyeballs! Pickled rats! Gold chocolate coins! Get 'em while they're sticky!", sh("alley", 1, 4.5, 11, -1, 2.8, -2), () => { const L = W.lolly; tween(1.2, (k, r) => { L.userData.armR.rotation.z = Math.sin(r * Math.PI * 4) * .6 + .9; L.userData.armR.rotation.x = -.5; }, () => { L.userData.armR.rotation.set(0, 0, 0); }); }],
+    ["lolly", "Come, come, little pirates! Lucky eyeballs, pickled rats, gold chocolate coins! Sweet as sunshine, sticky as trouble!", sh("alley", 1, 4.5, 11, -1, 2.8, -2), () => { const L = W.lolly; tween(1.2, (k, r) => { L.userData.armR.rotation.z = Math.sin(r * Math.PI * 4) * .6 + .9; L.userData.armR.rotation.x = -.5; }, () => { L.userData.armR.rotation.set(0, 0, 0); }); }],
     ["a", "Ooh! Can we get lollies? PLEEEASE?", sh("alley", 1.6, 3.5, -.6, -.1, 2.5, 5.6)],
     ["b", "Not now, {a}. We've got a cursed coin to look after.", sh("alley", 1.6, 3.5, -.6, -.1, 2.5, 5.6)],
     ["n", "Up on a rooftop, something is watching you. Something small and hairy... in a waistcoat.", sh("alley", 3, 8.6, 5.5, -5, 7.6, -1.5), () => { W.monkey.userData.head.rotation.y = -.6; }],
@@ -2216,31 +2257,31 @@ const PAGES = {
   ], choices: [{ label: "Chase it over the rooftops", em: "🏃", to: "gameRoof" }, { label: "Tempt it down with a banana", em: "🍌", to: "gameCatch" }] },
   gameRoof: { game: "roof", next: "alleyRoof", title: "Rooftop Run", how: "After that monkey! Tap to jump over the gaps between the roofs. Grab pieces of eight as you go." },
   alleyRoof: { price: true, mood: "night", music: "market", give: ["coin", "choc"], enter: () => { alleyTidy(); placeKids(W.alley, ROOF_START[0], ROOF_START[1], .5); W.monkey.position.copy(ROOF_START[2]); }, beats: [
-    ["n", "You climb, leap and slide across the slippery rooftops. {a} grabs the monkey's tail. {b} grabs the coin. And all three of you crash through the lolly-seller's awning...", sh("alley", 3.4, 7.2, 13, -2.8, 5.6, -2), () => roofCrash()],
-    ["n", "...straight into the lolly-seller's stall. CRASH! Chocolate coins everywhere!", sh("alley", 2, 4.6, 10.5, -1, 1.4, 1), () => coinSpill()],
-    ["lolly", "HA! Best show I've seen all week! Now, you squashed half my stall, so you'll be buying something. Five pieces of eight for a chocolate coin!", sh("alley", 2.5, 4.2, 9.5, -.4, 2.8, 0)],
+    ["n", "You climb, leap and slide across the slippery rooftops. {a} grabs the monkey's tail. {b} grabs the coin. And all three of you crash through Mama Mango's awning...", sh("alley", 3.4, 7.2, 13, -2.8, 5.6, -2), () => roofCrash()],
+    ["n", "...straight into Mama Mango's stall. CRASH! Chocolate coins everywhere!", sh("alley", 2, 4.6, 10.5, -1, 1.4, 1), () => coinSpill()],
+    ["lolly", "Hah! Best show me see all week, darlin'! But you squash half my stall, so you buying something, yes? Five pieces of eight for a chocolate coin!", sh("alley", 2.5, 4.2, 9.5, -.4, 2.8, 0)],
     ["a", "Lollies! YESSS!", sh("alley", 2.5, 4.2, 9.5, -.4, 2.8, 0), () => payCoins(PRICE, W.lolly, () => { const c = W.chocGift; c.position.copy(W.lolly.getWorldPosition(V()).add(V(.9, 3.2, 1))); c.scale.setScalar(1.2); MUSIC.sfx("coin"); giveFly(c, W.kidA, 1.1); })],
     ["n", "It's a gold-wrapped chocolate coin. Hmm... it looks EXACTLY like Grimtide's cursed coin. That could come in handy for a sneaky trick! Into the bag it goes.", kidFront("a", true), () => popInBag(W.chocGift, "choc", W.kidA, 2200)]
   ], choices: [{ label: "Back to the map", em: "🗺️", to: "map" }] },
   gameCatch: { game: "catch", next: "alleyBanana", title: "Monkey Business", how: "The monkey is up on the lolly stall with the cursed coin, throwing things down at you! Drag to move Sonny. Catch the chocolate coins and dodge the rotten fish. Then get ready to catch the CURSED COIN!" },
   alleyBanana: { price: true, mood: "night", music: "market", give: ["coin", "choc"], enter: () => { hideAt(W.catchHat); placeKids(W.alley, V(-1.4, 0, 5.4), V(1.2, 0, 5.8), Math.PI); W.monkey.position.set(2.2, 0, 4.4); W.monkey.rotation.y = -.6; if (W.banana) { W.kidB.userData.armR.add(W.banana); W.banana.position.set(0, -.95, .15); W.banana.scale.setScalar(1.3); W.banana.visible = true; W.kidB.userData.armR.rotation.z = 1.6; } }, beats: [
     ["n", "The cheeky monkey scampers down the wall, snatches the banana out of {b}'s hand, and gobbles it up in three bites, peel and all.", sh("alley", 4, 3.4, 1, -.2, 1.8, 5.2), () => { const m = W.monkey, b = W.banana; if (b && b.parent) { W.alley.attach(b); const p0 = b.position.clone(); tween(.5, k => b.position.lerpVectors(p0, m.position.clone().add(V(0, 1.4, .3)), k), () => tween(1.2, (k, r) => { b.scale.setScalar(1.3 * (1 - r) + .01); b.rotation.z = r * 6; }, () => { b.visible = false; MUSIC.sfx("plop"); W.kidB.userData.armR.rotation.z = 0; })); MUSIC.sfx("tick"); } }],
-    ["lolly", "Smart thinking! Now, how about a treat for clever pirates? Five pieces of eight for a chocolate coin!", sh("alley", 2.5, 4.2, 9.5, -.4, 2.8, 0)],
+    ["lolly", "Clever, clever pirates! Now a sweet treat for clever heads, eh? Five pieces of eight for a chocolate coin!", sh("alley", 2.5, 4.2, 9.5, -.4, 2.8, 0)],
     ["a", "Lollies! YESSS!", sh("alley", 2.5, 4.2, 9.5, -.4, 2.8, 0), () => payCoins(PRICE, W.lolly, () => { const c = W.chocGift; c.position.copy(W.lolly.getWorldPosition(V()).add(V(.9, 3.2, 1))); c.scale.setScalar(1.2); MUSIC.sfx("coin"); giveFly(c, W.kidA, 1.1); })],
     ["n", "It's a gold-wrapped chocolate coin. Hmm... it looks EXACTLY like Grimtide's cursed coin. That could come in handy for a sneaky trick! Into the bag it goes.", kidFront("a", true), () => popInBag(W.chocGift, "choc", W.kidA, 2200)]
   ], choices: [{ label: "Back to the map", em: "🗺️", to: "map" }] },
 
   alleyRoofShort: { mood: "night", music: "market", give: "coin", enter: () => { hideAt(W.catchHat); if (W.banana) { W.banana.visible = false; W.kidB.userData.armR.rotation.z = 0; } placeKids(W.alley, V(-1.4, 0, 5.4), V(1.2, 0, 5.8), Math.PI); }, beats: [
-    ["n", "You got the cursed coin back from that cheeky monkey! On the way down, you pass the lolly-seller's stall. Gold chocolate coins, glittering...", sh("alley", 4, 7, 16, -1, 4, -2)],
-    ["lolly", "Five pieces of eight for a chocolate coin, my little pirates!", sh("alley", 2.5, 4.2, 9.5, -.4, 2.8, 0)],
+    ["n", "You got the cursed coin back from that cheeky monkey! On the way down, you pass Mama Mango's stall. Gold chocolate coins, glittering...", sh("alley", 4, 7, 16, -1, 4, -2)],
+    ["lolly", "Five pieces of eight for one chocolate coin, my little sugar-pirates!", sh("alley", 2.5, 4.2, 9.5, -.4, 2.8, 0)],
     ["n", () => `{a} and {b} turn out every pocket. ${purse() ? "Only " + purse() + (purse() === 1 ? " piece" : " pieces") + " of eight." : "Not a single piece of eight."} That's ${shortBy()} short!`, sh("alley", 1.6, 3.5, -.6, -.1, 2.5, 5.6)],
-    ["lolly", () => S.hours < 3 ? "No coins, no chocolate! Come back when your pockets jingle." : "No coins, no chocolate! And it's nearly midnight. Off home with you!", sh("alley", 2.5, 4.2, 9.5, -.4, 2.8, 0)]
+    ["lolly", () => S.hours < 3 ? "No coins, no chocolate, darlin'! Come back when your pockets jingle-jangle." : "No coins, no chocolate! And it nearly midnight, so run along quick-quick!", sh("alley", 2.5, 4.2, 9.5, -.4, 2.8, 0)]
   ], choices: [{ label: "Have another go (costs an hour)", em: "⏳", to: "gameRoof", cost: 1, when: () => S.hours < 3 }, { label: "Leave without the chocolate", em: "🗺️", to: "map" }] },
   alleyBananaShort: { mood: "night", music: "market", give: "coin", enter: () => { hideAt(W.catchHat); if (W.banana) { W.banana.visible = false; W.kidB.userData.armR.rotation.z = 0; } placeKids(W.alley, V(-1.4, 0, 5.4), V(1.2, 0, 5.8), Math.PI); }, beats: [
-    ["n", "You caught the cursed coin, and the monkey gobbled up the banana. Then you spot the lolly-seller's chocolate coins, glittering...", sh("alley", 4, 7, 16, -1, 4, -2)],
-    ["lolly", "Five pieces of eight for a chocolate coin, my little pirates!", sh("alley", 2.5, 4.2, 9.5, -.4, 2.8, 0)],
+    ["n", "You caught the cursed coin, and the monkey gobbled up the banana. Then you spot Mama Mango's chocolate coins, glittering...", sh("alley", 4, 7, 16, -1, 4, -2)],
+    ["lolly", "Five pieces of eight for one chocolate coin, my little sugar-pirates!", sh("alley", 2.5, 4.2, 9.5, -.4, 2.8, 0)],
     ["n", () => `{a} and {b} turn out every pocket. ${purse() ? "Only " + purse() + (purse() === 1 ? " piece" : " pieces") + " of eight." : "Not a single piece of eight."} That's ${shortBy()} short!`, sh("alley", 1.6, 3.5, -.6, -.1, 2.5, 5.6)],
-    ["lolly", () => S.hours < 3 ? "No coins, no chocolate! Come back when your pockets jingle." : "No coins, no chocolate! And it's nearly midnight. Off home with you!", sh("alley", 2.5, 4.2, 9.5, -.4, 2.8, 0)]
+    ["lolly", () => S.hours < 3 ? "No coins, no chocolate, darlin'! Come back when your pockets jingle-jangle." : "No coins, no chocolate! And it nearly midnight, so run along quick-quick!", sh("alley", 2.5, 4.2, 9.5, -.4, 2.8, 0)]
   ], choices: [{ label: "Have another go (costs an hour)", em: "⏳", to: "gameCatch", cost: 1, when: () => S.hours < 3 }, { label: "Leave without the chocolate", em: "🗺️", to: "map" }] },
   /* ================= MIDNIGHT ================= */
   midnight: { mood: "ghost", music: "boss", enter: () => { resetShip(); crewFace(true); kidsInBoat(); boatAt(V(20, 0, 36), V(30, 0, 52)); W.ghostShip.visible = false; shipIn(5); }, beats: [
@@ -2278,10 +2319,10 @@ const PAGES = {
 
   /* ================= THE ENDINGS ================= */
   endMusic: { epi: "dawn", ending: { id: "music", title: "The Lullaby", em: "🎶" }, mood: "ghost", music: "spooky", beats: [
-    ["n", "{a} winds up the little music box. Plink... plink... plonk...", () => [deck(-8, 9, 10), deck(-3.4, 8, 3)], () => { W.musicBox.position.copy(deck(-3, 8.2, 3.6)); WORLD.scene.add(W.musicBox); noteBurst(deck(-3, 9, 3.6)); }],
-    ["grim", "Me mum... me mum used to play that song...", () => [deck(0, 10, 9), deck(5, 11, 1.5)], () => noteBurst(deck(-3, 9, 3.6))],
-    ["n", "Then the scariest ghost on the seven seas bursts into tears. Big, wet, see-through tears. He misses his mum more than any silly old coin. And just like that, the curse lifts.", () => [V(8, 14, 22), V(30, 14, 52)], () => { MUSIC.play("dawn"); WORLD.setMood("dawn", 5); fadeDo(() => { kidsInBoat(); boatAt(V(20, 0, 36), V(30, 0, 52)); }); setTimeout(() => tween(6, k => { W.bigShip.position.y = k * 60; W.bigShip.rotation.z = k * .2; }), 900); }],
-    ["n", "The coin crumbles into gold dust, and the Soggy Biscuit sails up, up, up into the stars.", () => { const p = W.bigShip.position; return [V(22, 2.5, 40), V(p.x, 30, p.z)]; }, () => { const sh = W.bigShip; sh.visible = true; const y0 = Math.min(sh.position.y, 14); tween(7, k => { sh.position.y = y0 + k * 50; sh.rotation.z = .2 + Math.sin(k * 6) * .05; }); sparkleAt(sh.position.clone().setY(y0 + 4)); }],
+    ["n", "{a} winds up the little music box. Plink... plink... plonk...", between(() => W.kidA.getWorldPosition(V()), () => W.grim.getWorldPosition(V()), 2.6), () => { const mb = W.musicBox; mb.userData.home = mb.userData.home || mb.parent; W.kidA.userData.armR.add(mb); mb.position.set(0, -.95, .35); mb.rotation.set(0, 0, 0); mb.scale.setScalar(.8); mb.visible = true; W.kidA.userData.busy = true; W.kidA.userData.armR.rotation.x = -1.2; MUSIC.sfx("musicbox"); noteBurst(kidHand()); setTimeout(() => S.page === "endMusic" && noteBurst(kidHand()), 2500); setTimeout(() => S.page === "endMusic" && noteBurst(kidHand()), 5000); }],
+    ["grim", "Me mum... me mum used to play that song...", () => [deck(0, 10, 9), deck(5, 11, 1.5)], () => noteBurst(kidHand())],
+    ["n", "Then the scariest ghost on the seven seas bursts into tears. Big, wet, see-through tears. He misses his mum more than any silly old coin. And just like that, the curse lifts.", () => [V(8, 14, 22), V(30, 14, 52)], () => { W.kidA.userData.armR.rotation.x = 0; W.kidA.userData.busy = false; hideAt(W.musicBox); MUSIC.play("dawn"); WORLD.setMood("night", 3); fadeDo(() => { kidsInBoat(); boatAt(V(20, 0, 36), V(30, 0, 52)); }); setTimeout(() => tween(6, k => { W.bigShip.position.y = k * 60; W.bigShip.rotation.z = k * .2; }), 900); }],
+    ["n", "The coin crumbles into gold dust, and the Soggy Biscuit sails up, up, up into the stars.", () => [V(14, 3, 22), V(30, 20, 52)], () => { const sh = W.bigShip; sh.visible = true; const y0 = Math.min(sh.position.y, 14); tween(7, k => { sh.position.y = y0 + k * 50; sh.rotation.z = .2 + Math.sin(k * 6) * .05; }); sparkleAt(sh.position.clone().setY(y0 + 4)); }],
     ["feathers", "Not bad, you two. Not bad at all.", () => [V(16, 4, 30), V(20, 2, 36)], () => { W.harbour.remove(W.parrot); WORLD.scene.add(W.parrot); W.parrot.visible = true; W.parrot.position.set(20.6, .9, 35); W.parrot.userData.flap = 0; }]
   ] },
   endKraken: { epi: "dawn", ending: { id: "kraken", title: "Kraken Attack", em: "🦑" }, mood: "ghost", music: "spooky", beats: [
@@ -2865,7 +2906,7 @@ const GAMES3D = {
           const rg = new THREE.CylinderGeometry(3.6, 3.6, 10.4, 3); rg.rotateX(-Math.PI / 2); rg.rotateY(Math.PI / 2); rg.scale(1, .6, 1); const rf = new THREE.Mesh(rg, WORLD.flat(0x2a2140)); rf.position.y = h + 1; bg.add(rf);
           for (let k = 0; k < 3; k++) if (Math.random() < .7) { const wn = new THREE.Mesh(new THREE.BoxGeometry(1, 1.2, .1), WORLD.glowMat(0xffc85a)); wn.position.set(-3 + k * 3, h - 3, 3.05); bg.add(wn); }
           WORLD.scene.add(bg); back.push({ g: bg, x: bx }); }
-        placeKids(WORLD.scene, V(RO.x, 10.45, RO.z + .5), V(RO.x - 50, -40, RO.z), Math.PI / 2); ky = 10.45; W.kidA.visible = true; W.kidB.visible = false;
+        { const run = V(RO.x, 10.45, RO.z + .5), off = V(RO.x - 50, -40, RO.z); if (S.turn === "b") placeKids(WORLD.scene, off, run, Math.PI / 2); else placeKids(WORLD.scene, run, off, Math.PI / 2); } ky = 10.45; RUNNER = S.turn === "b" ? W.kidB : W.kidA; RUNNER.visible = true; (RUNNER === W.kidA ? W.kidB : W.kidA).visible = false;
         mk = WORLD.make.monkey(); mk.scale.setScalar(1.3); mk.rotation.y = Math.PI / 2; WORLD.scene.add(mk); mk.position.set(RO.x + 16, 12, RO.z + .5);
         shot([V(RO.x + 7, 13, RO.z + 26), V(RO.x + 7, 9.5, RO.z)], 1.4);
       },
@@ -2880,7 +2921,7 @@ const GAMES3D = {
         roofs = roofs.filter(r => { if (r.x + r.w / 2 < -30) { WORLD.scene.remove(r.g); return false; } return true; });
         coins = coins.filter(c => { if (c.x < -30 || c.got) { WORLD.scene.remove(c.m); return false; } return true; });
         while (edge < 70) edge = addRoof(edge);
-        const k = W.kidA;
+        const k = RUNNER;
         if (respawn > 0) { respawn -= dt; if (respawn <= 0) { const r = roofs.find(rf => rf.x - rf.w / 2 < 2 && rf.x + rf.w / 2 > 2) || roofs.find(rf => rf.x > 0); ky = r.top + 4; vy = 0; k.visible = true; } }
         else {
           const prev = ky; vy -= GR * dt; ky += vy * dt; on = false;
@@ -3112,6 +3153,12 @@ function buildLabels() {
     if (!done) b.onclick = () => sailTo(pl); b._pl = pl; $("labels").appendChild(b); labelEls.push(b);
   });
 }
+/* tapping on the map: the nearest stop to your finger (its island, rock or tower, or its name) */
+function mapTap(x, y) {
+  let best = null, bd = Math.min(innerWidth, innerHeight) * .16;
+  PLACES.forEach(pl => { if (S.visited.includes(pl.id)) return; [pl.label, pl.label.clone().setY(pl.label.y * .35), pl.sea].forEach(v => { if (!v) return; const p = v.clone().project(WORLD.camera); if (p.z > 1) return; const d = Math.hypot((p.x * .5 + .5) * innerWidth - x, (-p.y * .5 + .5) * innerHeight - y); if (d < bd) { bd = d; best = pl; } }); });
+  if (best) { MUSIC.sfx("page"); sailTo(best); }
+}
 function clearLabels() { labelEls.forEach(b => b.remove()); labelEls = []; }
 function labelsTick() {
   labelEls.forEach(b => {
@@ -3228,7 +3275,7 @@ function boot() {
   if (!window.THREE) { $("loading").textContent = "The 3D world needs an internet connection to load. Check your connection and refresh."; return; }
   WORLD.init($("world"));
   const cv = WORLD.renderer.domElement;
-  cv.addEventListener("pointerdown", e => { MUSIC.unlock(); pointerDown = true; if (S.mode === "game") { e.preventDefault(); try { cv.setPointerCapture(e.pointerId); } catch (x) {} GAME && GAME.down(e.clientX, e.clientY); } });
+  cv.addEventListener("pointerdown", e => { MUSIC.unlock(); pointerDown = true; if (S.mode === "map" && labelEls.length) { mapTap(e.clientX, e.clientY); return; } if (S.mode === "game") { e.preventDefault(); try { cv.setPointerCapture(e.pointerId); } catch (x) {} GAME && GAME.down(e.clientX, e.clientY); } });
   cv.addEventListener("pointermove", e => { if (S.mode === "game" && GAME) GAME.move(e.clientX, e.clientY); });
   const up = e => { pointerDown = false; if (S.mode === "game" && GAME) GAME.up(e.clientX, e.clientY); };
   cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", up);
