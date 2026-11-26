@@ -1,10 +1,12 @@
 # The Curse of Captain Grimtide
 
-A choose-your-own-adventure pirate story with mini-games, made by Captain Dad.
+A choose-your-own-adventure pirate story with 3D mini-games, made by Captain Dad.
 
-- `index.html` – the game (story, island map, 7 mini-games, music, read-aloud)
-- `studio.html` – Captain Dad's recording studio for narrating the story
-- `beta.html` – the 3D makeover (playable slice: opening, harbour, Fish Fling in 3D, the island map)
-- `audio/` – Captain Dad's recordings (added after recording; `manifest.json` lists the clips)
+This is the **production** repo, deployed on Vercel from `main`. Don't edit it directly:
+changes are made in `joel-blackburn/captain-grimtide-beta` and released here with that repo's
+**Promote beta to production** action.
 
-Deployed on Vercel from the `main` branch.
+- `index.html` – the game
+- `audio3d/` – Captain Dad's recordings
+- `brand/` – app icon, favicon and web manifest
+- `beta.html` – redirects old links to the game
